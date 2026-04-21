@@ -1,0 +1,20 @@
+{
+  "name": "smart-area-card",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Smart Area Card for Home Assistant — standalone, no integration required.",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "custom-card-helpers": "^1.9.0",
+    "lit": "^3.2.0",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "typescript": "^5.8.3"
+  }
+}
