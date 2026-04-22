@@ -19,7 +19,7 @@ import type { HomeAssistantExtended, EntityRegistryEntry, DeviceRegistryEntry } 
 import type { SmartRoomTypeDefinition } from "./editor/editor-types";
 import { DEVICE_ENTITY_PLACEHOLDER, EXTRA_FIELD_PLACEHOLDERS } from "./editor/editor-types";
 import { BUILTIN_TYPE_DEFINITIONS } from "./editor/builtin-types";
-import { INITIAL_STATES, OPERATORS, COLOR_OPTIONS, HEADER_BADGE_OPTIONS, DOMAIN_MULTISELECT_OPTIONS } from "./editor/editor-constants";
+import { INITIAL_STATES, OPERATORS, COLOR_OPTIONS, HEADER_BADGE_OPTIONS, ALERT_HEADER_BADGE_OPTIONS, DOMAIN_MULTISELECT_OPTIONS } from "./editor/editor-constants";
 import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUndefined, allowedMainEntitiesSummary, domainSummary, normalizeTypeDefaultDevice, valueFromEvent } from "./editor/editor-utils";
 import { materializeTypeDefinition, mergePresetStates, mergePresetAlerts, syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
 
@@ -622,11 +622,10 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       ${item.preset && showPresetBanner ? html`<div class="preset-banner"><div class="preset-copy"><div><strong>${item.name?.trim() || (item.preset_source === "battery" ? "Battery alert" : `Default ${this._presetLabel(item.preset_source)} alert`)}</strong></div><div>${item.preset_source === "battery" ? "Synced with Battery entity and threshold. Conditions are auto-managed. Appearance can be customized but alert cannot be removed." : "You can edit this default type configuration, but it cannot be removed."}</div></div>${onReset ? html`<button type="button" class="secondary" @click=${onReset}>Reset</button>` : nothing}</div>` : nothing}
       <div class="panel-grid">
         <div class="subsection">
-          <div class="subsection-title">${item.name?.trim() || "Alert"}</div>
-          <div class="row single"><label>Alert name<span class="hint">Internal name used to identify this alert inside the editor.</span><input ?disabled=${Boolean(item.preset || item.preset_source) && !allowPresetNameEdit} .value=${item.name ?? ""} @input=${(e: InputEvent) => onUpdate("name", valueFromEvent(e))} /><span class="hint">Example: Unlocked alert, Low battery</span></label></div>
+          <div class="subsection-title">Alert</div>
           <div class="row single">${this._renderToggleField("Alert enabled", "Enables this alert without removing its config.", item.enabled !== false, (checked) => onUpdate("enabled", checked), batteryLocked)}</div>
           <div class="row"><label>Alert message<span class="hint">Text shown in the room alert list.</span><input ?disabled=${batteryLocked} .value=${item.message ?? ""} @input=${(e: InputEvent) => onUpdate("message", valueFromEvent(e))} /></label><div class="inline-control"><div class="inline-control-header">${this._renderToggleField("Alert border", "Shows the border while active.", item.outlined ?? true, (checked) => onUpdate("outlined", checked), batteryLocked)}</div><div class="inline-color-block"><span class="inline-color-label">Color</span>${this._renderColorSelect(item.border_color ?? "red", batteryLocked, (value) => onUpdate("border_color", value), true)}</div></div></div>
-          <div class="row single">${this._renderPickerField("Header badge", "Badge while active.", this._renderHeaderBadgeSelect(item.header_badge ?? (batteryLocked ? "low_battery" : "none"), batteryLocked, (value) => onUpdate("header_badge", value)))}</div>
+          <div class="row single">${this._renderPickerField("Header badge", "Badge while active.", this._renderAlertHeaderBadgeSelect(item.header_badge ?? (batteryLocked ? "low_battery" : "alert_generic"), batteryLocked, (value) => onUpdate("header_badge", value)))}</div>
           <div class="row single"><div class="inline-control"><div><div>Alert icon</div><div class="hint">Top-right icon while active. Overrides state icons.</div></div><div class="icon-picker-row">${this._renderIconPicker(item.icon ?? "", batteryLocked, (value) => onUpdate("icon", value || undefined))}</div><div class="inline-color-block"><span class="inline-color-label">Color</span>${this._renderColorSelect(item.icon_color ?? item.border_color ?? "red", batteryLocked, (value) => onUpdate("icon_color", value), true)}</div></div></div>
         </div>
       </div>
@@ -787,6 +786,24 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       <div class="badge-menu">
         ${options.map((item) => html`<button type="button" class="badge-option" ?disabled=${disabled} @click=${(e: Event) => { onChange(item.value); (e.currentTarget as HTMLElement).closest("details")?.removeAttribute("open"); }}>
           <span class="badge-icon">${item.icon ? html`<ha-icon icon=${item.icon} style=${`color:${(item as { color?: string }).color ?? "#fff"}`}></ha-icon>` : html`<span></span>`}</span>
+          <span>${item.label}</span>
+        </button>`)}
+      </div>
+    </details>`;
+  }
+
+  private _renderAlertHeaderBadgeSelect(value: string, disabled: boolean, onChange: (value: string) => void) {
+    const options = ALERT_HEADER_BADGE_OPTIONS;
+    const current = options.find((item) => item.value === value) ?? options[0];
+    return html`<details class="badge-picker">
+      <summary>
+        <span class="badge-icon"><ha-icon icon=${current.icon} style="color:#ff3b30"></ha-icon></span>
+        <span>${current.label}</span>
+        <span>▾</span>
+      </summary>
+      <div class="badge-menu">
+        ${options.map((item) => html`<button type="button" class="badge-option" ?disabled=${disabled} @click=${(e: Event) => { onChange(item.value); (e.currentTarget as HTMLElement).closest("details")?.removeAttribute("open"); }}>
+          <span class="badge-icon"><ha-icon icon=${item.icon} style="color:#ff3b30"></ha-icon></span>
           <span>${item.label}</span>
         </button>`)}
       </div>
@@ -1433,7 +1450,6 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
         alerts: [
           ...current,
           {
-            name: "",
             enabled: true,
             message: "",
             conditions: [],
@@ -1441,7 +1457,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
             border_color: "red",
             icon: "",
             icon_color: "red",
-            header_badge: "none",
+            header_badge: "alert_generic",
           },
         ],
       },

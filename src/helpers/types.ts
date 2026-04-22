@@ -101,6 +101,7 @@ export interface SmartRoomNamedStateConfig {
 
 export type SmartRoomHeaderBadge =
   | "none"
+  | "alert_generic"
   | "light"
   | "playing"
   | "rec"

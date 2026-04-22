@@ -11,6 +11,16 @@ export const COLOR_OPTIONS = [
   { value: "purple", label: "Purple", swatch: "#8b5cf6" },
   { value: "gray", label: "Gray", swatch: "#94a3b8" },
 ] as const;
+export const ALERT_HEADER_BADGE_OPTIONS = [
+  { value: "alert_generic", label: "Generic alert", icon: "mdi:alert-circle-outline" },
+  { value: "low_battery", label: "Low battery", icon: "mdi:battery-alert-variant-outline" },
+  { value: "fire", label: "Fire alarm", icon: "mdi:fire-alert" },
+  { value: "water", label: "Water alarm", icon: "mdi:water-alert" },
+  { value: "lock_open", label: "Lock open", icon: "mdi:lock-open-variant" },
+  { value: "door_open", label: "Door open", icon: "mdi:door-open" },
+  { value: "plug_off", label: "Disconnected plug", icon: "mdi:power-plug-off-outline" },
+] as const;
+
 export const HEADER_BADGE_OPTIONS = [
   { value: "none", label: "None", icon: "" },
   { value: "light", label: "Light", icon: "mdi:lightbulb", color: "#ffd700" },

@@ -38,15 +38,16 @@ declare global {
 }
 
 const BADGE_CONFIG: Partial<Record<SmartRoomHeaderBadge, { pillClass: string; icon: string }>> = {
-  door_open:   { pillClass: "header-pill header-pill-orange", icon: "mdi:door-open" },
-  door_closed: { pillClass: "header-pill header-pill-green",  icon: "mdi:door-closed" },
-  lock_open:   { pillClass: "header-pill header-pill-red",    icon: "mdi:lock-open-variant" },
-  lock_closed: { pillClass: "header-pill header-pill-green",  icon: "mdi:lock" },
-  presence:    { pillClass: "header-pill header-pill-white",  icon: "mdi:account" },
-  fire:        { pillClass: "header-pill header-pill-red",    icon: "mdi:fire-alert" },
-  water:       { pillClass: "header-pill header-pill-red",    icon: "mdi:water-alert" },
-  plug_off:    { pillClass: "header-pill header-pill-white",  icon: "mdi:power-plug-off-outline" },
-  low_battery: { pillClass: "header-pill header-pill-red",    icon: "mdi:battery-alert-variant-outline" },
+  alert_generic: { pillClass: "header-pill header-pill-red",    icon: "mdi:alert-circle-outline" },
+  door_open:     { pillClass: "header-pill header-pill-red",    icon: "mdi:door-open" },
+  door_closed:   { pillClass: "header-pill header-pill-green",  icon: "mdi:door-closed" },
+  lock_open:     { pillClass: "header-pill header-pill-red",    icon: "mdi:lock-open-variant" },
+  lock_closed:   { pillClass: "header-pill header-pill-green",  icon: "mdi:lock" },
+  presence:      { pillClass: "header-pill header-pill-white",  icon: "mdi:account" },
+  fire:          { pillClass: "header-pill header-pill-red",    icon: "mdi:fire-alert" },
+  water:         { pillClass: "header-pill header-pill-red",    icon: "mdi:water-alert" },
+  plug_off:      { pillClass: "header-pill header-pill-red",    icon: "mdi:power-plug-off-outline" },
+  low_battery:   { pillClass: "header-pill header-pill-red",    icon: "mdi:battery-alert-variant-outline" },
 };
 
 function _formatLastTriggered(lastTriggered: string | null | undefined): string {
@@ -230,6 +231,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         <div class="header-top">
           <div class="title-line">
             ${this._config?.ui?.show_area_icon && model.areaIcon ? html`<ha-icon icon=${model.areaIcon}></ha-icon>` : nothing}
+            ${this._renderHeaderBadge("alert_generic")}
             ${this._renderHeaderBadge("door_open")}
             ${this._renderHeaderBadge("door_closed")}
             ${this._renderHeaderBadge("lock_open")}

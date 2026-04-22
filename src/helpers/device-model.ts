@@ -113,11 +113,21 @@ export const computeDeviceModel = (
   const alertMessages: string[] = [];
   const alertsByBadge: Partial<Record<SmartRoomHeaderBadge, string[]>> = {};
   matchedAlerts.forEach((item) => {
+    const conditionSuffix = (item.conditions ?? [])
+      .map((c) => {
+        const entityPart = c.entity.split(".").pop() ?? c.entity;
+        const valStr = Array.isArray(c.value) ? c.value.join(", ") : String(c.value);
+        return `${entityPart} ${c.operator} ${valStr}`;
+      })
+      .join("; ");
+    const defaultMessage = conditionSuffix
+      ? `${deviceLabel} alert; ${conditionSuffix}`
+      : `${deviceLabel} alert`;
     const message = item.preset_source === "battery"
       ? batteryLevelValue !== undefined
         ? `${deviceLabel} low battery (${batteryLevelValue}%)`
         : `${deviceLabel} low battery`
-      : (item.message?.trim() || `${deviceLabel} alert`);
+      : (item.message?.trim() || defaultMessage);
     alertMessages.push(message);
     const badge = (item.header_badge ?? "none") as SmartRoomHeaderBadge;
     if (badge !== "none") {
