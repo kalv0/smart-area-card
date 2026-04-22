@@ -57,6 +57,7 @@ export function evaluateClimateAlert(
   entity: HassEntity | undefined,
   alertConfig: { enabled?: boolean; min?: number; max?: number } | undefined,
   label: string,
+  icon: string,
 ): ClimateAlert | undefined {
   if (!alertConfig?.enabled || !entity || isUnavailable(entity)) {
     return undefined;
@@ -67,12 +68,15 @@ export function evaluateClimateAlert(
     return undefined;
   }
 
+  const unit = entity.attributes.unit_of_measurement ? ` ${entity.attributes.unit_of_measurement}` : "";
+  const message = `${label}: ${entity.state}${unit}`;
+
   if (alertConfig.min !== undefined && value < alertConfig.min) {
-    return { key, label, reason: `${label} low` };
+    return { key, label, reason: message, icon };
   }
 
   if (alertConfig.max !== undefined && value > alertConfig.max) {
-    return { key, label, reason: `${label} high` };
+    return { key, label, reason: message, icon };
   }
 
   return undefined;
@@ -95,18 +99,30 @@ export function countHeaderBadges(
   return counts;
 }
 
-export function buildClimateItems(entities: {
-  temp?: HassEntity;
-  humidity?: HassEntity;
-  co2?: HassEntity;
-  voc?: HassEntity;
-  pm25?: HassEntity;
-  aqi?: HassEntity;
-}): Array<{ key: string; icon: string; value: string; className: string }> {
+export const CLIMATE_DEFAULT_ICONS: Record<string, string> = {
+  temperature: "mdi:thermometer",
+  humidity: "mdi:water-percent",
+  co2: "mdi:molecule-co2",
+  voc: "mdi:flask-outline",
+  pm25: "mdi:blur",
+  aqi: "mdi:gauge",
+};
+
+export function buildClimateItems(
+  entities: {
+    temp?: HassEntity;
+    humidity?: HassEntity;
+    co2?: HassEntity;
+    voc?: HassEntity;
+    pm25?: HassEntity;
+    aqi?: HassEntity;
+  },
+  customIcons?: Record<string, string | undefined>,
+): Array<{ key: string; icon: string; value: string; className: string }> {
   const items: Array<{ key: string; icon: string; value: string; className: string }> = [];
+  const resolveIcon = (key: string) => customIcons?.[key] || CLIMATE_DEFAULT_ICONS[key] || "mdi:gauge";
   const pushItem = (
     key: string,
-    icon: string,
     className: string,
     entity?: HassEntity,
     formatter?: (value: string, unit?: string) => string,
@@ -115,18 +131,18 @@ export function buildClimateItems(entities: {
     const unit = entity.attributes.unit_of_measurement ? String(entity.attributes.unit_of_measurement) : undefined;
     const raw = String(entity.state);
     const value = formatter ? formatter(raw, unit) : `${raw}${unit ? ` ${unit}` : ""}`;
-    items.push({ key, icon, value, className });
+    items.push({ key, icon: resolveIcon(key), value, className });
   };
 
-  pushItem("temperature", "mdi:thermometer", "temp", entities.temp, (value, unit) => {
+  pushItem("temperature", "temp", entities.temp, (value, unit) => {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? `${numeric.toFixed(1)}${unit ?? " deg"}` : `${value}${unit ? ` ${unit}` : ""}`;
   });
-  pushItem("humidity", "mdi:water-percent", "humidity", entities.humidity, (value, unit) => `${value}${unit ?? "%"}`);
-  pushItem("co2", "mdi:molecule-co2", "co2", entities.co2);
-  pushItem("voc", "mdi:flask-outline", "voc", entities.voc);
-  pushItem("pm25", "mdi:blur", "pm25", entities.pm25);
-  pushItem("aqi", "mdi:gauge", "aqi", entities.aqi);
+  pushItem("humidity", "humidity", entities.humidity, (value, unit) => `${value}${unit ?? "%"}`);
+  pushItem("co2", "co2", entities.co2);
+  pushItem("voc", "voc", entities.voc);
+  pushItem("pm25", "pm25", entities.pm25);
+  pushItem("aqi", "aqi", entities.aqi);
 
   return items;
 }

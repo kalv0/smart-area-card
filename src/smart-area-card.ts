@@ -103,7 +103,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   @state() private _expanded = false;
   @state() private _everExpanded = false;
   @state() private _showAutomationPanel = false;
-  @state() private _closedAlertPanels = new Set<SmartRoomHeaderBadge>();
+  @state() private _closedAlertPanels = new Set<string>();
 
   private _renderModel?: RenderModel;
   private _lastSignature = "";
@@ -226,16 +226,22 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       </div>
     `);
 
+    const climatePills = (this._renderModel?.climateAlertBadges ?? [])
+      .filter((b) => b.messages.length > 0)
+      .map((b) => html`<button class="header-pill header-pill-red header-pill-button header-pill-clickable" @click=${(e: Event) => this._handleAlertBadgeClick(b.key, e)}><ha-icon icon=${b.icon}></ha-icon></button>`);
+
     const alertPills = (["alert_generic", "door_open", "lock_open", "fire", "water", "plug_off", "low_battery"] as SmartRoomHeaderBadge[])
       .map((b) => this._renderHeaderBadge(b))
       .filter((t): t is TemplateResult => t !== nothing);
+
+    const allAlertPills = [...climatePills, ...alertPills];
 
     return html`
       <section class="header">
         <div class="header-top">
           <div class="title-line">
             ${this._config?.ui?.show_area_icon && model.areaIcon ? html`<ha-icon icon=${model.areaIcon}></ha-icon>` : nothing}
-            ${alertPills.length ? html`<div class="header-alerts">${alertPills}</div>` : nothing}
+            ${allAlertPills.length ? html`<div class="header-alerts">${allAlertPills}</div>` : nothing}
             <span>${room}</span>
             <div class="header-states">
               ${this._renderAutomationBadge()}
@@ -280,25 +286,31 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   private _renderAlertPanels(): TemplateResult | typeof nothing {
+    const panels: Array<{ key: string; icon: string; messages: string[] }> = [];
+
     const alertsByBadge = this._renderModel?.alertsByBadge ?? {};
-    const visiblePanels = (Object.entries(alertsByBadge) as [SmartRoomHeaderBadge, string[]][])
+    (Object.entries(alertsByBadge) as [SmartRoomHeaderBadge, string[]][])
       .filter(([, messages]) => messages.length > 0)
-      .filter(([badge]) => !this._closedAlertPanels.has(badge));
-    if (!visiblePanels.length) return nothing;
-    return html`${visiblePanels.map(([badge, messages]) => {
-      const icon = BADGE_CONFIG[badge]?.icon ?? "mdi:alert-circle-outline";
-      return html`
-        <section class="alert-bar">
-          <ha-icon icon=${icon}></ha-icon>
-          <div class="alert-lines">
-            ${messages.map((msg) => html`<div>${msg}</div>`)}
-          </div>
-        </section>
-      `;
-    })}`;
+      .forEach(([badge, messages]) => panels.push({ key: badge, icon: BADGE_CONFIG[badge]?.icon ?? "mdi:alert-circle-outline", messages }));
+
+    (this._renderModel?.climateAlertBadges ?? [])
+      .filter((b) => b.messages.length > 0)
+      .forEach((b) => panels.push(b));
+
+    const visible = panels.filter((p) => !this._closedAlertPanels.has(p.key));
+    if (!visible.length) return nothing;
+
+    return html`${visible.map(({ icon, messages }) => html`
+      <section class="alert-bar">
+        <ha-icon icon=${icon}></ha-icon>
+        <div class="alert-lines">
+          ${messages.map((msg) => html`<div>${msg}</div>`)}
+        </div>
+      </section>
+    `)}`;
   }
 
-  private _handleAlertBadgeClick(badge: SmartRoomHeaderBadge, event: Event): void {
+  private _handleAlertBadgeClick(badge: string, event: Event): void {
     event.stopPropagation();
     const next = new Set(this._closedAlertPanels);
     if (next.has(badge)) {
@@ -657,7 +669,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     try {
       const raw = window.localStorage.getItem(`smart-area:${this._config.room}:alerts-closed`);
       const parsed = raw ? JSON.parse(raw) as string[] : [];
-      this._closedAlertPanels = new Set(parsed as SmartRoomHeaderBadge[]);
+      this._closedAlertPanels = new Set<string>(parsed);
     } catch {
       this._closedAlertPanels = new Set();
     }

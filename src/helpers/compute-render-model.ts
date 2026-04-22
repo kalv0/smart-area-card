@@ -2,7 +2,7 @@ import type { HomeAssistant } from "custom-card-helpers";
 import { computeDeviceModel } from "./device-model";
 import { getEntity, isUnavailable } from "./entity-helpers";
 import { normalizeAssetPath } from "./config-helpers";
-import { getClimateEntities, evaluateClimateAlert, buildClimateItems, countHeaderBadges } from "./room-model";
+import { getClimateEntities, evaluateClimateAlert, buildClimateItems, countHeaderBadges, CLIMATE_DEFAULT_ICONS } from "./room-model";
 import type { SmartRoomCardConfig } from "./types";
 import type { RenderModel, ClimateAlert } from "../types/card-model";
 import type { HomeAssistantExtended } from "../types/ha-extensions";
@@ -33,14 +33,21 @@ export function computeRenderModel(
   const useDaylightOnBackground = keepOnUntilSunset && sun && !isUnavailable(sun) && sun.state === "above_horizon";
   const roomIsActive = devices.some((device) => device.countsAsRoomActive) || useDaylightOnBackground;
   const alertsConfig = config.sensors?.alerts;
+  const customIcons = config.sensors?.icons ?? {};
+  const resolveIcon = (key: string) => customIcons[key as keyof typeof customIcons] || CLIMATE_DEFAULT_ICONS[key] || "mdi:gauge";
   const climateAlerts = [
-    evaluateClimateAlert("temperature", temp, alertsConfig?.temperature, "Temperature"),
-    evaluateClimateAlert("humidity", humidity, alertsConfig?.humidity, "Humidity"),
-    evaluateClimateAlert("co2", co2, alertsConfig?.co2, "CO2"),
-    evaluateClimateAlert("voc", voc, alertsConfig?.voc, "VOC"),
-    evaluateClimateAlert("pm25", pm25, alertsConfig?.pm25, "PM2.5"),
-    evaluateClimateAlert("aqi", aqi, alertsConfig?.aqi, "AQI"),
+    evaluateClimateAlert("temperature", temp, alertsConfig?.temperature, "Temperature", resolveIcon("temperature")),
+    evaluateClimateAlert("humidity", humidity, alertsConfig?.humidity, "Humidity", resolveIcon("humidity")),
+    evaluateClimateAlert("co2", co2, alertsConfig?.co2, "CO2", resolveIcon("co2")),
+    evaluateClimateAlert("voc", voc, alertsConfig?.voc, "VOC", resolveIcon("voc")),
+    evaluateClimateAlert("pm25", pm25, alertsConfig?.pm25, "PM2.5", resolveIcon("pm25")),
+    evaluateClimateAlert("aqi", aqi, alertsConfig?.aqi, "AQI", resolveIcon("aqi")),
   ].filter((item): item is ClimateAlert => Boolean(item));
+  const climateAlertBadges = climateAlerts.map((alert) => ({
+    key: `climate_${alert.key}`,
+    icon: alert.icon,
+    messages: [alert.reason],
+  }));
   const areaEntry = resolveAreaEntry(hassExt, config.room_id);
   const automationCount = config.ui?.automation_badge_enabled && areaEntry
     ? countEnabledRoomAutomations(hass, hassExt, config.room_id!)
@@ -55,13 +62,14 @@ export function computeRenderModel(
     badgeCounts,
     hasAlert: deviceAlerts.some((d) => d.alertHeaderBorder) || climateAlerts.length > 0,
     alertsByBadge,
+    climateAlertBadges,
     alertReasons: [
       ...deviceAlerts.flatMap((device) =>
         device.alertMessages.length ? device.alertMessages : [`${device.label} alert`],
       ),
       ...climateAlerts.map((item) => item.reason),
     ],
-    climateItems: buildClimateItems({ temp, humidity, co2, voc, pm25, aqi }),
+    climateItems: buildClimateItems({ temp, humidity, co2, voc, pm25, aqi }, customIcons),
     climateEntities: getClimateEntities(config.sensors),
     areaIcon: areaEntry?.icon || "mdi:home-outline",
     roomBackground: normalizeAssetPath(

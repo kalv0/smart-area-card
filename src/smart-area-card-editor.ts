@@ -200,13 +200,15 @@ export class SmartAreaCardEditor extends LitElement {
     const enabled = alertConfig?.enabled === true;
     const roomName = this._areaName(this._config?.room_id) ?? "this room";
     const restrictToRoom = config.sensors?.filters?.[key]?.restrict_to_room_area === true;
+    const customIcon = config.sensors?.icons?.[key] ?? "";
     return html`
       <div class="panel">
-        <div class="panel-title">${this._renderClimateTitle(key, label)}</div>
+        <div class="panel-title">${this._renderClimateTitle(key, label, customIcon)}</div>
         <div class="row">
           <div class="field-card"><div class="field-title">${label} entity</div><span class="hint">Entity printed in the header for this climate metric. Leave it empty to hide this metric completely.</span>${this._renderEntityPicker(config.sensors?.[key] ?? "", (value) => this._setSensor(key, value), false, this._entitySelector(["sensor"], restrictToRoom, this._config?.room_id))}${this._renderCompactCheckField(`Only entities from ${roomName}`, "Limit this picker to the selected area.", restrictToRoom, (checked) => this._setSensorFilter(key, "restrict_to_room_area", checked))}</div>
           ${this._renderToggleField("Enable room alert", "When enabled, this climate value can turn the room into alert state using the thresholds defined below.", enabled, (checked) => this._setSensorAlert(key, "enabled", checked))}
         </div>
+        <div class="row single"><div class="inline-control"><div><div>Icon</div><div class="hint">Shown in the header climate strip and as alert badge. Supports any MDI icon.</div></div><div class="icon-picker-row">${this._renderIconPicker(customIcon, false, (value) => this._setSensorIcon(key, value))}</div></div></div>
         ${enabled
           ? html`
               <div class="row">
@@ -494,8 +496,9 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   private _renderClimateTitle(
     key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi",
     label: string,
+    customIcon?: string,
   ) {
-    const iconByKey: Record<typeof key, string> = {
+    const defaultIconByKey: Record<typeof key, string> = {
       temperature: "mdi:thermometer",
       humidity: "mdi:water-percent",
       co2: "mdi:molecule-co2",
@@ -503,7 +506,8 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       pm25: "mdi:blur",
       aqi: "mdi:gauge",
     };
-    return html`<span class="climate-title"><ha-icon icon=${iconByKey[key]}></ha-icon><span>${label}</span></span>`;
+    const icon = customIcon || defaultIconByKey[key];
+    return html`<span class="climate-title"><ha-icon icon=${icon}></ha-icon><span>${label}</span></span>`;
   }
 
   private _typeIcon(type: string): string {
@@ -1101,6 +1105,9 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   private _setExpander(key: string, value: unknown) { this._patch({ expander: { ...(this._config?.expander ?? {}), [key]: value } }); }
   private _setRoomImage(key: "background_on" | "background_off", value: string) { this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...(this._config?.ui?.images ?? {}), [key]: value || undefined } } }); }
   private _setSensor(key: string, value: string) { this._patch({ sensors: { ...(this._config?.sensors ?? {}), [key]: value || undefined } }); }
+  private _setSensorIcon(key: string, value: string) {
+    this._patch({ sensors: { ...(this._config?.sensors ?? {}), icons: { ...(this._config?.sensors?.icons ?? {}), [key]: value || undefined } } });
+  }
   private _setSensorFilter(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi", field: "restrict_to_room_area", value: boolean) {
     this._patch({
       sensors: {

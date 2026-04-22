@@ -125,7 +125,7 @@ export const computeDeviceModel = (
       : `${deviceLabel} alert`;
     const message = item.preset_source === "battery"
       ? batteryLevelValue !== undefined
-        ? `${deviceLabel} low battery (${batteryLevelValue}%)`
+        ? `${deviceLabel} battery: ${batteryLevelValue}%`
         : `${deviceLabel} low battery`
       : (item.message?.trim() || defaultMessage);
     alertMessages.push(message);

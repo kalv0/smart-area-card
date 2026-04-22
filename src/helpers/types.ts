@@ -177,6 +177,14 @@ export interface SmartRoomCardConfig {
       pm25?: { enabled?: boolean; min?: number; max?: number };
       aqi?: { enabled?: boolean; min?: number; max?: number };
     };
+    icons?: {
+      temperature?: string;
+      humidity?: string;
+      co2?: string;
+      voc?: string;
+      pm25?: string;
+      aqi?: string;
+    };
   };
   ui?: {
     blur?: boolean;
