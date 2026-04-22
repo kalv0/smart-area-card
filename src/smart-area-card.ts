@@ -226,26 +226,26 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       </div>
     `);
 
+    const alertPills = (["alert_generic", "door_open", "lock_open", "fire", "water", "plug_off", "low_battery"] as SmartRoomHeaderBadge[])
+      .map((b) => this._renderHeaderBadge(b))
+      .filter((t): t is TemplateResult => t !== nothing);
+
     return html`
       <section class="header">
         <div class="header-top">
           <div class="title-line">
             ${this._config?.ui?.show_area_icon && model.areaIcon ? html`<ha-icon icon=${model.areaIcon}></ha-icon>` : nothing}
-            ${this._renderHeaderBadge("alert_generic")}
-            ${this._renderHeaderBadge("door_open")}
-            ${this._renderHeaderBadge("door_closed")}
-            ${this._renderHeaderBadge("lock_open")}
-            ${this._renderHeaderBadge("lock_closed")}
-            ${this._renderHeaderBadge("presence")}
-            ${this._renderHeaderBadge("fire")}
-            ${this._renderHeaderBadge("water")}
-            ${this._renderHeaderBadge("plug_off")}
-            ${this._renderHeaderBadge("low_battery")}
+            ${alertPills.length ? html`<div class="header-alerts">${alertPills}</div>` : nothing}
             <span>${room}</span>
-            ${this._renderAutomationBadge()}
-            ${this._renderHeaderBadge("light")}
-            ${this._renderHeaderBadge("rec")}
-            ${this._renderHeaderBadge("playing")}
+            <div class="header-states">
+              ${this._renderAutomationBadge()}
+              ${this._renderHeaderBadge("door_closed")}
+              ${this._renderHeaderBadge("lock_closed")}
+              ${this._renderHeaderBadge("presence")}
+              ${this._renderHeaderBadge("light")}
+              ${this._renderHeaderBadge("rec")}
+              ${this._renderHeaderBadge("playing")}
+            </div>
           </div>
 
           ${this._config?.ui?.header_climate_more_info === false
@@ -272,8 +272,9 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         const cfg = BADGE_CONFIG[badge];
         if (!cfg) return nothing;
         const alertMessages = this._renderModel?.alertsByBadge?.[badge] ?? [];
-        if (alertMessages.length > 0) {
-          return html`<button class="${cfg.pillClass}" @click=${(e: Event) => this._handleAlertBadgeClick(badge, e)}><ha-icon icon=${cfg.icon}></ha-icon>${countLabel}</button>`;
+        const hideable = this._renderModel?.alertBadgeHideable?.[badge] !== false;
+        if (alertMessages.length > 0 && hideable) {
+          return html`<button class="${cfg.pillClass} header-pill-button header-pill-clickable" @click=${(e: Event) => this._handleAlertBadgeClick(badge, e)}><ha-icon icon=${cfg.icon}></ha-icon>${countLabel}</button>`;
         }
         return html`<span class="${cfg.pillClass}"><ha-icon icon=${cfg.icon}></ha-icon>${countLabel}</span>`;
       }
@@ -284,7 +285,10 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const alertsByBadge = this._renderModel?.alertsByBadge ?? {};
     const visiblePanels = (Object.entries(alertsByBadge) as [SmartRoomHeaderBadge, string[]][])
       .filter(([, messages]) => messages.length > 0)
-      .filter(([badge]) => !this._closedAlertPanels.has(badge));
+      .filter(([badge]) => {
+        const hideable = this._renderModel?.alertBadgeHideable?.[badge] !== false;
+        return !hideable || !this._closedAlertPanels.has(badge);
+      });
     if (!visiblePanels.length) return nothing;
     return html`${visiblePanels.map(([badge, messages]) => {
       const icon = BADGE_CONFIG[badge]?.icon ?? "mdi:alert-circle-outline";

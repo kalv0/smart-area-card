@@ -69,6 +69,7 @@ export interface SmartRoomNamedAlertConfig {
   icon_color?: SmartRoomPaletteColor;
   header_badge?: SmartRoomHeaderBadge;
   header_border?: boolean;
+  badge_hides_message?: boolean;
 }
 
 export interface SmartRoomNamedStateConfig {

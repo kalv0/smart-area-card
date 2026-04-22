@@ -140,10 +140,9 @@ export const smartRoomCardStyles = css`
 
   .header-top {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--sr-space-3);
-    flex-wrap: wrap;
   }
 
   .title-line {
@@ -154,6 +153,24 @@ export const smartRoomCardStyles = css`
     font-weight: 800;
     color: white;
     line-height: 1.05;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .header-alerts {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+
+  .header-states {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sr-space-2);
+    flex: 1;
+    min-width: 0;
   }
 
   .title-line ha-icon {
@@ -262,6 +279,23 @@ export const smartRoomCardStyles = css`
     transform: scale(1.05);
   }
 
+  .header-pill-button {
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+    cursor: default;
+  }
+
+  .header-pill-clickable {
+    cursor: pointer;
+    transition: opacity 140ms ease, transform 140ms ease;
+  }
+
+  .header-pill-clickable:hover {
+    opacity: 0.8;
+    transform: scale(1.08);
+  }
+
   .climate {
     display: flex;
     flex-direction: column;
@@ -270,6 +304,8 @@ export const smartRoomCardStyles = css`
     color: white;
     text-align: right;
     line-height: 1;
+    flex-shrink: 0;
+    align-self: flex-start;
   }
 
   .climate-item {

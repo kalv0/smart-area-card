@@ -16,10 +16,16 @@ export function computeRenderModel(
   const devices = (config.devices ?? []).map((device) => computeDeviceModel(states, device));
   const deviceAlerts = devices.filter((device) => device.isAlert);
   const alertsByBadge: Partial<Record<import("./types").SmartRoomHeaderBadge, string[]>> = {};
+  const alertBadgeHideable: Partial<Record<import("./types").SmartRoomHeaderBadge, boolean>> = {};
   deviceAlerts.forEach((device) => {
     (Object.entries(device.alertsByBadge) as [import("./types").SmartRoomHeaderBadge, string[]][]).forEach(([badge, messages]) => {
       if (!alertsByBadge[badge]) alertsByBadge[badge] = [];
       alertsByBadge[badge]!.push(...messages);
+    });
+    (Object.entries(device.alertBadgeHideable) as [import("./types").SmartRoomHeaderBadge, boolean][]).forEach(([badge, hideable]) => {
+      if (alertBadgeHideable[badge] !== false) {
+        alertBadgeHideable[badge] = hideable;
+      }
     });
   });
   const temp = getEntity(states, config.sensors?.temperature);
@@ -55,6 +61,7 @@ export function computeRenderModel(
     badgeCounts,
     hasAlert: deviceAlerts.some((d) => d.alertHeaderBorder) || climateAlerts.length > 0,
     alertsByBadge,
+    alertBadgeHideable,
     alertReasons: [
       ...deviceAlerts.flatMap((device) =>
         device.alertMessages.length ? device.alertMessages : [`${device.label} alert`],

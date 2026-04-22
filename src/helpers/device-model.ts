@@ -41,6 +41,7 @@ export interface ComputedDeviceModel {
   batteryLevel?: number;
   alertMessages: string[];
   alertsByBadge: Partial<Record<SmartRoomHeaderBadge, string[]>>;
+  alertBadgeHideable: Partial<Record<SmartRoomHeaderBadge, boolean>>;
 }
 
 export const computeDeviceModel = (
@@ -112,16 +113,17 @@ export const computeDeviceModel = (
   const batteryLevelValue = getBatteryLevel(batteryEntity);
   const alertMessages: string[] = [];
   const alertsByBadge: Partial<Record<SmartRoomHeaderBadge, string[]>> = {};
+  const alertBadgeHideable: Partial<Record<SmartRoomHeaderBadge, boolean>> = {};
   matchedAlerts.forEach((item) => {
     const conditionSuffix = (item.conditions ?? [])
       .map((c) => {
         const entityPart = c.entity.split(".").pop() ?? c.entity;
-        const valStr = Array.isArray(c.value) ? c.value.join(", ") : String(c.value);
+        const valStr = Array.isArray(c.value) ? c.value.join("; ") : String(c.value);
         return `${entityPart} ${c.operator} ${valStr}`;
       })
       .join("; ");
     const defaultMessage = conditionSuffix
-      ? `${deviceLabel} alert; ${conditionSuffix}`
+      ? `${deviceLabel} alert (${conditionSuffix})`
       : `${deviceLabel} alert`;
     const message = item.preset_source === "battery"
       ? batteryLevelValue !== undefined
@@ -129,10 +131,13 @@ export const computeDeviceModel = (
         : `${deviceLabel} low battery`
       : (item.message?.trim() || defaultMessage);
     alertMessages.push(message);
-    const badge = (item.header_badge ?? "none") as SmartRoomHeaderBadge;
+    const badge = (item.header_badge ?? "alert_generic") as SmartRoomHeaderBadge;
     if (badge !== "none") {
       if (!alertsByBadge[badge]) alertsByBadge[badge] = [];
       alertsByBadge[badge]!.push(message);
+      if (alertBadgeHideable[badge] !== false) {
+        alertBadgeHideable[badge] = item.badge_hides_message !== false;
+      }
     }
   });
 
@@ -166,5 +171,6 @@ export const computeDeviceModel = (
     batteryLevel: batteryLevelValue,
     alertMessages,
     alertsByBadge,
+    alertBadgeHideable,
   };
 };
