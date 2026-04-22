@@ -283,7 +283,6 @@ export const smartRoomCardStyles = css`
   .header-pill-button {
     appearance: none;
     -webkit-appearance: none;
-    font: inherit;
     cursor: default;
   }
 

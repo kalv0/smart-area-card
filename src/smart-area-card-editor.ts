@@ -186,11 +186,6 @@ export class SmartAreaCardEditor extends LitElement {
           <div class="row single">
             ${this._renderToggleField("Automation badge", "Shows the number of enabled automations linked to this area.", automationEnabled, (checked) => this._setUi("automation_badge_enabled", checked), !this._isRoomIdValid(config.room_id))}
           </div>
-          ${automationEnabled ? html`
-            <div class="row single">
-              ${this._renderToggleField("Show automations on tap", "When enabled, tapping the badge shows an inline list of automations in this area.", config.ui?.automation_badge_tap_navigate ?? true, (checked) => this._setUi("automation_badge_tap_navigate", checked))}
-            </div>
-          ` : nothing}
         </div>
       </section>
     `;
@@ -626,7 +621,6 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
           <div class="row single">${this._renderToggleField("Alert enabled", "Enables this alert without removing its config.", item.enabled !== false, (checked) => onUpdate("enabled", checked), batteryLocked)}</div>
           <div class="row single"><label>Alert message<span class="hint">Text shown in the room alert list.</span><input ?disabled=${batteryLocked} .value=${item.message ?? ""} @input=${(e: InputEvent) => onUpdate("message", valueFromEvent(e))} /></label></div>
           <div class="row single">${this._renderPickerField("Header badge", "Badge while active.", this._renderAlertHeaderBadgeSelect(item.header_badge ?? (batteryLocked ? "low_battery" : "alert_generic"), batteryLocked, (value) => onUpdate("header_badge", value)))}</div>
-          <div class="row single">${this._renderToggleField("Hide message on badge click", "When enabled, clicking the badge in the header hides the alert message.", item.badge_hides_message !== false, (checked) => onUpdate("badge_hides_message", checked), batteryLocked)}</div>
           <div class="row single"><div class="inline-control"><div class="inline-control-header">${this._renderToggleField("Alert border", "Shows the border while active.", item.outlined ?? true, (checked) => onUpdate("outlined", checked), batteryLocked)}</div><div class="inline-color-block"><span class="inline-color-label">Color</span>${this._renderColorSelect(item.border_color ?? "red", batteryLocked, (value) => onUpdate("border_color", value), true)}</div></div></div>
           <div class="row single"><div class="inline-control"><div><div>Alert icon</div><div class="hint">Top-right icon while active. Overrides state icons.</div></div><div class="icon-picker-row">${this._renderIconPicker(item.icon ?? "", batteryLocked, (value) => onUpdate("icon", value || undefined))}</div><div class="inline-color-block"><span class="inline-color-label">Color</span>${this._renderColorSelect(item.icon_color ?? item.border_color ?? "red", batteryLocked, (value) => onUpdate("icon_color", value), true)}</div></div></div>
         </div>

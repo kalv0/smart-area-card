@@ -41,7 +41,6 @@ export interface ComputedDeviceModel {
   batteryLevel?: number;
   alertMessages: string[];
   alertsByBadge: Partial<Record<SmartRoomHeaderBadge, string[]>>;
-  alertBadgeHideable: Partial<Record<SmartRoomHeaderBadge, boolean>>;
 }
 
 export const computeDeviceModel = (
@@ -113,7 +112,6 @@ export const computeDeviceModel = (
   const batteryLevelValue = getBatteryLevel(batteryEntity);
   const alertMessages: string[] = [];
   const alertsByBadge: Partial<Record<SmartRoomHeaderBadge, string[]>> = {};
-  const alertBadgeHideable: Partial<Record<SmartRoomHeaderBadge, boolean>> = {};
   matchedAlerts.forEach((item) => {
     const conditionSuffix = (item.conditions ?? [])
       .map((c) => {
@@ -135,9 +133,6 @@ export const computeDeviceModel = (
     if (badge !== "none") {
       if (!alertsByBadge[badge]) alertsByBadge[badge] = [];
       alertsByBadge[badge]!.push(message);
-      if (alertBadgeHideable[badge] !== false) {
-        alertBadgeHideable[badge] = item.badge_hides_message !== false;
-      }
     }
   });
 
@@ -171,6 +166,5 @@ export const computeDeviceModel = (
     batteryLevel: batteryLevelValue,
     alertMessages,
     alertsByBadge,
-    alertBadgeHideable,
   };
 };

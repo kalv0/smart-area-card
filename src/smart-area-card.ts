@@ -271,9 +271,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       default: {
         const cfg = BADGE_CONFIG[badge];
         if (!cfg) return nothing;
-        const alertMessages = this._renderModel?.alertsByBadge?.[badge] ?? [];
-        const hideable = this._renderModel?.alertBadgeHideable?.[badge] !== false;
-        if (alertMessages.length > 0 && hideable) {
+        if ((this._renderModel?.alertsByBadge?.[badge]?.length ?? 0) > 0) {
           return html`<button class="${cfg.pillClass} header-pill-button header-pill-clickable" @click=${(e: Event) => this._handleAlertBadgeClick(badge, e)}><ha-icon icon=${cfg.icon}></ha-icon>${countLabel}</button>`;
         }
         return html`<span class="${cfg.pillClass}"><ha-icon icon=${cfg.icon}></ha-icon>${countLabel}</span>`;
@@ -285,10 +283,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const alertsByBadge = this._renderModel?.alertsByBadge ?? {};
     const visiblePanels = (Object.entries(alertsByBadge) as [SmartRoomHeaderBadge, string[]][])
       .filter(([, messages]) => messages.length > 0)
-      .filter(([badge]) => {
-        const hideable = this._renderModel?.alertBadgeHideable?.[badge] !== false;
-        return !hideable || !this._closedAlertPanels.has(badge);
-      });
+      .filter(([badge]) => !this._closedAlertPanels.has(badge));
     if (!visiblePanels.length) return nothing;
     return html`${visiblePanels.map(([badge, messages]) => {
       const icon = BADGE_CONFIG[badge]?.icon ?? "mdi:alert-circle-outline";
@@ -319,13 +314,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     if (!this._config?.ui?.automation_badge_enabled) return nothing;
     const count = this._renderModel?.badgeCounts?.automation ?? 0;
     if (!count) return nothing;
-    const label = `${count} automations enabled`;
-    const navigates = this._config.ui?.automation_badge_tap_navigate !== false;
-    const content = html`<ha-icon icon="mdi:home-automation"></ha-icon><span class="badge-count">${count}</span>`;
-    if (navigates) {
-      return html`<button class="automation-badge automation-badge-clickable" aria-label=${label} @click=${this._handleAutomationBadgeClick}>${content}</button>`;
-    }
-    return html`<span class="automation-badge" aria-label=${label}>${content}</span>`;
+    return html`<button class="automation-badge automation-badge-clickable" aria-label="${count} automations enabled" @click=${this._handleAutomationBadgeClick}><ha-icon icon="mdi:home-automation"></ha-icon><span class="badge-count">${count}</span></button>`;
   }
 
   private _handleAutomationBadgeClick = (event: Event): void => {
