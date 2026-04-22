@@ -102,6 +102,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   @state() private _expanded = false;
   @state() private _everExpanded = false;
   @state() private _showAutomationPanel = false;
+  @state() private _closedAlertPanels = new Set<SmartRoomHeaderBadge>();
 
   private _renderModel?: RenderModel;
   private _lastSignature = "";
@@ -139,6 +140,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     };
 
     this._restoreExpanded();
+    this._restoreAutomationPanel();
+    this._restoreAlertPanels();
   }
 
   public getCardSize(): number {
@@ -161,7 +164,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
   protected shouldUpdate(changedProps: Map<string, unknown>): boolean {
     if (!changedProps.size) return true;
-    if (changedProps.has("_config") || changedProps.has("_expanded") || changedProps.has("_showAutomationPanel")) {
+    if (changedProps.has("_config") || changedProps.has("_expanded") || changedProps.has("_showAutomationPanel") || changedProps.has("_closedAlertPanels")) {
       return true;
     }
     if (changedProps.has("hass")) {
@@ -203,7 +206,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         <div class="shell">
           <section class="summary-zone">
             ${this._renderHeader()}
-            ${this._renderModel.hasAlert ? this._renderAlertBar() : nothing}
+            ${this._renderAlertPanels()}
             ${this._renderAutomationPanel()}
           </section>
           ${this._renderExpander()}
@@ -265,20 +268,45 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         return html`<span class="media-pill"><span class="media-main"><ha-icon icon="mdi:play"></ha-icon><span class="media-waves" aria-hidden="true"><span></span><span></span><span></span></span></span>${countLabel}</span>`;
       default: {
         const cfg = BADGE_CONFIG[badge];
-        return cfg ? html`<span class="${cfg.pillClass}"><ha-icon icon=${cfg.icon}></ha-icon>${countLabel}</span>` : nothing;
+        if (!cfg) return nothing;
+        const alertMessages = this._renderModel?.alertsByBadge?.[badge] ?? [];
+        if (alertMessages.length > 0) {
+          return html`<button class="${cfg.pillClass}" @click=${(e: Event) => this._handleAlertBadgeClick(badge, e)}><ha-icon icon=${cfg.icon}></ha-icon>${countLabel}</button>`;
+        }
+        return html`<span class="${cfg.pillClass}"><ha-icon icon=${cfg.icon}></ha-icon>${countLabel}</span>`;
       }
     }
   }
 
-  private _renderAlertBar(): TemplateResult {
-    return html`
-      <section class="alert-bar">
-        <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
-        <div class="alert-lines">
-          ${(this._renderModel?.alertReasons ?? []).map((reason) => html`<div>${reason}</div>`)}
-        </div>
-      </section>
-    `;
+  private _renderAlertPanels(): TemplateResult | typeof nothing {
+    const alertsByBadge = this._renderModel?.alertsByBadge ?? {};
+    const visiblePanels = (Object.entries(alertsByBadge) as [SmartRoomHeaderBadge, string[]][])
+      .filter(([, messages]) => messages.length > 0)
+      .filter(([badge]) => !this._closedAlertPanels.has(badge));
+    if (!visiblePanels.length) return nothing;
+    return html`${visiblePanels.map(([badge, messages]) => {
+      const icon = BADGE_CONFIG[badge]?.icon ?? "mdi:alert-circle-outline";
+      return html`
+        <section class="alert-bar">
+          <ha-icon icon=${icon}></ha-icon>
+          <div class="alert-lines">
+            ${messages.map((msg) => html`<div>${msg}</div>`)}
+          </div>
+        </section>
+      `;
+    })}`;
+  }
+
+  private _handleAlertBadgeClick(badge: SmartRoomHeaderBadge, event: Event): void {
+    event.stopPropagation();
+    const next = new Set(this._closedAlertPanels);
+    if (next.has(badge)) {
+      next.delete(badge);
+    } else {
+      next.add(badge);
+    }
+    this._closedAlertPanels = next;
+    this._persistAlertPanels();
   }
 
   private _renderAutomationBadge(): TemplateResult | typeof nothing {
@@ -297,6 +325,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _handleAutomationBadgeClick = (event: Event): void => {
     event.stopPropagation();
     this._showAutomationPanel = !this._showAutomationPanel;
+    this._persistAutomationPanel();
   };
 
   private _getAreaAutomations(): Array<{ name: string; enabled: boolean; lastTriggered?: string | null }> {
@@ -607,6 +636,44 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       return;
     }
     window.localStorage.setItem(storageKeyForConfig(this._config), String(this._expanded));
+  }
+
+  private _restoreAutomationPanel(): void {
+    if (!this._config) return;
+    if (this._config.expander?.persist_state === false) {
+      this._showAutomationPanel = false;
+      return;
+    }
+    const raw = window.localStorage.getItem(`smart-area:${this._config.room}:automation-panel`);
+    this._showAutomationPanel = raw === "true";
+  }
+
+  private _persistAutomationPanel(): void {
+    if (!this._config || this._config.expander?.persist_state === false) return;
+    window.localStorage.setItem(`smart-area:${this._config.room}:automation-panel`, String(this._showAutomationPanel));
+  }
+
+  private _restoreAlertPanels(): void {
+    if (!this._config) return;
+    if (this._config.expander?.persist_state === false) {
+      this._closedAlertPanels = new Set();
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem(`smart-area:${this._config.room}:alerts-closed`);
+      const parsed = raw ? JSON.parse(raw) as string[] : [];
+      this._closedAlertPanels = new Set(parsed as SmartRoomHeaderBadge[]);
+    } catch {
+      this._closedAlertPanels = new Set();
+    }
+  }
+
+  private _persistAlertPanels(): void {
+    if (!this._config || this._config.expander?.persist_state === false) return;
+    window.localStorage.setItem(
+      `smart-area:${this._config.room}:alerts-closed`,
+      JSON.stringify([...this._closedAlertPanels]),
+    );
   }
 
   private _getInitialExpandedState(): boolean {

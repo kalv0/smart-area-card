@@ -8,6 +8,7 @@ export interface RenderModel {
   badgeCounts: Partial<Record<SmartRoomHeaderBadge, number>>;
   hasAlert: boolean;
   alertReasons: string[];
+  alertsByBadge: Partial<Record<SmartRoomHeaderBadge, string[]>>;
   climateItems: Array<{ key: string; icon: string; value: string; className: string }>;
   climateEntities: string[];
   roomBackground?: string;

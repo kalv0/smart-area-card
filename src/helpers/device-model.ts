@@ -40,6 +40,7 @@ export interface ComputedDeviceModel {
   image?: string;
   batteryLevel?: number;
   alertMessages: string[];
+  alertsByBadge: Partial<Record<SmartRoomHeaderBadge, string[]>>;
 }
 
 export const computeDeviceModel = (
@@ -107,6 +108,24 @@ export const computeDeviceModel = (
         ? getPaletteColor(iconState.item.icon_inactive_color)
         : "white";
 
+  const deviceLabel = normalizeName(config, entity);
+  const batteryLevelValue = getBatteryLevel(batteryEntity);
+  const alertMessages: string[] = [];
+  const alertsByBadge: Partial<Record<SmartRoomHeaderBadge, string[]>> = {};
+  matchedAlerts.forEach((item) => {
+    const message = item.preset_source === "battery"
+      ? batteryLevelValue !== undefined
+        ? `${deviceLabel} low battery (${batteryLevelValue}%)`
+        : `${deviceLabel} low battery`
+      : (item.message?.trim() || `${deviceLabel} alert`);
+    alertMessages.push(message);
+    const badge = (item.header_badge ?? "none") as SmartRoomHeaderBadge;
+    if (badge !== "none") {
+      if (!alertsByBadge[badge]) alertsByBadge[badge] = [];
+      alertsByBadge[badge]!.push(message);
+    }
+  });
+
   return {
     key: config.entity,
     config,
@@ -125,7 +144,7 @@ export const computeDeviceModel = (
     activeAccent: accent,
     activeAccentCss: accent !== "none" ? getPaletteColor(accent) : undefined,
     outlined,
-    label: normalizeName(config, entity),
+    label: deviceLabel,
     stateText: resolveStateText(states, config.states?.states, entity),
     statusIcon,
     statusIconColor,
@@ -134,16 +153,8 @@ export const computeDeviceModel = (
     alertHeaderBorder: primaryAlert?.header_border !== false && isAlert,
     icon: getDeviceIcon(config, entity),
     image: resolveDeviceImage(config, isOn, matchedState, imageState?.item),
-    batteryLevel: getBatteryLevel(batteryEntity),
-    alertMessages: matchedAlerts
-      .map((item) => {
-        if (item.preset_source === "battery") {
-          return batteryEntity && getBatteryLevel(batteryEntity) !== undefined
-            ? `${normalizeName(config, entity)} low battery (${getBatteryLevel(batteryEntity)}%)`
-            : `${normalizeName(config, entity)} low battery`;
-        }
-        return item.message?.trim() || `${normalizeName(config, entity)} alert`;
-      })
-      .filter(Boolean),
+    batteryLevel: batteryLevelValue,
+    alertMessages,
+    alertsByBadge,
   };
 };

@@ -15,6 +15,13 @@ export function computeRenderModel(
   const hassExt = hass as HomeAssistantExtended;
   const devices = (config.devices ?? []).map((device) => computeDeviceModel(states, device));
   const deviceAlerts = devices.filter((device) => device.isAlert);
+  const alertsByBadge: Partial<Record<import("./types").SmartRoomHeaderBadge, string[]>> = {};
+  deviceAlerts.forEach((device) => {
+    (Object.entries(device.alertsByBadge) as [import("./types").SmartRoomHeaderBadge, string[]][]).forEach(([badge, messages]) => {
+      if (!alertsByBadge[badge]) alertsByBadge[badge] = [];
+      alertsByBadge[badge]!.push(...messages);
+    });
+  });
   const temp = getEntity(states, config.sensors?.temperature);
   const humidity = getEntity(states, config.sensors?.humidity);
   const co2 = getEntity(states, config.sensors?.co2);
@@ -47,6 +54,7 @@ export function computeRenderModel(
     activeRecCount: devices.filter((d) => d.countsAsRecActive).length,
     badgeCounts,
     hasAlert: deviceAlerts.some((d) => d.alertHeaderBorder) || climateAlerts.length > 0,
+    alertsByBadge,
     alertReasons: [
       ...deviceAlerts.flatMap((device) =>
         device.alertMessages.length ? device.alertMessages : [`${device.label} alert`],
