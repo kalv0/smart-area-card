@@ -1,3 +1,4 @@
+/** Intentionally `string` — device types are extensible via BUILTIN_TYPE_DEFINITIONS and user-defined presets. */
 export type SmartRoomDeviceType = string;
 
 export type SmartRoomActionType = "button" | "more-info" | "custom" | "none";
@@ -249,13 +250,5 @@ export interface SmartRoomCardConfig {
     condition?: ConditionConfig;
   };
 }
-
-export const DEVICE_TYPES: SmartRoomDeviceType[] = [
-  "light",
-  "camera",
-  "media_player",
-  "lock",
-  "custom",
-];
 
 export const UNAVAILABLE_STATES = new Set(["unavailable", "unknown"]);
