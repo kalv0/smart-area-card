@@ -19,9 +19,20 @@ import type { HomeAssistantExtended, EntityRegistryEntry, DeviceRegistryEntry } 
 import type { SmartRoomTypeDefinition } from "./editor/editor-types";
 import { DEVICE_ENTITY_PLACEHOLDER, EXTRA_FIELD_PLACEHOLDERS } from "./editor/editor-types";
 import { BUILTIN_TYPE_DEFINITIONS } from "./editor/builtin-types";
-import { INITIAL_STATES, OPERATORS, COLOR_OPTIONS, HEADER_BADGE_OPTIONS, ALERT_HEADER_BADGE_OPTIONS, DOMAIN_MULTISELECT_OPTIONS } from "./editor/editor-constants";
-import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUndefined, allowedMainEntitiesSummary, domainSummary, normalizeTypeDefaultDevice, valueFromEvent } from "./editor/editor-utils";
+import { INITIAL_STATES, OPERATORS, COLOR_OPTIONS, HEADER_BADGE_OPTIONS, ALERT_HEADER_BADGE_OPTIONS } from "./editor/editor-constants";
+import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUndefined, allowedMainEntitiesSummary, normalizeTypeDefaultDevice, valueFromEvent } from "./editor/editor-utils";
 import { materializeTypeDefinition, mergePresetStates, mergePresetAlerts, syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
+
+const SENSOR_DEVICE_CLASSES: Partial<Record<string, string[]>> = {
+  temperature: ["temperature"],
+  humidity: ["humidity"],
+  co2: ["carbon_dioxide"],
+  voc: ["volatile_organic_compounds"],
+  pm25: ["pm25"],
+  aqi: ["aqi"],
+  noise: ["sound_pressure"],
+  presence: ["presence", "motion", "occupancy", "moving"],
+};
 
 export class SmartAreaCardEditor extends LitElement {
   static styles = calvoRoomCardEditorStyles;
@@ -33,7 +44,6 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _dragIndex?: number;
   @state() private _dropIndex?: number;
   @state() private _showAddTypePicker = false;
-  @state() private _domainSearchByKey: Record<string, string> = {};
   @state() private _showAdvancedCardSetup = false;
   @state() private _showAdvancedClimate = false;
   @state() private _showAdvancedBattery = false;
@@ -201,6 +211,7 @@ export class SmartAreaCardEditor extends LitElement {
     const restrictToRoom = hasRoomId && config.sensors?.filters?.[key]?.restrict_to_room_area !== false;
     const showAll = !restrictToRoom;
     const isPresence = key === "presence";
+    const deviceClasses = SENSOR_DEVICE_CLASSES[key];
     return html`
       <div class="sensor-row">
         <div class="sensor-row-header">
@@ -209,13 +220,7 @@ export class SmartAreaCardEditor extends LitElement {
           <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(key, "enabled", v))}<span>Alert</span></label>
         </div>
         <div class="sensor-row-body">
-          ${this._renderEntityPicker(entityId, (v) => this._setSensor(key, v), false, this._entitySelector(domains, restrictToRoom, this._config?.room_id))}
-          ${hasRoomId ? html`
-            <label class="show-all-check">
-              <input type="checkbox" .checked=${showAll} @change=${(e: Event) => this._setSensorFilter(key, "restrict_to_room_area", !(e.target as HTMLInputElement).checked)} />
-              <span>Show all entities</span>
-            </label>
-          ` : nothing}
+          ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(key, "restrict_to_room_area", !showAll))}
         </div>
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
@@ -307,14 +312,44 @@ export class SmartAreaCardEditor extends LitElement {
 
   private _renderIdentityPanel(device: SmartRoomDeviceConfig, index: number, entityRequired: boolean, entityValid: boolean) {
     const definition = this._definitionForType(device.type ?? "custom");
-    const invalidReason = !this._isRoomIdValid(this._config?.room_id)
-      ? "Area ID required"
-      : "";
-    const batterySelector = this._getDeviceSelectorOverride(device, "battery", {
-      domains: ["sensor"],
-      restrict_to_room_area: this._deviceRestrictsToRoomArea(device),
-    });
-    return html`<div class="panel ${this._toneClass(device.type)}"><div class="panel-title">Identity</div><div class="row"><label>Name<span class="hint">Tile label.</span><input .value=${device.name ?? ""} @input=${(e: InputEvent) => this._setDevice(index, "name", valueFromEvent(e))} /></label><div class="field-card">${invalidReason ? html`<div class="error-chip">${invalidReason}</div>` : nothing}<div class="field-title">Entity</div><span class="hint">Main device entity.</span>${this._renderEntityPicker(device.entity ?? "", (value) => this._setDevice(index, "entity", value), false, this._entitySelectorForDevice(device))}${this._renderDeviceEntitySelectorTools(device, "entity", this._allowedMainEntities(device.type), (next) => this._setDeviceSelector(index, "entity", next))}${!this._isRoomIdValid(this._config?.room_id) ? html`<span class="required-note">Set Area ID first.</span>` : html`${nothing}`}</div></div><div class="row"><div class="field-card"><div class="field-title">Battery entity</div><span class="hint">Battery source.</span>${this._renderEntityPicker(device.battery ?? "", (value) => this._setDevice(index, "battery", value), false, this._entitySelector(["sensor"], batterySelector.restrict_to_room_area ?? false, this._config?.room_id, { device_class: ["battery"] }))}${this._renderDeviceAreaOnlySelectorTool(device, "battery", (next) => this._setDeviceSelector(index, "battery", next))}${device.battery?.trim() ? html`<span class="hint">${this._isEntityValid(device.battery) ? "Valid battery entity." : "Battery entity is not valid yet."}</span>${this._renderCompactCheckField("Show battery level", "Shows the battery icon and percentage on the device tile.", device.show_battery !== false, (checked) => this._setDevice(index, "show_battery", checked))}${this._renderCompactCheckField("Enable battery alert", "Derives a low battery alert using the card-level battery alert settings.", device.battery_alert_enabled !== false, (checked) => this._setDevice(index, "battery_alert_enabled", checked))}` : html`<span class="hint">Optional. Creates a low battery alert and shows battery level on the tile.</span>`}</div><div></div></div>${(definition.extra_fields ?? []).map((field) => { const fieldSelector = this._getDeviceSelectorOverride(device, `var:${field.key}`, { domains: field.selector_domains ?? ["*"], restrict_to_room_area: this._deviceRestrictsToRoomArea(device) }); return html`<div class="row single"><div class="field-card"><div class="field-title">${field.label}</div><span class="hint">${field.hint}</span>${this._renderEntityPicker(String(device.variables?.[field.key] ?? device[field.key as keyof SmartRoomDeviceConfig] ?? ""), (value) => this._setDeviceVariable(index, field.key, value), false, this._entitySelector(fieldSelector.domains?.includes("*") ? undefined : fieldSelector.domains?.map((item) => item.endsWith(".") ? item.slice(0, -1) : item), fieldSelector.restrict_to_room_area ?? false, this._config?.room_id))}${this._renderDeviceEntitySelectorTools(device, `var:${field.key}`, field.selector_domains ?? ["*"], (next) => this._setDeviceSelector(index, `var:${field.key}`, next))}${String(device.variables?.[field.key] ?? "").trim() ? html`<span class="hint">${this._isEntityValid(String(device.variables?.[field.key] ?? "")) ? "Valid entity." : "Entity is not valid yet."}</span>` : nothing}</div></div>`; })}</div>`;
+    const hasRoom = this._isRoomIdValid(this._config?.room_id);
+    const roomId = this._config?.room_id;
+    const entityDomains = this._allowedMainEntities(device.type).filter((d) => d !== "*");
+    const entityRestrict = hasRoom && device.entity_selectors?.["entity"]?.restrict_to_room_area !== false;
+    const batteryRestrict = hasRoom && device.entity_selectors?.["battery"]?.restrict_to_room_area !== false;
+    return html`<div class="panel ${this._toneClass(device.type)}">
+      <div class="panel-title">Identity</div>
+      <div class="row">
+        <label>Name<span class="hint">Tile label.</span><input .value=${device.name ?? ""} @input=${(e: InputEvent) => this._setDevice(index, "name", valueFromEvent(e))} /></label>
+        <div class="field-card">
+          ${!hasRoom ? html`<div class="error-chip">Area ID required</div>` : nothing}
+          <div class="field-title">Entity</div>
+          <span class="hint">Main device entity.</span>
+          ${this._renderSmartEntityPicker(device.entity ?? "", (value) => this._setDevice(index, "entity", value), entityDomains.length ? entityDomains : undefined, undefined, entityRestrict, roomId, (showAll) => this._setDeviceSelector(index, "entity", { ...(device.entity_selectors?.["entity"] ?? {}), restrict_to_room_area: !showAll, domains: entityDomains.length ? entityDomains : ["*"] }))}
+        </div>
+      </div>
+      <div class="row">
+        <div class="field-card">
+          <div class="field-title">Battery entity</div>
+          <span class="hint">Battery source.</span>
+          ${this._renderSmartEntityPicker(device.battery ?? "", (value) => this._setDevice(index, "battery", value), ["sensor"], ["battery"], batteryRestrict, roomId, (showAll) => this._setDeviceSelector(index, "battery", { ...(device.entity_selectors?.["battery"] ?? {}), restrict_to_room_area: !showAll, domains: ["sensor"] }))}
+          ${device.battery?.trim() ? html`<span class="hint">${this._isEntityValid(device.battery) ? "Valid battery entity." : "Battery entity is not valid yet."}</span>${this._renderCompactCheckField("Show battery level", "Shows the battery icon and percentage on the device tile.", device.show_battery !== false, (checked) => this._setDevice(index, "show_battery", checked))}${this._renderCompactCheckField("Enable battery alert", "Derives a low battery alert using the card-level battery alert settings.", device.battery_alert_enabled !== false, (checked) => this._setDevice(index, "battery_alert_enabled", checked))}` : html`<span class="hint">Optional. Creates a low battery alert and shows battery level on the tile.</span>`}
+        </div>
+        <div></div>
+      </div>
+      ${(definition.extra_fields ?? []).map((field) => {
+        const fieldKey = `var:${field.key}`;
+        const fieldDomains = (field.selector_domains ?? []).filter((d) => d !== "*");
+        const fieldRestrict = hasRoom && device.entity_selectors?.[fieldKey]?.restrict_to_room_area !== false;
+        const fieldValue = String(device.variables?.[field.key] ?? (device as Record<string, unknown>)[field.key] ?? "");
+        return html`<div class="row single"><div class="field-card">
+          <div class="field-title">${field.label}</div>
+          <span class="hint">${field.hint}</span>
+          ${this._renderSmartEntityPicker(fieldValue, (value) => this._setDeviceVariable(index, field.key, value), fieldDomains.length ? fieldDomains : undefined, undefined, fieldRestrict, roomId, (showAll) => this._setDeviceSelector(index, fieldKey, { ...(device.entity_selectors?.[fieldKey] ?? {}), restrict_to_room_area: !showAll, domains: field.selector_domains ?? ["*"] }))}
+          ${fieldValue.trim() ? html`<span class="hint">${this._isEntityValid(fieldValue) ? "Valid entity." : "Entity is not valid yet."}</span>` : nothing}
+        </div></div>`;
+      })}
+    </div>`;
   }
 
   private _renderSharedVisualsPanel(
@@ -364,19 +399,6 @@ entities:
 If your popup content is already a JSON object, you can paste it as-is.</span></label></div>` : nothing}
       </div>
     </div>`;
-  }
-
-  private _renderDomainMultiSelect(selectedValues: string[], onChange: (next: string[]) => void, searchKey = "shared") {
-    const selected = selectedValues?.length ? selectedValues : ["*"];
-    const query = (this._domainSearchByKey[searchKey] ?? "").trim().toLowerCase();
-    const options = [
-      DOMAIN_MULTISELECT_OPTIONS[0],
-      ...DOMAIN_MULTISELECT_OPTIONS.slice(1).sort((a, b) => a.label.localeCompare(b.label)),
-    ].filter((item) => !query || item.label.toLowerCase().includes(query) || item.value.toLowerCase().includes(query));
-    return html`<details class="multi-select" @toggle=${(e: Event) => {
-      if (!(e.currentTarget instanceof HTMLDetailsElement) || e.currentTarget.open) return;
-      this._domainSearchByKey = { ...this._domainSearchByKey, [searchKey]: "" };
-    }}><summary><div class="multi-select-trigger"><span class="multi-select-value">${domainSummary(selected)}</span><span>▾</span></div></summary><div class="multi-select-menu"><input class="multi-select-search" type="text" placeholder="Search entity domains" .value=${this._domainSearchByKey[searchKey] ?? ""} @input=${(e: InputEvent) => { this._domainSearchByKey = { ...this._domainSearchByKey, [searchKey]: valueFromEvent(e) }; }} /><div class="multi-select-options">${options.map((item) => { const checked = selected.includes("*") ? item.value === "*" : selected.includes(item.value); return html`<label class="multi-select-option"><input type="checkbox" .checked=${checked} @change=${(e: Event) => { const isChecked = (e.currentTarget as HTMLInputElement).checked; const current = new Set(selected); if (item.value === "*") { onChange(["*"]); this._domainSearchByKey = { ...this._domainSearchByKey, [searchKey]: "" }; return; } current.delete("*"); if (isChecked) current.add(item.value); else current.delete(item.value); onChange(current.size ? Array.from(current).sort((left, right) => left.localeCompare(right)) : ["*"]); this._domainSearchByKey = { ...this._domainSearchByKey, [searchKey]: "" }; }} /><span class="multi-select-option-label">${item.label}</span></label>`; })}</div></div></details>`;
   }
 
   private _renderVisualsPanel(device: SmartRoomDeviceConfig, index: number) {
@@ -453,35 +475,6 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     };
   }
 
-  private _renderDeviceEntitySelectorTools(
-    device: SmartRoomDeviceConfig,
-    selectorKey: string,
-    defaultDomains: string[] | undefined,
-    onChange: (next: SmartRoomEntitySelectorOverride) => void,
-  ) {
-    const roomName = this._areaName(this._config?.room_id) ?? "this room";
-    const current = this._getDeviceSelectorOverride(device, selectorKey, { domains: defaultDomains, restrict_to_room_area: this._deviceRestrictsToRoomArea(device) });
-    return html`<div class="entity-selector-tools">
-      ${this._renderCompactCheckField(`Only entities from ${roomName}`, "Limit this picker to the selected area.", current.restrict_to_room_area ?? false, (checked) => onChange({ ...current, restrict_to_room_area: checked }))}
-      <div class="field-card">
-        <div class="field-title">Allowed entities</div>
-        <span class="hint">Entity domains allowed in this picker.</span>
-        ${this._renderDomainMultiSelect(current.domains ?? ["*"], (domains) => onChange({ ...current, domains }), `device-selector-${selectorKey}`)}
-      </div>
-    </div>`;
-  }
-
-  private _renderDeviceAreaOnlySelectorTool(
-    device: SmartRoomDeviceConfig,
-    selectorKey: string,
-    onChange: (next: SmartRoomEntitySelectorOverride) => void,
-  ) {
-    const roomName = this._areaName(this._config?.room_id) ?? "this room";
-    const current = this._getDeviceSelectorOverride(device, selectorKey, { domains: ["sensor"], restrict_to_room_area: this._deviceRestrictsToRoomArea(device) });
-    return html`<div class="entity-selector-tools">
-      ${this._renderCompactCheckField(`Only entities from ${roomName}`, "Limit this picker to the selected area.", current.restrict_to_room_area ?? false, (checked) => onChange({ ...current, restrict_to_room_area: checked, domains: ["sensor"] }))}
-    </div>`;
-  }
 
   private _areaEntityIds(areaId?: string, domains?: string[]): string[] {
     const normalizedAreaId = (areaId ?? "").trim();
@@ -499,6 +492,27 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       .sort((a, b) => a.localeCompare(b));
   }
 
+  private _areaEntityIdsFiltered(areaId?: string, domains?: string[], deviceClasses?: string[]): string[] {
+    const normalizedAreaId = (areaId ?? "").trim();
+    if (!normalizedAreaId) return [];
+    const allowedDomains = new Set((domains ?? []).map((d) => d.trim()).filter(Boolean));
+    const allowedClasses = deviceClasses && deviceClasses.length ? new Set(deviceClasses) : null;
+    const devicesById = new Map(this._deviceRegistry.map((item) => [item.id, item]));
+    return this._entityRegistry
+      .filter((entry) => {
+        const domain = entry.entity_id.split(".")[0] ?? "";
+        if (allowedDomains.size && !allowedDomains.has(domain)) return false;
+        const inArea = entry.area_id === normalizedAreaId ||
+          Boolean(entry.device_id && devicesById.get(entry.device_id)?.area_id === normalizedAreaId);
+        if (!inArea) return false;
+        if (!allowedClasses) return true;
+        const dc = this.hass?.states[entry.entity_id]?.attributes?.device_class as string | undefined;
+        return dc ? allowedClasses.has(dc) : false;
+      })
+      .map((entry) => entry.entity_id)
+      .sort((a, b) => a.localeCompare(b));
+  }
+
   private _entitySelector(domains?: string[], restrictToArea = false, areaId?: string, extra?: Record<string, unknown>): Record<string, unknown> {
     const selector: Record<string, unknown> = { entity: { ...(extra ?? {}) } };
     const entitySelector = selector.entity as Record<string, unknown>;
@@ -510,6 +524,36 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       entitySelector.include_entities = this._areaEntityIds(areaId, uniqueDomains.length ? uniqueDomains : undefined);
     }
     return selector;
+  }
+
+  private _entitySelectorFiltered(domains: string[] | undefined, restrictToArea: boolean, areaId: string | undefined, deviceClasses?: string[]): Record<string, unknown> {
+    const entitySpec: Record<string, unknown> = {};
+    const uniqueDomains = [...new Set((domains ?? []).map((d) => d.trim()).filter(Boolean).map((d) => d.endsWith(".") ? d.slice(0, -1) : d))];
+    if (uniqueDomains.length) entitySpec.domain = uniqueDomains;
+    if (restrictToArea) {
+      entitySpec.include_entities = this._areaEntityIdsFiltered(areaId, uniqueDomains.length ? uniqueDomains : undefined, deviceClasses);
+    } else if (deviceClasses && deviceClasses.length) {
+      entitySpec.device_class = deviceClasses.length === 1 ? deviceClasses[0] : deviceClasses;
+    }
+    return { entity: entitySpec };
+  }
+
+  private _renderSmartEntityPicker(
+    value: string,
+    onChange: (value: string) => void,
+    domains: string[] | undefined,
+    deviceClasses: string[] | undefined,
+    restrictToArea: boolean,
+    areaId: string | undefined,
+    onToggleShowAll: (showAll: boolean) => void,
+    disabled = false,
+  ) {
+    const hasRoom = Boolean(areaId?.trim());
+    const selector = this._entitySelectorFiltered(domains, restrictToArea, areaId, deviceClasses);
+    return html`
+      ${this._renderEntityPicker(value, onChange, disabled, selector)}
+      ${hasRoom && !disabled ? html`<label class="show-all-check"><input type="checkbox" .checked=${!restrictToArea} @change=${(e: Event) => onToggleShowAll((e.target as HTMLInputElement).checked)} /><span>Show all entities</span></label>` : nothing}
+    `;
   }
 
   private _renderPickerField(title: string, hint: string, content: unknown) {
@@ -721,9 +765,11 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     selectorDefaults?: { domains?: string[]; restrict_to_room_area?: boolean },
   ) {
     const current = condition ?? { entity: "", operator: "eq", value: "on" };
-    const domains = this._normalizeSelectorDomains(current.selector_domains ?? selectorDefaults?.domains ?? ["*"]);
-    const restrictToRoom = current.restrict_to_room_area ?? selectorDefaults?.restrict_to_room_area ?? false;
-    return html`<div class="row"><div class="field-card"><div class="field-title">Entity</div>${this._renderEntityPicker(current.entity, (value) => onChange({ ...current, entity: value }), disabled, this._entitySelector(domains.includes("*") ? undefined : domains.map((item) => item.endsWith(".") ? item.slice(0, -1) : item), restrictToRoom, this._config?.room_id))}${this._renderCompactCheckField(`Only entities from ${this._areaName(this._config?.room_id) ?? "this room"}`, "Limit this picker to the selected area.", restrictToRoom, (checked) => onChange({ ...current, restrict_to_room_area: checked }), disabled)}<div class="entity-selector-tools"><div class="field-card"><div class="field-title">Allowed entities</div><span class="hint">Entity domains allowed in this picker.</span>${this._renderDomainMultiSelect(domains, (next) => onChange({ ...current, selector_domains: next }), `condition-selector-${current.entity}-${current.operator}`)}</div></div></div><label>Operator<select ?disabled=${disabled} .value=${current.operator} @change=${(e: Event) => onChange({ ...current, operator: valueFromEvent(e) as ConditionConfig["operator"] })}>${OPERATORS.map((operator) => html`<option value=${operator}>${operator}</option>`)}</select></label></div><div class="row single"><label>Value<input ?disabled=${disabled} .value=${conditionValueToText(current.value)} @input=${(e: InputEvent) => onChange({ ...current, value: parseConditionValue(valueFromEvent(e)) })} /></label></div>`;
+    const hasRoom = this._isRoomIdValid(this._config?.room_id);
+    const rawDomains = current.selector_domains ?? selectorDefaults?.domains ?? ["*"];
+    const domains = rawDomains.filter((d) => d !== "*");
+    const restrictToRoom = current.restrict_to_room_area ?? selectorDefaults?.restrict_to_room_area ?? hasRoom;
+    return html`<div class="row"><div class="field-card"><div class="field-title">Entity</div>${this._renderSmartEntityPicker(current.entity, (value) => onChange({ ...current, entity: value }), domains.length ? domains : undefined, undefined, restrictToRoom, this._config?.room_id, (showAll) => onChange({ ...current, restrict_to_room_area: !showAll }), disabled)}</div><label>Operator<select ?disabled=${disabled} .value=${current.operator} @change=${(e: Event) => onChange({ ...current, operator: valueFromEvent(e) as ConditionConfig["operator"] })}>${OPERATORS.map((operator) => html`<option value=${operator}>${operator}</option>`)}</select></label></div><div class="row single"><label>Value<input ?disabled=${disabled} .value=${conditionValueToText(current.value)} @input=${(e: InputEvent) => onChange({ ...current, value: parseConditionValue(valueFromEvent(e)) })} /></label></div>`;
   }
 
   private _renderIconPicker(value: string, disabled: boolean, onChange: (value: string) => void) {
@@ -937,24 +983,6 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
   private _allowedMainEntities(type?: SmartRoomDeviceType): string[] {
     return this._definitionForType(type ?? "custom").allowed_main_entities ?? ["*"];
-  }
-
-  private _entitySelectorForDevice(device: SmartRoomDeviceConfig): Record<string, unknown> {
-    const selectorOverride = this._getDeviceSelectorOverride(device, "entity", {
-      domains: this._allowedMainEntities(device.type),
-      restrict_to_room_area: this._deviceRestrictsToRoomArea(device),
-    });
-    const patterns = selectorOverride.domains ?? this._allowedMainEntities(device.type);
-    const areaId = (this._config?.room_id ?? "").trim();
-    const restrictToArea = selectorOverride.restrict_to_room_area ?? false;
-    const domains = [...new Set(patterns
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((item) => item.endsWith(".") ? item.slice(0, -1) : item)
-      .filter((item) => !item.includes("*") && !item.includes(".")))];
-    return patterns.includes("*")
-      ? this._entitySelector(undefined, restrictToArea, areaId)
-      : this._entitySelector(domains, restrictToArea, areaId);
   }
 
   private _isEntityAllowedForDevice(device: SmartRoomDeviceConfig, entityId?: string): boolean {

@@ -60,13 +60,17 @@ export function evaluateClimateAlert(
   alertConfig: { enabled?: boolean; min?: number; max?: number; eq?: number | string } | undefined,
   label: string,
   icon: string,
+  roomName?: string,
 ): ClimateAlert | undefined {
   if (!alertConfig?.enabled || !entity || isUnavailable(entity)) {
     return undefined;
   }
 
   const unit = entity.attributes.unit_of_measurement ? ` ${entity.attributes.unit_of_measurement}` : "";
-  const message = `${label}: ${entity.state}${unit}`;
+  const stateStr = `${entity.state}${unit}`;
+  const message = roomName
+    ? `${roomName} ${label.toLowerCase()}: ${stateStr}`
+    : `${label}: ${stateStr}`;
 
   if (alertConfig.eq !== undefined && typeof alertConfig.eq === "string") {
     return entity.state === alertConfig.eq ? { key, label, reason: message, icon } : undefined;

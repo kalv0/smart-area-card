@@ -37,6 +37,22 @@ declare global {
   }
 }
 
+function groupClimateAlertsByIcon(
+  badges: Array<{ key: string; icon: string; messages: string[] }>,
+): Array<{ key: string; icon: string; messages: string[] }> {
+  const byIcon = new Map<string, { key: string; icon: string; messages: string[] }>();
+  for (const badge of badges) {
+    if (!badge.messages.length) continue;
+    const existing = byIcon.get(badge.icon);
+    if (existing) {
+      existing.messages = [...existing.messages, ...badge.messages];
+    } else {
+      byIcon.set(badge.icon, { key: badge.icon, icon: badge.icon, messages: [...badge.messages] });
+    }
+  }
+  return [...byIcon.values()];
+}
+
 const BADGE_CONFIG: Partial<Record<SmartRoomHeaderBadge, { pillClass: string; icon: string }>> = {
   alert_generic: { pillClass: "header-pill header-pill-red",    icon: "mdi:alert-circle-outline" },
   door_open:     { pillClass: "header-pill header-pill-red",    icon: "mdi:door-open" },
@@ -226,8 +242,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       </div>
     `);
 
-    const climatePills = (this._renderModel?.climateAlertBadges ?? [])
-      .filter((b) => b.messages.length > 0)
+    const climatePills = groupClimateAlertsByIcon(this._renderModel?.climateAlertBadges ?? [])
       .map((b) => html`<button class="header-pill header-pill-red header-pill-button header-pill-clickable" @click=${(e: Event) => this._handleAlertBadgeClick(b.key, e)}><ha-icon icon=${b.icon}></ha-icon></button>`);
 
     const alertPills = (["alert_generic", "door_open", "lock_open", "fire", "water", "plug_off", "low_battery"] as SmartRoomHeaderBadge[])
@@ -293,8 +308,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       .filter(([, messages]) => messages.length > 0)
       .forEach(([badge, messages]) => panels.push({ key: badge, icon: BADGE_CONFIG[badge]?.icon ?? "mdi:alert-circle-outline", messages }));
 
-    (this._renderModel?.climateAlertBadges ?? [])
-      .filter((b) => b.messages.length > 0)
+    groupClimateAlertsByIcon(this._renderModel?.climateAlertBadges ?? [])
       .forEach((b) => panels.push(b));
 
     const visible = panels.filter((p) => !this._closedAlertPanels.has(p.key));
