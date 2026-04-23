@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Typecheck · Test · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        # --include=dev is required: this project's npm config omits devDeps by default
+        run: npm install --include=dev
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Test
+        run: npm run test:run
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload bundle artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-area-card-dist
+          path: dist/smart-area-card.js
+          retention-days: 30
