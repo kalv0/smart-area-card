@@ -23,6 +23,7 @@ import type { RenderModel } from "./types/card-model";
 import type { HomeAssistantExtended } from "./types/ha-extensions";
 import { createCardSignature, resolveAreaAutomationIds } from "./helpers/room-model";
 import { computeRenderModel } from "./helpers/compute-render-model";
+import { warnOnInvalidConfig } from "./helpers/validate-config";
 import { PressController } from "./controllers/press-controller";
 import { ImageFitController } from "./controllers/image-fit-controller";
 import "./smart-area-card-editor";
@@ -156,6 +157,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       ...config,
     };
 
+    warnOnInvalidConfig(this._config);
     this._rebuildAutomationIds();
     this._restoreExpanded();
     this._restoreAutomationPanel();
