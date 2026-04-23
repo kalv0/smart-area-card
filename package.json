@@ -6,7 +6,9 @@
   "description": "Smart Area Card for Home Assistant — standalone, no integration required.",
   "scripts": {
     "build": "node build.mjs",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "test": "node node_modules/vitest/vitest.mjs",
+    "test:run": "node node_modules/vitest/vitest.mjs run"
   },
   "dependencies": {
     "custom-card-helpers": "^1.9.0",
@@ -15,6 +17,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.12",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.9"
   }
 }
