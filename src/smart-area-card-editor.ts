@@ -21,8 +21,9 @@ import type { SmartRoomTypeDefinition } from "./editor/editor-types";
 import { DEVICE_ENTITY_PLACEHOLDER, EXTRA_FIELD_PLACEHOLDERS } from "./editor/editor-types";
 import { BUILTIN_TYPE_DEFINITIONS } from "./editor/builtin-types";
 import { INITIAL_STATES, OPERATORS, COLOR_OPTIONS, HEADER_BADGE_OPTIONS, ALERT_HEADER_BADGE_OPTIONS } from "./editor/editor-constants";
-import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUndefined, allowedMainEntitiesSummary, normalizeTypeDefaultDevice, valueFromEvent } from "./editor/editor-utils";
-import { materializeTypeDefinition, mergePresetStates, mergePresetAlerts, syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
+import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUndefined, valueFromEvent } from "./editor/editor-utils";
+import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
+import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
 
 const SENSOR_DEVICE_CLASSES: Partial<Record<string, string[]>> = {
   temperature: ["temperature"],
@@ -975,16 +976,15 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   }
 
   private _isEntityRequired(device: SmartRoomDeviceConfig): boolean {
-    return this._definitionForType(device.type ?? "custom").entity_required;
+    return isEntityRequired(this._typeDefinitions, device);
   }
 
   private _definitionForType(type: SmartRoomDeviceType): SmartRoomTypeDefinition {
-    return BUILTIN_TYPE_DEFINITIONS.find((item) => item.id === type)
-      ?? BUILTIN_TYPE_DEFINITIONS.find((item) => item.id === "custom")!;
+    return definitionForType(this._typeDefinitions, type);
   }
 
   private _allowedMainEntities(type?: SmartRoomDeviceType): string[] {
-    return this._definitionForType(type ?? "custom").allowed_main_entities ?? ["*"];
+    return allowedMainEntities(this._typeDefinitions, type);
   }
 
   private _isEntityAllowedForDevice(device: SmartRoomDeviceConfig, entityId?: string): boolean {
@@ -1265,101 +1265,25 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     this._patch({ devices });
   }
   private _applyTypePreset(device: SmartRoomDeviceConfig, type: SmartRoomDeviceConfig["type"], entity: string): SmartRoomDeviceConfig {
-    const preset = this._buildPreset(type ?? "custom", entity, device);
-    return {
-      ...device,
-      ...preset,
-      entity: device.entity,
-      type: type ?? "custom",
-    };
+    return applyTypePreset(this._typeDefinitions, device, type, entity);
   }
   private _hydratePresetDefaults(device: SmartRoomDeviceConfig): SmartRoomDeviceConfig {
-    const preset = this._buildPreset(device.type ?? "custom", device.entity ?? "", device);
-    const mergedStates = mergePresetStates(device.states?.states, preset.states?.states);
-    const mergedAlerts = mergePresetAlerts(device.states?.alerts, preset.states?.alerts);
-    return this._applyDerivedBatteryAlert({
-      ...device,
-      image: device.image ?? preset.image,
-      image_on: device.image_on ?? preset.image_on,
-      image_off: device.image_off ?? preset.image_off,
-      privacy: device.privacy ?? preset.privacy,
-      tap_action: device.tap_action ?? preset.tap_action,
-      hold_action: device.hold_action ?? preset.hold_action,
-      double_tap_action: device.double_tap_action ?? preset.double_tap_action,
-      offline: device.offline ?? preset.offline,
-      states: {
-        ...(preset.states ?? {}),
-        ...(device.states ?? {}),
-        states: mergedStates,
-        alerts: mergedAlerts,
-      },
-    }, this._config?.ui?.battery_threshold ?? 20);
+    return hydratePresetDefaults(this._typeDefinitions, device, this._config?.ui?.battery_threshold ?? 20, this._config?.ui);
   }
   private _syncDeviceWithEntity(device: SmartRoomDeviceConfig, previousEntity: string, nextEntity: string): SmartRoomDeviceConfig {
-    const preset = this._buildPreset(device.type ?? "custom", nextEntity, device);
-    return this._applyDerivedBatteryAlert({
-      ...device,
-      entity: nextEntity,
-      tap_action: syncActionEntity(device.tap_action, preset.tap_action, previousEntity, nextEntity, [DEVICE_ENTITY_PLACEHOLDER]),
-      hold_action: syncActionEntity(device.hold_action, preset.hold_action, previousEntity, nextEntity, [DEVICE_ENTITY_PLACEHOLDER]),
-      double_tap_action: syncActionEntity(device.double_tap_action, preset.double_tap_action, previousEntity, nextEntity, [DEVICE_ENTITY_PLACEHOLDER]),
-      offline: syncOfflinePreset(device.offline, preset.offline, previousEntity, nextEntity, [DEVICE_ENTITY_PLACEHOLDER]),
-      states: syncStatePreset(device.states, preset.states, previousEntity, nextEntity, [DEVICE_ENTITY_PLACEHOLDER]),
-    }, this._config?.ui?.battery_threshold ?? 20);
+    return syncDeviceWithEntity(this._typeDefinitions, device, previousEntity, nextEntity, this._config?.ui?.battery_threshold ?? 20, this._config?.ui);
   }
   private _buildPreset(type: SmartRoomDeviceConfig["type"], entity: string, device?: SmartRoomDeviceConfig): SmartRoomDeviceConfig {
-    const definition = this._definitionForType(type ?? "custom");
-    return materializeTypeDefinition(definition, {
-      entity,
-      privacy: device?.privacy,
-      battery: device?.battery,
-      variables: device?.variables,
-    });
+    return buildPreset(this._typeDefinitions, type, entity, device);
   }
   private _buildResolvedPresetDevice(device: SmartRoomDeviceConfig): SmartRoomDeviceConfig {
-    return this._applyDerivedBatteryAlert(
-      this._applyTypePreset(
-        {
-          ...device,
-          states: { on_conditions: [], alert_conditions: [] },
-        },
-        device.type ?? "custom",
-        device.entity ?? "",
-      ),
-      this._config?.ui?.battery_threshold ?? 20,
-    );
+    return buildResolvedPresetDevice(this._typeDefinitions, device, this._config?.ui?.battery_threshold ?? 20, this._config?.ui);
   }
-  private _applyDerivedBatteryAlertWithUi(
-    device: SmartRoomDeviceConfig,
-    threshold: number,
-    ui: SmartRoomCardConfig["ui"],
-  ): SmartRoomDeviceConfig {
-    const batteryEntity = device.battery?.trim();
-    const allAlerts = device.states?.alerts ?? [];
-    const existingBatteryAlert = allAlerts.find((item) => item.preset_source === "battery");
-    const currentAlerts = allAlerts.filter((item) => item.preset_source !== "battery");
-    if (!batteryEntity || device.battery_alert_enabled === false) {
-      return { ...device, states: { ...(device.states ?? {}), alerts: currentAlerts } };
-    }
-    const batteryAlert: SmartRoomNamedAlertConfig = {
-      name: "Low battery",
-      preset: true,
-      preset_source: "battery",
-      conditions: [{ entity: batteryEntity, operator: "lte", value: threshold }],
-      enabled: existingBatteryAlert?.enabled !== false,
-      message: existingBatteryAlert?.message ?? "",
-      outlined: existingBatteryAlert?.outlined ?? (ui?.battery_alert_outlined !== false),
-      border_color: existingBatteryAlert?.border_color ?? (ui?.battery_alert_border_color ?? "red"),
-      header_badge: existingBatteryAlert?.header_badge ?? (ui?.battery_alert_header_badge ?? "low_battery"),
-      header_border: existingBatteryAlert?.header_border ?? (ui?.battery_alert_header_border !== false),
-      icon: existingBatteryAlert?.icon,
-      icon_color: existingBatteryAlert?.icon_color,
-    };
-    return { ...device, states: { ...(device.states ?? {}), alerts: [...currentAlerts, batteryAlert] } };
+  private _applyDerivedBatteryAlertWithUi(device: SmartRoomDeviceConfig, threshold: number, ui: SmartRoomCardConfig["ui"]): SmartRoomDeviceConfig {
+    return applyDerivedBatteryAlertWithUi(device, threshold, ui);
   }
-
   private _applyDerivedBatteryAlert(device: SmartRoomDeviceConfig, threshold: number): SmartRoomDeviceConfig {
-    return this._applyDerivedBatteryAlertWithUi(device, threshold, this._config?.ui);
+    return applyDerivedBatteryAlertWithUi(device, threshold, this._config?.ui);
   }
   private _setOffline(index: number, key: string, value: unknown) { const devices = [...(this._config?.devices ?? [])]; devices[index] = { ...devices[index], offline: { ...(devices[index].offline ?? {}), [key]: value } }; this._patch({ devices }); }
   private _resetPresetState(index: number, stateIndex: number) {
