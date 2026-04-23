@@ -169,6 +169,8 @@ export interface SmartRoomCardConfig {
     voc?: string;
     pm25?: string;
     aqi?: string;
+    presence?: string;
+    noise?: string;
     filters?: {
       temperature?: { restrict_to_room_area?: boolean };
       humidity?: { restrict_to_room_area?: boolean };
@@ -176,6 +178,8 @@ export interface SmartRoomCardConfig {
       voc?: { restrict_to_room_area?: boolean };
       pm25?: { restrict_to_room_area?: boolean };
       aqi?: { restrict_to_room_area?: boolean };
+      presence?: { restrict_to_room_area?: boolean };
+      noise?: { restrict_to_room_area?: boolean };
     };
     alerts?: {
       temperature?: { enabled?: boolean; min?: number; max?: number; eq?: number };
@@ -184,6 +188,8 @@ export interface SmartRoomCardConfig {
       voc?: { enabled?: boolean; min?: number; max?: number; eq?: number };
       pm25?: { enabled?: boolean; min?: number; max?: number; eq?: number };
       aqi?: { enabled?: boolean; min?: number; max?: number; eq?: number };
+      noise?: { enabled?: boolean; min?: number; max?: number; eq?: number };
+      presence?: { enabled?: boolean; eq?: string };
     };
     icons?: {
       temperature?: string;
@@ -192,6 +198,8 @@ export interface SmartRoomCardConfig {
       voc?: string;
       pm25?: string;
       aqi?: string;
+      presence?: string;
+      noise?: string;
     };
     custom?: SmartRoomCustomSensor[];
   };

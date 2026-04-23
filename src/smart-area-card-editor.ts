@@ -154,12 +154,14 @@ export class SmartAreaCardEditor extends LitElement {
           <div class="climate-sensor-list">
             ${this._renderPresetSensor("temperature", "Temperature", "mdi:thermometer", config)}
             ${this._renderPresetSensor("humidity", "Humidity", "mdi:water-percent", config)}
-            ${!this._showAdvancedClimate ? html`<button type="button" class="secondary sensor-more-btn" @click=${() => { this._showAdvancedClimate = true; }}>More sensors (CO₂, VOC, PM2.5, AQI)</button>` : nothing}
+            ${this._renderPresetSensor("presence", "Presence", "mdi:motion-sensor", config, ["binary_sensor", "sensor"])}
+            ${!this._showAdvancedClimate ? html`<button type="button" class="secondary sensor-more-btn" @click=${() => { this._showAdvancedClimate = true; }}>More sensors (CO₂, VOC, PM2.5, AQI, Noise)</button>` : nothing}
             ${this._showAdvancedClimate ? html`
               ${this._renderPresetSensor("co2", "CO₂", "mdi:molecule-co2", config)}
               ${this._renderPresetSensor("voc", "VOC", "mdi:flask-outline", config)}
               ${this._renderPresetSensor("pm25", "PM2.5", "mdi:blur", config)}
               ${this._renderPresetSensor("aqi", "AQI", "mdi:gauge", config)}
+              ${this._renderPresetSensor("noise", "Noise", "mdi:volume-high", config)}
               <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showAdvancedClimate = false; }}>← Hide</button>
             ` : nothing}
           </div>
@@ -186,30 +188,44 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderPresetSensor(
-    key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi",
+    key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise",
     label: string,
     icon: string,
     config: SmartRoomCardConfig,
+    domains: string[] = ["sensor"],
   ) {
     const alertConfig = config.sensors?.alerts?.[key];
     const alertEnabled = alertConfig?.enabled === true;
     const entityId = config.sensors?.[key] ?? "";
-    const restrictToRoom = config.sensors?.filters?.[key]?.restrict_to_room_area === true;
-    const roomName = this._areaName(this._config?.room_id) ?? "this room";
+    const hasRoomId = Boolean(this._config?.room_id?.trim());
+    const restrictToRoom = hasRoomId && config.sensors?.filters?.[key]?.restrict_to_room_area !== false;
+    const showAll = !restrictToRoom;
+    const isPresence = key === "presence";
     return html`
       <div class="sensor-row">
-        <div class="sensor-row-main">
+        <div class="sensor-row-header">
           <span class="sensor-row-icon"><ha-icon icon=${icon}></ha-icon></span>
           <span class="sensor-row-label">${label}</span>
-          <div class="sensor-row-entity">${this._renderEntityPicker(entityId, (v) => this._setSensor(key, v), false, this._entitySelector(["sensor"], restrictToRoom, this._config?.room_id))}</div>
-          <label class="sensor-row-restrict">${this._renderInlineToggle(restrictToRoom, (v) => this._setSensorFilter(key, "restrict_to_room_area", v))}<span>Only ${roomName}</span></label>
           <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(key, "enabled", v))}<span>Alert</span></label>
+        </div>
+        <div class="sensor-row-body">
+          ${this._renderEntityPicker(entityId, (v) => this._setSensor(key, v), false, this._entitySelector(domains, restrictToRoom, this._config?.room_id))}
+          ${hasRoomId ? html`
+            <label class="show-all-check">
+              <input type="checkbox" .checked=${showAll} @change=${(e: Event) => this._setSensorFilter(key, "restrict_to_room_area", !(e.target as HTMLInputElement).checked)} />
+              <span>Show all entities</span>
+            </label>
+          ` : nothing}
         </div>
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
-            <label>Min<input type="number" .value=${alertConfig?.min !== undefined ? String(alertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-            <label>Max<input type="number" .value=${alertConfig?.max !== undefined ? String(alertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-            <label>Eq<input type="number" .value=${alertConfig?.eq !== undefined ? String(alertConfig.eq) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "eq", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+            ${isPresence ? html`
+              <label class="sensor-alert-full">When equal to<input type="text" .value=${typeof alertConfig?.eq === "string" ? alertConfig.eq : ""} placeholder="e.g. on" @input=${(e: InputEvent) => this._setSensorAlert(key, "eq", (e.target as HTMLInputElement).value || undefined)} /></label>
+            ` : html`
+              <label>Min<input type="number" .value=${typeof alertConfig?.min === "number" ? String(alertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              <label>Max<input type="number" .value=${typeof alertConfig?.max === "number" ? String(alertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              <label>Eq<input type="number" .value=${typeof alertConfig?.eq === "number" ? String(alertConfig.eq) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "eq", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+            `}
           </div>
         ` : nothing}
       </div>
@@ -498,23 +514,6 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
   private _renderPickerField(title: string, hint: string, content: unknown) {
     return html`<div class="inline-control"><div><div>${title}</div><div class="hint">${hint}</div></div>${content}</div>`;
-  }
-
-  private _renderClimateTitle(
-    key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi",
-    label: string,
-    customIcon?: string,
-  ) {
-    const defaultIconByKey: Record<typeof key, string> = {
-      temperature: "mdi:thermometer",
-      humidity: "mdi:water-percent",
-      co2: "mdi:molecule-co2",
-      voc: "mdi:flask-outline",
-      pm25: "mdi:blur",
-      aqi: "mdi:gauge",
-    };
-    const icon = customIcon || defaultIconByKey[key];
-    return html`<span class="climate-title"><ha-icon icon=${icon}></ha-icon><span>${label}</span></span>`;
   }
 
   private _typeIcon(type: string): string {
@@ -1115,7 +1114,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   private _setSensorIcon(key: string, value: string) {
     this._patch({ sensors: { ...(this._config?.sensors ?? {}), icons: { ...(this._config?.sensors?.icons ?? {}), [key]: value || undefined } } });
   }
-  private _setSensorFilter(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi", field: "restrict_to_room_area", value: boolean) {
+  private _setSensorFilter(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", field: "restrict_to_room_area", value: boolean) {
     this._patch({
       sensors: {
         ...(this._config?.sensors ?? {}),
@@ -1129,7 +1128,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       },
     });
   }
-  private _setSensorAlert(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi", field: "enabled" | "min" | "max" | "eq", value: boolean | number | undefined) {
+  private _setSensorAlert(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", field: "enabled" | "min" | "max" | "eq", value: boolean | number | string | undefined) {
     this._patch({
       sensors: {
         ...(this._config?.sensors ?? {}),

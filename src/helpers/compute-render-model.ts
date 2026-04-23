@@ -28,6 +28,8 @@ export function computeRenderModel(
   const voc = getEntity(states, config.sensors?.voc);
   const pm25 = getEntity(states, config.sensors?.pm25);
   const aqi = getEntity(states, config.sensors?.aqi);
+  const presence = getEntity(states, config.sensors?.presence);
+  const noise = getEntity(states, config.sensors?.noise);
   const sun = getEntity(states, "sun.sun");
   const keepOnUntilSunset = config.ui?.keep_background_on_until_sunset === true;
   const useDaylightOnBackground = keepOnUntilSunset && sun && !isUnavailable(sun) && sun.state === "above_horizon";
@@ -42,6 +44,8 @@ export function computeRenderModel(
     evaluateClimateAlert("voc", voc, alertsConfig?.voc, "VOC", resolveIcon("voc")),
     evaluateClimateAlert("pm25", pm25, alertsConfig?.pm25, "PM2.5", resolveIcon("pm25")),
     evaluateClimateAlert("aqi", aqi, alertsConfig?.aqi, "AQI", resolveIcon("aqi")),
+    evaluateClimateAlert("presence", presence, alertsConfig?.presence, "Presence", resolveIcon("presence")),
+    evaluateClimateAlert("noise", noise, alertsConfig?.noise, "Noise", resolveIcon("noise")),
   ].filter((item): item is ClimateAlert => Boolean(item));
   const climateAlertBadges = climateAlerts.map((alert) => ({
     key: `climate_${alert.key}`,
@@ -93,7 +97,7 @@ export function computeRenderModel(
       ...climateAlerts.map((item) => item.reason),
     ],
     climateItems: buildClimateItems(
-      { temp, humidity, co2, voc, pm25, aqi },
+      { temp, humidity, co2, voc, pm25, aqi, presence, noise },
       customIcons,
       customSensorEntries.map(({ config: sc, entity }) => ({ name: sc.name, icon: sc.icon, entity })),
     ),

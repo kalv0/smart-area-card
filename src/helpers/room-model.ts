@@ -47,7 +47,7 @@ export function createCardSignature(
 
 export function getClimateEntities(sensors: SmartRoomCardConfig["sensors"]): string[] {
   if (!sensors) return [];
-  const presets = [sensors.temperature, sensors.humidity, sensors.co2, sensors.voc, sensors.pm25, sensors.aqi].filter(
+  const presets = [sensors.temperature, sensors.humidity, sensors.co2, sensors.voc, sensors.pm25, sensors.aqi, sensors.presence, sensors.noise].filter(
     (value): value is string => Boolean(value),
   );
   const custom = (sensors.custom ?? []).map((s) => s.entity).filter(Boolean);
@@ -55,9 +55,9 @@ export function getClimateEntities(sensors: SmartRoomCardConfig["sensors"]): str
 }
 
 export function evaluateClimateAlert(
-  key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi",
+  key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise",
   entity: HassEntity | undefined,
-  alertConfig: { enabled?: boolean; min?: number; max?: number; eq?: number } | undefined,
+  alertConfig: { enabled?: boolean; min?: number; max?: number; eq?: number | string } | undefined,
   label: string,
   icon: string,
 ): ClimateAlert | undefined {
@@ -65,13 +65,17 @@ export function evaluateClimateAlert(
     return undefined;
   }
 
+  const unit = entity.attributes.unit_of_measurement ? ` ${entity.attributes.unit_of_measurement}` : "";
+  const message = `${label}: ${entity.state}${unit}`;
+
+  if (alertConfig.eq !== undefined && typeof alertConfig.eq === "string") {
+    return entity.state === alertConfig.eq ? { key, label, reason: message, icon } : undefined;
+  }
+
   const value = Number(entity.state);
   if (!Number.isFinite(value)) {
     return undefined;
   }
-
-  const unit = entity.attributes.unit_of_measurement ? ` ${entity.attributes.unit_of_measurement}` : "";
-  const message = `${label}: ${entity.state}${unit}`;
 
   if (alertConfig.min !== undefined && value < alertConfig.min) {
     return { key, label, reason: message, icon };
@@ -79,7 +83,7 @@ export function evaluateClimateAlert(
   if (alertConfig.max !== undefined && value > alertConfig.max) {
     return { key, label, reason: message, icon };
   }
-  if (alertConfig.eq !== undefined && value === alertConfig.eq) {
+  if (alertConfig.eq !== undefined && typeof alertConfig.eq === "number" && value === alertConfig.eq) {
     return { key, label, reason: message, icon };
   }
 
@@ -110,6 +114,8 @@ export const CLIMATE_DEFAULT_ICONS: Record<string, string> = {
   voc: "mdi:flask-outline",
   pm25: "mdi:blur",
   aqi: "mdi:gauge",
+  presence: "mdi:motion-sensor",
+  noise: "mdi:volume-high",
 };
 
 export function buildClimateItems(
@@ -120,6 +126,8 @@ export function buildClimateItems(
     voc?: HassEntity;
     pm25?: HassEntity;
     aqi?: HassEntity;
+    presence?: HassEntity;
+    noise?: HassEntity;
   },
   customIcons?: Record<string, string | undefined>,
   customSensors?: Array<{ name: string; icon?: string; entity?: HassEntity }>,
@@ -149,6 +157,8 @@ export function buildClimateItems(
   pushItem("voc", "voc", entities.voc);
   pushItem("pm25", "pm25", entities.pm25);
   pushItem("aqi", "aqi", entities.aqi);
+  pushItem("presence", "presence", entities.presence);
+  pushItem("noise", "noise", entities.noise);
 
   (customSensors ?? []).forEach((sensor, i) => {
     pushItem(`custom_${i}`, "custom", sensor.entity, sensor.icon || "mdi:gauge");

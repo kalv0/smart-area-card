@@ -1352,6 +1352,15 @@ export const calvoRoomCardEditorStyles = css`
     background: rgba(76, 201, 240, 0.05);
   }
 
+  /* preset sensor header row: icon + label + alert toggle */
+  .sensor-row-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  /* custom sensor main row (icon + name input + entity + toggles + remove) */
   .sensor-row-main {
     display: flex;
     align-items: center;
@@ -1369,19 +1378,53 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .sensor-row-label {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--editor-text);
-    min-width: 84px;
   }
 
+  /* full-width entity picker block below the header row */
+  .sensor-row-body {
+    display: grid;
+    gap: 4px;
+  }
+
+  .show-all-check {
+    /* reset label card styling */
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0 2px;
+    /* own layout */
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--editor-muted);
+    cursor: pointer;
+  }
+
+  .show-all-check input {
+    width: 13px;
+    height: 13px;
+    margin: 0;
+    flex: 0 0 auto;
+  }
+
+  /* entity picker inside sensor-row body */
+  .sensor-row-body ha-entity-picker,
+  .sensor-row-body ha-selector {
+    width: 100%;
+  }
+
+  /* entity in custom sensor row (inline flex item) */
   .sensor-row-entity {
     flex: 1 1 180px;
     min-width: 0;
   }
 
-  .sensor-row-restrict,
   .sensor-row-alert-toggle {
     /* reset label card styling */
     background: transparent;
@@ -1390,6 +1433,7 @@ export const calvoRoomCardEditorStyles = css`
     padding: 0;
     /* own layout */
     flex: 0 0 auto;
+    margin-left: auto;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1401,7 +1445,6 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   /* strip ios-toggle card styling when nested inline */
-  .sensor-row-restrict .ios-toggle,
   .sensor-row-alert-toggle .ios-toggle {
     padding: 0;
     border: none;
@@ -1431,6 +1474,18 @@ export const calvoRoomCardEditorStyles = css`
   .sensor-alert-row input {
     padding: 5px 8px;
     font-size: 0.8rem;
+  }
+
+  .sensor-alert-full {
+    grid-column: 1 / -1;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    gap: 3px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--editor-muted);
   }
 
   .sensor-name-input {
