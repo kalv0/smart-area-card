@@ -14,6 +14,7 @@ import type {
   SmartRoomHeaderBadge,
   SmartRoomNamedAlertConfig,
   SmartRoomNamedStateConfig,
+  SmartRoomNumericSensorAlert,
 } from "./helpers";
 import type { HomeAssistantExtended, EntityRegistryEntry, DeviceRegistryEntry } from "./types/ha-extensions";
 import type { SmartRoomTypeDefinition } from "./editor/editor-types";
@@ -211,6 +212,7 @@ export class SmartAreaCardEditor extends LitElement {
     const restrictToRoom = hasRoomId && config.sensors?.filters?.[key]?.restrict_to_room_area !== false;
     const showAll = !restrictToRoom;
     const isPresence = key === "presence";
+    const numericAlertConfig = !isPresence ? (alertConfig as SmartRoomNumericSensorAlert | undefined) : undefined;
     const deviceClasses = SENSOR_DEVICE_CLASSES[key];
     return html`
       <div class="sensor-row">
@@ -227,9 +229,9 @@ export class SmartAreaCardEditor extends LitElement {
             ${isPresence ? html`
               <label class="sensor-alert-full">When equal to<input type="text" .value=${typeof alertConfig?.eq === "string" ? alertConfig.eq : ""} placeholder="e.g. on" @input=${(e: InputEvent) => this._setSensorAlert(key, "eq", (e.target as HTMLInputElement).value || undefined)} /></label>
             ` : html`
-              <label>Min<input type="number" .value=${typeof alertConfig?.min === "number" ? String(alertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-              <label>Max<input type="number" .value=${typeof alertConfig?.max === "number" ? String(alertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-              <label>Eq<input type="number" .value=${typeof alertConfig?.eq === "number" ? String(alertConfig.eq) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "eq", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              <label>Min<input type="number" .value=${typeof numericAlertConfig?.min === "number" ? String(numericAlertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              <label>Max<input type="number" .value=${typeof numericAlertConfig?.max === "number" ? String(numericAlertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              <label>Eq<input type="number" .value=${typeof numericAlertConfig?.eq === "number" ? String(numericAlertConfig.eq) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "eq", toNumberOrUndefined(valueFromEvent(e)))} /></label>
             `}
           </div>
         ` : nothing}
@@ -341,7 +343,7 @@ export class SmartAreaCardEditor extends LitElement {
         const fieldKey = `var:${field.key}`;
         const fieldDomains = (field.selector_domains ?? []).filter((d) => d !== "*");
         const fieldRestrict = hasRoom && device.entity_selectors?.[fieldKey]?.restrict_to_room_area !== false;
-        const fieldValue = String(device.variables?.[field.key] ?? (device as Record<string, unknown>)[field.key] ?? "");
+        const fieldValue = String(device.variables?.[field.key] ?? (device as unknown as Record<string, unknown>)[field.key] ?? "");
         return html`<div class="row single"><div class="field-card">
           <div class="field-title">${field.label}</div>
           <span class="hint">${field.hint}</span>

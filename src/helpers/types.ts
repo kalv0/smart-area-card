@@ -149,12 +149,24 @@ export interface SmartRoomDeviceConfig {
   double_tap_action?: SmartRoomActionConfig;
 }
 
+export interface SmartRoomNumericSensorAlert {
+  enabled?: boolean;
+  min?: number;
+  max?: number;
+  eq?: number;
+}
+
+export interface SmartRoomPresenceSensorAlert {
+  enabled?: boolean;
+  eq?: string;
+}
+
 export interface SmartRoomCustomSensor {
   name: string;
   icon?: string;
   entity: string;
   restrict_to_room_area?: boolean;
-  alert?: { enabled?: boolean; min?: number; max?: number; eq?: number };
+  alert?: SmartRoomNumericSensorAlert;
 }
 
 export interface SmartRoomCardConfig {
@@ -182,14 +194,14 @@ export interface SmartRoomCardConfig {
       noise?: { restrict_to_room_area?: boolean };
     };
     alerts?: {
-      temperature?: { enabled?: boolean; min?: number; max?: number; eq?: number };
-      humidity?: { enabled?: boolean; min?: number; max?: number; eq?: number };
-      co2?: { enabled?: boolean; min?: number; max?: number; eq?: number };
-      voc?: { enabled?: boolean; min?: number; max?: number; eq?: number };
-      pm25?: { enabled?: boolean; min?: number; max?: number; eq?: number };
-      aqi?: { enabled?: boolean; min?: number; max?: number; eq?: number };
-      noise?: { enabled?: boolean; min?: number; max?: number; eq?: number };
-      presence?: { enabled?: boolean; eq?: string };
+      temperature?: SmartRoomNumericSensorAlert;
+      humidity?: SmartRoomNumericSensorAlert;
+      co2?: SmartRoomNumericSensorAlert;
+      voc?: SmartRoomNumericSensorAlert;
+      pm25?: SmartRoomNumericSensorAlert;
+      aqi?: SmartRoomNumericSensorAlert;
+      noise?: SmartRoomNumericSensorAlert;
+      presence?: SmartRoomPresenceSensorAlert;
     };
     icons?: {
       temperature?: string;
