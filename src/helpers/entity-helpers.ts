@@ -55,43 +55,55 @@ export const friendlyState = (entity?: HassEntity): string => {
   return String(entity.state).replace(/_/g, " ");
 };
 
-export const resolveStateText = (
+/**
+ * Resolves display text from pre-evaluated named states.
+ * Use this in computeDeviceModel where evaluatedStates is already available,
+ * to avoid re-evaluating conditions a second time.
+ */
+export const resolveStateTextFromEvaluated = (
   states: Record<string, HassEntity>,
-  allStates: SmartRoomNamedStateConfig[] | undefined,
+  evaluatedStates: Array<{ item: SmartRoomNamedStateConfig; active: boolean }>,
   fallbackEntity?: HassEntity,
 ): string => {
-  const items = (allStates ?? [])
-    .filter((item) => item.enabled !== false)
-    .flatMap((item) => {
+  const items = evaluatedStates
+    .filter(({ item }) => item.enabled !== false)
+    .flatMap(({ item, active }) => {
       const values: string[] = [];
-      const active = Boolean(item.conditions?.length) ? evaluateAllConditions(states, item.conditions) : false;
       const activeText = item.text_active ?? item.text;
       const activeEntity = item.text_entity_active ?? item.text_entity;
       const inactiveText = item.text_inactive;
       const inactiveEntity = item.text_entity_inactive;
       if (active) {
-        if (activeText?.trim()) {
-          values.push(activeText.trim());
-        }
-        if (activeEntity?.trim()) {
-          values.push(friendlyState(states[activeEntity.trim()]));
-        }
+        if (activeText?.trim()) values.push(activeText.trim());
+        if (activeEntity?.trim()) values.push(friendlyState(states[activeEntity.trim()]));
       } else {
-        if (inactiveText?.trim()) {
-          values.push(inactiveText.trim());
-        }
-        if (inactiveEntity?.trim()) {
-          values.push(friendlyState(states[inactiveEntity.trim()]));
-        }
+        if (inactiveText?.trim()) values.push(inactiveText.trim());
+        if (inactiveEntity?.trim()) values.push(friendlyState(states[inactiveEntity.trim()]));
       }
       return values.filter(Boolean);
     })
     .filter(Boolean);
 
-  if (!items.length) {
-    return friendlyState(fallbackEntity);
-  }
+  if (!items.length) return friendlyState(fallbackEntity);
   return items.join(", ");
+};
+
+/**
+ * Resolves display text by evaluating named state conditions.
+ * Prefer resolveStateTextFromEvaluated when evaluatedStates is already available.
+ */
+export const resolveStateText = (
+  states: Record<string, HassEntity>,
+  allStates: SmartRoomNamedStateConfig[] | undefined,
+  fallbackEntity?: HassEntity,
+): string => {
+  const evaluated = (allStates ?? [])
+    .filter((item) => item.enabled !== false)
+    .map((item) => ({
+      item,
+      active: Boolean(item.conditions?.length) ? evaluateAllConditions(states, item.conditions) : false,
+    }));
+  return resolveStateTextFromEvaluated(states, evaluated, fallbackEntity);
 };
 
 export const normalizeName = (

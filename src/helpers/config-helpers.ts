@@ -55,5 +55,12 @@ export const resolveDeviceImage = (
     "product",
   );
 
+/** Stable storage key for a card instance. Prefers room_id over display name. */
+export const storageKey = (config: SmartRoomCardConfig, suffix: string): string => {
+  const id = config.room_id?.trim() || config.room;
+  return `smart-area:${id}:${suffix}`;
+};
+
+/** @deprecated Use storageKey(config, "expanded") instead. */
 export const storageKeyForConfig = (config: SmartRoomCardConfig): string =>
-  `smart-area:${config.room}:expanded`;
+  storageKey(config, "expanded");

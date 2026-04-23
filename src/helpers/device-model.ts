@@ -7,11 +7,12 @@ import {
   getBatteryLevel,
   normalizeName,
   getDeviceIcon,
-  resolveStateText,
+  resolveStateTextFromEvaluated,
 } from "./entity-helpers";
 import { shouldDimOffline, shouldStrikeOffline, offlineOpacity, resolveDeviceImage } from "./config-helpers";
 
 export interface ComputedDeviceModel {
+  /** Unique identity: `${index}:${entity_id}`. Use config.entity for service calls. */
   key: string;
   config: SmartRoomDeviceConfig;
   entity?: HassEntity;
@@ -46,6 +47,7 @@ export interface ComputedDeviceModel {
 export const computeDeviceModel = (
   states: Record<string, HassEntity>,
   config: SmartRoomDeviceConfig,
+  index: number,
 ): ComputedDeviceModel => {
   const entity = getEntity(states, config.entity);
   const batteryEntity = getEntity(states, config.battery);
@@ -55,9 +57,9 @@ export const computeDeviceModel = (
   const evaluatedStates = (config.states?.states ?? [])
     .filter((item) => item.enabled !== false)
     .map((item) => ({
-    item,
-    active: evaluateAllConditions(states, item.conditions),
-  }));
+      item,
+      active: evaluateAllConditions(states, item.conditions),
+    }));
   const matchedStates = evaluatedStates.filter(({ active }) => active).map(({ item }) => item);
   const matchedState = matchedStates[0];
   const iconState = evaluatedStates.find(
@@ -73,6 +75,7 @@ export const computeDeviceModel = (
   const isAlert = customAlert || matchedAlerts.length > 0;
   const accent = matchedState?.border_color ?? "none";
   const outlined = matchedState?.outlined ?? (isOn && accent !== "none");
+
   const resolveActiveHeaderBadge = (state?: SmartRoomNamedStateConfig): SmartRoomHeaderBadge => {
     if (!state) return "none";
     if (state.header_badge_active) return state.header_badge_active;
@@ -84,24 +87,25 @@ export const computeDeviceModel = (
   };
   const resolveInactiveHeaderBadge = (state?: SmartRoomNamedStateConfig): SmartRoomHeaderBadge =>
     state?.header_badge_inactive ?? "none";
+
   const headerBadges: SmartRoomHeaderBadge[] = [];
   evaluatedStates.forEach(({ item, active }) => {
     const badge = active ? resolveActiveHeaderBadge(item) : resolveInactiveHeaderBadge(item);
-    if (badge !== "none") {
-      headerBadges.push(badge);
-    }
+    if (badge !== "none") headerBadges.push(badge);
   });
   const offlineBadge = offline ? (config.offline?.header_badge ?? "none") : "none";
   if (offlineBadge !== "none") headerBadges.push(offlineBadge);
   matchedAlerts.forEach((alert) => {
-    if (alert.header_badge && alert.header_badge !== "none") {
-      headerBadges.push(alert.header_badge);
-    }
+    if (alert.header_badge && alert.header_badge !== "none") headerBadges.push(alert.header_badge);
   });
+
   const statusIcon = primaryAlert?.icon?.trim()
     || (iconState?.active ? iconState.item.icon_active?.trim() : iconState?.item.icon_inactive?.trim());
-  const statusIconColor = primaryAlert?.icon?.trim()
-    ? getPaletteColor(primaryAlert.icon_color ?? primaryAlert.border_color ?? "red")
+
+  // Use isAlert (not icon presence) to determine status icon color, so alert color
+  // applies even when the active alert has no icon configured.
+  const statusIconColor = isAlert
+    ? getPaletteColor(primaryAlert?.icon_color ?? primaryAlert?.border_color ?? "red")
     : iconState?.active
       ? getPaletteColor(iconState.item.icon_active_color ?? iconState.item.border_color ?? "white")
       : iconState?.item.icon_inactive_color
@@ -137,7 +141,7 @@ export const computeDeviceModel = (
   });
 
   return {
-    key: config.entity,
+    key: `${index}:${config.entity}`,
     config,
     entity,
     batteryEntity,
@@ -155,7 +159,7 @@ export const computeDeviceModel = (
     activeAccentCss: accent !== "none" ? getPaletteColor(accent) : undefined,
     outlined,
     label: deviceLabel,
-    stateText: resolveStateText(states, config.states?.states, entity),
+    stateText: resolveStateTextFromEvaluated(states, evaluatedStates, entity),
     statusIcon,
     statusIconColor,
     alertOutlined: primaryAlert?.outlined !== false && isAlert,

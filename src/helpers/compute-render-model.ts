@@ -2,7 +2,14 @@ import type { HomeAssistant } from "custom-card-helpers";
 import { computeDeviceModel } from "./device-model";
 import { getEntity, isUnavailable } from "./entity-helpers";
 import { normalizeAssetPath } from "./config-helpers";
-import { getClimateEntities, evaluateClimateAlert, buildClimateItems, countHeaderBadges, CLIMATE_DEFAULT_ICONS } from "./room-model";
+import {
+  getClimateEntities,
+  evaluateClimateAlert,
+  buildClimateItems,
+  countHeaderBadges,
+  CLIMATE_DEFAULT_ICONS,
+  getAreaAutomations,
+} from "./room-model";
 import type { SmartRoomCardConfig } from "./types";
 import type { RenderModel, ClimateAlert } from "../types/card-model";
 import type { HomeAssistantExtended } from "../types/ha-extensions";
@@ -10,10 +17,13 @@ import type { HomeAssistantExtended } from "../types/ha-extensions";
 export function computeRenderModel(
   config: SmartRoomCardConfig,
   hass: HomeAssistant,
+  automationEntityIds: string[] = [],
 ): RenderModel {
   const states = hass.states;
   const hassExt = hass as HomeAssistantExtended;
-  const devices = (config.devices ?? []).map((device) => computeDeviceModel(states, device));
+
+  const devices = (config.devices ?? []).map((device, i) => computeDeviceModel(states, device, i));
+
   const deviceAlerts = devices.filter((device) => device.isAlert);
   const alertsByBadge: Partial<Record<import("./types").SmartRoomHeaderBadge, string[]>> = {};
   deviceAlerts.forEach((device) => {
@@ -22,6 +32,7 @@ export function computeRenderModel(
       alertsByBadge[badge]!.push(...messages);
     });
   });
+
   const temp = getEntity(states, config.sensors?.temperature);
   const humidity = getEntity(states, config.sensors?.humidity);
   const co2 = getEntity(states, config.sensors?.co2);
@@ -31,13 +42,16 @@ export function computeRenderModel(
   const presence = getEntity(states, config.sensors?.presence);
   const noise = getEntity(states, config.sensors?.noise);
   const sun = getEntity(states, "sun.sun");
+
   const keepOnUntilSunset = config.ui?.keep_background_on_until_sunset === true;
   const useDaylightOnBackground = keepOnUntilSunset && sun && !isUnavailable(sun) && sun.state === "above_horizon";
   const roomIsActive = devices.some((device) => device.countsAsRoomActive) || useDaylightOnBackground;
+
   const alertsConfig = config.sensors?.alerts;
   const customIcons = config.sensors?.icons ?? {};
   const resolveIcon = (key: string) => customIcons[key as keyof typeof customIcons] || CLIMATE_DEFAULT_ICONS[key] || "mdi:gauge";
   const roomName = config.room || undefined;
+
   const climateAlerts = [
     evaluateClimateAlert("temperature", temp, alertsConfig?.temperature, "Temperature", resolveIcon("temperature"), roomName),
     evaluateClimateAlert("humidity", humidity, alertsConfig?.humidity, "Humidity", resolveIcon("humidity"), roomName),
@@ -48,6 +62,7 @@ export function computeRenderModel(
     evaluateClimateAlert("presence", presence, alertsConfig?.presence, "Presence", resolveIcon("presence"), roomName),
     evaluateClimateAlert("noise", noise, alertsConfig?.noise, "Noise", resolveIcon("noise"), roomName),
   ].filter((item): item is ClimateAlert => Boolean(item));
+
   const climateAlertBadges = climateAlerts.map((alert) => ({
     key: `climate_${alert.key}`,
     icon: alert.icon,
@@ -77,11 +92,21 @@ export function computeRenderModel(
       });
     }
   });
+
   const areaEntry = resolveAreaEntry(hassExt, config.room_id);
   const automationCount = config.ui?.automation_badge_enabled && areaEntry
-    ? countEnabledRoomAutomations(hass, hassExt, config.room_id!)
+    ? automationEntityIds.filter((id) => {
+        const entity = states[id];
+        return entity && !isUnavailable(entity) && entity.state === "on";
+      }).length
     : 0;
+
   const badgeCounts = countHeaderBadges(devices, automationCount);
+
+  // Automations list — computed from the same filtered IDs to avoid divergence
+  const areaAutomations = config.ui?.automation_badge_enabled && config.room_id?.trim()
+    ? getAreaAutomations(hass, hassExt.entities ?? {}, config.room_id)
+    : [];
 
   return {
     devices,
@@ -89,7 +114,10 @@ export function computeRenderModel(
     activeMediaCount: devices.filter((d) => d.countsAsMediaActive).length,
     activeRecCount: devices.filter((d) => d.countsAsRecActive).length,
     badgeCounts,
-    hasAlert: deviceAlerts.some((d) => d.alertHeaderBorder) || climateAlerts.length > 0 || climateAlertBadges.some((b) => b.key.startsWith("custom_")),
+    // hasAlert drives the red border on the collapsed card.
+    // Device alerts respect their per-alert header_border config.
+    // Climate/custom sensor alerts always activate the border (no per-sensor border config yet).
+    hasAlert: deviceAlerts.some((d) => d.alertHeaderBorder) || climateAlertBadges.some((b) => b.messages.length > 0),
     alertsByBadge,
     climateAlertBadges,
     alertReasons: [
@@ -104,6 +132,7 @@ export function computeRenderModel(
       customSensorEntries.map(({ config: sc, entity }) => ({ name: sc.name, icon: sc.icon, entity })),
     ),
     climateEntities: getClimateEntities(config.sensors),
+    areaAutomations,
     areaIcon: areaEntry?.icon || "mdi:home-outline",
     roomBackground: normalizeAssetPath(
       roomIsActive
@@ -122,20 +151,4 @@ function resolveAreaEntry(
   const normalized = (roomId ?? "").trim();
   if (!normalized) return undefined;
   return areas[normalized];
-}
-
-function countEnabledRoomAutomations(
-  hass: HomeAssistant,
-  hassExt: HomeAssistantExtended,
-  roomId: string,
-): number {
-  const normalized = roomId.trim();
-  if (!normalized) return 0;
-  const entityRegistry = hassExt.entities ?? {};
-  return Object.values(hass.states).filter((entity) => {
-    const [domain] = entity.entity_id.split(".");
-    if (domain !== "automation") return false;
-    if (isUnavailable(entity) || entity.state !== "on") return false;
-    return entityRegistry[entity.entity_id]?.area_id === normalized;
-  }).length;
 }

@@ -58,7 +58,7 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   public setConfig(config: SmartRoomCardConfig): void {
-    const fallback: SmartRoomCardConfig = { type: "custom:smart-area-card", room: "", room_id: "", devices: [], sensors: { alerts: {} }, ui: { header_climate_more_info: true, battery_threshold: 20, battery_alerts_enabled: true, show_entity_icons: false, show_area_icon: false, keep_background_on_until_sunset: false, automation_badge_enabled: false, automation_badge_tap_navigate: true }, expander: { enabled: true, initial_state: "closed", persist_state: true } };
+    const fallback: SmartRoomCardConfig = { type: "custom:smart-area-card", room: "", room_id: "", devices: [], sensors: { alerts: {} }, ui: { header_climate_more_info: true, battery_threshold: 20, battery_alerts_enabled: true, show_entity_icons: false, show_area_icon: false, keep_background_on_until_sunset: false, automation_badge_enabled: false }, expander: { enabled: true, initial_state: "closed", persist_state: true } };
     try {
       const clone = deepClone(config);
       const nextConfig: SmartRoomCardConfig = { ...fallback, ...clone, ui: { ...fallback.ui, ...(clone.ui ?? {}) }, expander: { ...fallback.expander, ...(clone.expander ?? {}) } };
@@ -69,7 +69,7 @@ export class SmartAreaCardEditor extends LitElement {
     }
     const deviceCount = this._config?.devices?.length ?? 0;
     this._expandedDevices = this._expandedDevices.filter((index) => index < deviceCount);
-    this._refreshRegistries();
+    // Registry is loaded once in firstUpdated. Do not re-fetch on every config change.
   }
 
   protected render() {

@@ -76,9 +76,12 @@ export function mergePresetStates(
   const currentItems = current ?? [];
   const fallbackItems = fallback ?? [];
   if (!currentItems.length) return fallbackItems;
-  return currentItems.map((item, index) => {
-    const fallbackItem = fallbackItems.find((candidate) => candidate.preset_source && candidate.preset_source === item.preset_source)
-      ?? fallbackItems[index];
+  return currentItems.map((item) => {
+    // Match by preset_source only — index-based fallback caused incorrect merges
+    // when users manually reordered states in YAML.
+    const fallbackItem = item.preset_source
+      ? fallbackItems.find((candidate) => candidate.preset_source === item.preset_source)
+      : undefined;
     if (!fallbackItem?.preset) return item;
     return {
       ...fallbackItem,
@@ -96,9 +99,12 @@ export function mergePresetAlerts(
   const currentItems = current ?? [];
   const fallbackItems = fallback ?? [];
   if (!currentItems.length) return fallbackItems;
-  return currentItems.map((item, index) => {
-    const fallbackItem = fallbackItems.find((candidate) => candidate.preset_source && candidate.preset_source === item.preset_source)
-      ?? fallbackItems[index];
+  return currentItems.map((item) => {
+    // Match by preset_source only — index-based fallback caused incorrect merges
+    // when users manually reordered alerts in YAML.
+    const fallbackItem = item.preset_source
+      ? fallbackItems.find((candidate) => candidate.preset_source === item.preset_source)
+      : undefined;
     if (!fallbackItem?.preset) return item;
     return {
       ...fallbackItem,

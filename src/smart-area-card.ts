@@ -10,7 +10,7 @@ import {
   evaluateCondition,
   getBatteryColor,
   getBatteryIcon,
-  storageKeyForConfig,
+  storageKey,
   type ComputedDeviceModel,
   type PopupConfig,
   type SmartRoomActionConfig,
@@ -21,7 +21,7 @@ import {
 import { smartRoomCardStyles } from "./styles";
 import type { RenderModel } from "./types/card-model";
 import type { HomeAssistantExtended } from "./types/ha-extensions";
-import { createCardSignature } from "./helpers/room-model";
+import { createCardSignature, resolveAreaAutomationIds } from "./helpers/room-model";
 import { computeRenderModel } from "./helpers/compute-render-model";
 import { PressController } from "./controllers/press-controller";
 import { ImageFitController } from "./controllers/image-fit-controller";
@@ -67,17 +67,17 @@ const BADGE_CONFIG: Partial<Record<SmartRoomHeaderBadge, { pillClass: string; ic
 };
 
 function _formatLastTriggered(lastTriggered: string | null | undefined): string {
-  if (!lastTriggered) return "nunca ejecutada";
+  if (!lastTriggered) return "never";
   const date = new Date(lastTriggered);
-  if (isNaN(date.getTime())) return "nunca ejecutada";
+  if (isNaN(date.getTime())) return "never";
   const diffMs = Date.now() - date.getTime();
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "hace un momento";
-  if (mins < 60) return `hace ${mins}m`;
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
   const hours = Math.floor(diffMs / 3600000);
-  if (hours < 24) return `hace ${hours}h`;
+  if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(diffMs / 86400000);
-  if (days < 30) return `hace ${days}d`;
+  if (days < 30) return `${days}d ago`;
   return date.toLocaleDateString();
 }
 
@@ -102,7 +102,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         show_area_icon: false,
         keep_background_on_until_sunset: false,
         automation_badge_enabled: false,
-        automation_badge_tap_navigate: true,
         blur: true,
         glassmorphism: true,
       },
@@ -123,6 +122,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
   private _renderModel?: RenderModel;
   private _lastSignature = "";
+  /** Cached automation entity IDs for the current room. Rebuilt on config change. */
+  private _automationEntityIds: string[] = [];
 
   private readonly _press = new PressController(this);
   private readonly _imageFit = new ImageFitController(this);
@@ -146,7 +147,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         show_area_icon: false,
         keep_background_on_until_sunset: false,
         automation_badge_enabled: false,
-        automation_badge_tap_navigate: true,
       },
       expander: {
         enabled: true,
@@ -156,20 +156,27 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       ...config,
     };
 
+    this._rebuildAutomationIds();
     this._restoreExpanded();
     this._restoreAutomationPanel();
     this._restoreAlertPanels();
   }
 
   public getCardSize(): number {
-    return this._expanded ? 7 : 4;
+    if (!this._expanded) return 4;
+    const deviceRows = Math.ceil((this._config?.devices?.length ?? 0) / 3);
+    return 4 + Math.max(deviceRows, 1);
   }
 
   protected willUpdate(changedProps: Map<string, unknown>): void {
     if (changedProps.has("hass") || changedProps.has("_config")) {
       if (this._config && this.hass) {
+        // Rebuild automation IDs when hass first becomes available after setConfig
+        if (changedProps.has("hass") && !this._automationEntityIds.length && this._config.ui?.automation_badge_enabled) {
+          this._rebuildAutomationIds();
+        }
         try {
-          this._renderModel = computeRenderModel(this._config, this.hass);
+          this._renderModel = computeRenderModel(this._config, this.hass, this._automationEntityIds);
         } catch (err) {
           console.error("[smart-area-card] computeRenderModel failed:", err);
         }
@@ -181,12 +188,19 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
   protected shouldUpdate(changedProps: Map<string, unknown>): boolean {
     if (!changedProps.size) return true;
-    if (changedProps.has("_config") || changedProps.has("_expanded") || changedProps.has("_showAutomationPanel") || changedProps.has("_closedAlertPanels")) {
+    if (
+      changedProps.has("_config") ||
+      changedProps.has("_expanded") ||
+      changedProps.has("_showAutomationPanel") ||
+      changedProps.has("_closedAlertPanels")
+    ) {
       return true;
     }
     if (changedProps.has("hass")) {
       const hassExt = this.hass as HomeAssistantExtended;
-      const signature = this._config ? createCardSignature(this._config, this.hass.states, hassExt.entities) : "";
+      const signature = this._config
+        ? createCardSignature(this._config, this.hass.states, this._automationEntityIds)
+        : "";
       if (signature !== this._lastSignature) {
         this._lastSignature = signature;
         return true;
@@ -311,6 +325,15 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     groupClimateAlertsByIcon(this._renderModel?.climateAlertBadges ?? [])
       .forEach((b) => panels.push(b));
 
+    // Clean up stale dismissed keys for alerts that no longer exist.
+    // This ensures alerts reappear after resolving and re-triggering.
+    const activeKeys = new Set(panels.map((p) => p.key));
+    const staleKeys = [...this._closedAlertPanels].filter((k) => !activeKeys.has(k));
+    if (staleKeys.length) {
+      this._closedAlertPanels = new Set([...this._closedAlertPanels].filter((k) => activeKeys.has(k)));
+      this._persistAlertPanels();
+    }
+
     const visible = panels.filter((p) => !this._closedAlertPanels.has(p.key));
     if (!visible.length) return nothing;
 
@@ -349,27 +372,9 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._persistAutomationPanel();
   };
 
-  private _getAreaAutomations(): Array<{ name: string; enabled: boolean; lastTriggered?: string | null }> {
-    const roomId = this._config?.room_id?.trim();
-    if (!roomId || !this.hass) return [];
-    const entityRegistry = (this.hass as HomeAssistantExtended).entities ?? {};
-    const automations = Object.values(this.hass.states).filter((entity) => {
-      if (!entity.entity_id.startsWith("automation.")) return false;
-      return entityRegistry[entity.entity_id]?.area_id === roomId;
-    });
-    const enabled = automations.filter((e) => e.state === "on");
-    const disabled = automations.filter((e) => e.state !== "on");
-    const toItem = (e: (typeof automations)[0]) => ({
-      name: String(e.attributes.friendly_name ?? e.entity_id),
-      enabled: e.state === "on",
-      lastTriggered: e.attributes.last_triggered as string | null | undefined,
-    });
-    return [...enabled.map(toItem), ...disabled.map(toItem)];
-  }
-
   private _renderAutomationPanel(): TemplateResult | typeof nothing {
     if (!this._showAutomationPanel) return nothing;
-    const automations = this._getAreaAutomations();
+    const automations = this._renderModel?.areaAutomations ?? [];
     if (!automations.length) return nothing;
     return html`
       <section class="automation-panel">
@@ -509,9 +514,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   private _handleCardClick = (): void => {
-    if (this._config?.expander?.enabled === false) {
-      return;
-    }
+    if (this._config?.expander?.enabled === false) return;
     this._toggleExpanded();
   };
 
@@ -523,12 +526,10 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     }
 
     const entities = this._renderModel?.climateEntities ?? [];
-    if (!entities.length) {
-      return;
-    }
+    if (!entities.length) return;
 
     this._openPopupOrInfo(entities[0], {
-      title: "Clima",
+      title: "Climate",
       size: "wide",
       card: {
         type: "entities",
@@ -540,6 +541,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _handleDevicePointerDown(event: PointerEvent, device: ComputedDeviceModel): void {
     event.stopPropagation();
     this._press.start(() => {
+      // Re-lookup by key to get the latest computed state at hold time.
       const target = this._renderModel?.devices.find((d) => d.key === device.key);
       if (target) this._executeAction(target.config.hold_action, target);
     });
@@ -556,9 +558,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   private _handleDeviceKeyDown(event: KeyboardEvent, device: ComputedDeviceModel): void {
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
+    if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     event.stopPropagation();
     this._executeAction(device.config.tap_action, device);
@@ -571,11 +571,10 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
   private _executeAction(action: SmartRoomActionConfig | undefined, device: ComputedDeviceModel): void {
     const resolved = action?.action ?? this._defaultAction(device);
-    const targetEntity = action?.entity ?? device.key;
+    // Use config.entity (not device.key) as the entity ID — key is now index-prefixed.
+    const targetEntity = action?.entity ?? device.config.entity;
 
-    if (resolved === "none") {
-      return;
-    }
+    if (resolved === "none") return;
 
     if (resolved === "button") {
       if (action?.service) {
@@ -622,9 +621,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       return;
     }
 
-    if (entityId) {
-      this._showMoreInfo(entityId);
-    }
+    if (entityId) this._showMoreInfo(entityId);
   }
 
   private _showMoreInfo(entityId: string): void {
@@ -637,6 +634,16 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._persistExpanded();
   }
 
+  /** Rebuilds the cached list of automation entity IDs for the current room. */
+  private _rebuildAutomationIds(): void {
+    if (!this._config?.ui?.automation_badge_enabled || !this._config.room_id?.trim()) {
+      this._automationEntityIds = [];
+      return;
+    }
+    const entityRegistry = (this.hass as HomeAssistantExtended | undefined)?.entities ?? {};
+    this._automationEntityIds = resolveAreaAutomationIds(entityRegistry, this._config.room_id);
+  }
+
   private _restoreExpanded(): void {
     if (!this._config) return;
 
@@ -647,16 +654,14 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       return;
     }
 
-    const stored = window.localStorage.getItem(storageKeyForConfig(this._config));
+    const stored = window.localStorage.getItem(storageKey(this._config, "expanded"));
     this._expanded = stored ? stored === "true" : defaultExpanded;
     this._everExpanded = this._expanded;
   }
 
   private _persistExpanded(): void {
-    if (!this._config || this._config.expander?.persist_state === false) {
-      return;
-    }
-    window.localStorage.setItem(storageKeyForConfig(this._config), String(this._expanded));
+    if (!this._config || this._config.expander?.persist_state === false) return;
+    window.localStorage.setItem(storageKey(this._config, "expanded"), String(this._expanded));
   }
 
   private _restoreAutomationPanel(): void {
@@ -665,13 +670,13 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       this._showAutomationPanel = false;
       return;
     }
-    const raw = window.localStorage.getItem(`smart-area:${this._config.room}:automation-panel`);
+    const raw = window.localStorage.getItem(storageKey(this._config, "automation-panel"));
     this._showAutomationPanel = raw === "true";
   }
 
   private _persistAutomationPanel(): void {
     if (!this._config || this._config.expander?.persist_state === false) return;
-    window.localStorage.setItem(`smart-area:${this._config.room}:automation-panel`, String(this._showAutomationPanel));
+    window.localStorage.setItem(storageKey(this._config, "automation-panel"), String(this._showAutomationPanel));
   }
 
   private _restoreAlertPanels(): void {
@@ -681,7 +686,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       return;
     }
     try {
-      const raw = window.localStorage.getItem(`smart-area:${this._config.room}:alerts-closed`);
+      const raw = window.localStorage.getItem(storageKey(this._config, "alerts-closed"));
       const parsed = raw ? JSON.parse(raw) as string[] : [];
       this._closedAlertPanels = new Set<string>(parsed);
     } catch {
@@ -692,7 +697,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _persistAlertPanels(): void {
     if (!this._config || this._config.expander?.persist_state === false) return;
     window.localStorage.setItem(
-      `smart-area:${this._config.room}:alerts-closed`,
+      storageKey(this._config, "alerts-closed"),
       JSON.stringify([...this._closedAlertPanels]),
     );
   }
