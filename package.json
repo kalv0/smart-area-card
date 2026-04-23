@@ -1,9 +1,22 @@
 {
   "name": "smart-area-card",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "Smart Area Card for Home Assistant — standalone, no integration required.",
+  "description": "Home Assistant Lovelace custom card — room overview with climate sensors, device tiles, alerts, and automation panel.",
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "custom-card",
+    "lit",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kalv0/smart-area-card.git"
+  },
+  "author": "kalv0",
+  "license": "MIT",
   "scripts": {
     "build": "node build.mjs",
     "check": "tsc --noEmit",
