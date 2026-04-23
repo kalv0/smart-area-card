@@ -123,6 +123,7 @@ export class SmartAreaCardEditor extends LitElement {
     const batteryBorderColor = config.ui?.battery_alert_border_color ?? "red";
     const batteryHeaderBadge = config.ui?.battery_alert_header_badge ?? "low_battery";
     const batteryHeaderBorder = config.ui?.battery_alert_header_border !== false;
+    const customSensors = config.sensors?.custom ?? [];
     return html`
       <section class="section">
         <div class="section-header"><div>
@@ -132,105 +133,111 @@ export class SmartAreaCardEditor extends LitElement {
 
         <div class="panel">
           <div class="panel-title">Battery alerts</div>
-          <div class="panel-subtitle">Derived battery alerts are added automatically to devices that report a battery entity.</div>
           <div class="row single">
             ${this._renderToggleField("Enable battery alerts", "Shows a low battery alert badge on device tiles when battery falls below the threshold.", batteryAlertsEnabled, (checked) => this._setUi("battery_alerts_enabled", checked))}
           </div>
           ${batteryAlertsEnabled ? html`
-            <div class="row single"><label>Low battery threshold<span class="hint">Battery % that triggers a low-battery alert. Set to 0 to disable.</span><input type="number" min="0" max="100" .value=${String(config.ui?.battery_threshold ?? 20)} @input=${(e: InputEvent) => this._setUi("battery_threshold", Number(valueFromEvent(e)))} /></label></div>
-            ${!this._showAdvancedBattery ? html`<div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedBattery = true; }}>Advanced settings</button></div>` : nothing}
+            <div class="row single"><label>Threshold %<input type="number" min="0" max="100" .value=${String(config.ui?.battery_threshold ?? 20)} @input=${(e: InputEvent) => this._setUi("battery_threshold", Number(valueFromEvent(e)))} /></label></div>
+            ${!this._showAdvancedBattery ? html`<div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedBattery = true; }}>Advanced</button></div>` : nothing}
             ${this._showAdvancedBattery ? html`
-              <div class="row">
-                <div class="inline-control">
-                  <div class="inline-control-header">
-                    ${this._renderToggleField("Device tile border", "Shows a border around the device tile when a battery alert fires.", batteryOutlined, (checked) => this._setUi("battery_alert_outlined", checked))}
-                  </div>
-                  <div class="inline-color-block">
-                    <span class="inline-color-label">Color</span>
-                    ${this._renderColorSelect(batteryBorderColor, false, (value) => this._setUi("battery_alert_border_color", value), true)}
-                  </div>
-                </div>
-              </div>
-              <div class="row single">
-                ${this._renderPickerField("Header badge", "Badge shown on the device tile header while the battery alert is active.", this._renderHeaderBadgeSelect(batteryHeaderBadge, false, (value) => this._setUi("battery_alert_header_badge", value)))}
-              </div>
-              <div class="row single">
-                ${this._renderToggleField("Card border when collapsed", "When a battery alert fires, shows a red border around the collapsed room card.", batteryHeaderBorder, (checked) => this._setUi("battery_alert_header_border", checked))}
-              </div>
-              <div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedBattery = false; }}>Back to simple settings</button></div>
+              <div class="row single"><div class="inline-control"><div class="inline-control-header">${this._renderToggleField("Tile border", "Shows a border around the device tile when a battery alert fires.", batteryOutlined, (checked) => this._setUi("battery_alert_outlined", checked))}</div><div class="inline-color-block"><span class="inline-color-label">Color</span>${this._renderColorSelect(batteryBorderColor, false, (value) => this._setUi("battery_alert_border_color", value), true)}</div></div></div>
+              <div class="row single">${this._renderPickerField("Header badge", "Badge shown while the battery alert is active.", this._renderHeaderBadgeSelect(batteryHeaderBadge, false, (value) => this._setUi("battery_alert_header_badge", value)))}</div>
+              <div class="row single">${this._renderToggleField("Card border", "Shows a red border around the collapsed card when a battery alert fires.", batteryHeaderBorder, (checked) => this._setUi("battery_alert_header_border", checked))}</div>
+              <div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedBattery = false; }}>← Back</button></div>
             ` : nothing}
           ` : nothing}
         </div>
 
         <div class="panel">
-          <div class="panel-title">Header climate data</div>
-          <div class="panel-subtitle">Only configured sensors are shown. Each alert stays disabled until you explicitly enable its limits.</div>
-          ${this._renderSensorAlertConfig("temperature", "Temperature", config)}
-          <div class="row single">
-            ${this._renderToggleField("Click opens details", "When enabled, tapping the climate strip opens details. When disabled, the same tap expands or collapses the room card.", config.ui?.header_climate_more_info ?? true, (checked) => this._setUi("header_climate_more_info", checked))}
+          <div class="panel-title">Sensors</div>
+          <div class="panel-subtitle">Only sensors with a configured entity are displayed. Click opens details can be toggled below.</div>
+          <div class="climate-sensor-list">
+            ${this._renderPresetSensor("temperature", "Temperature", "mdi:thermometer", config)}
+            ${this._renderPresetSensor("humidity", "Humidity", "mdi:water-percent", config)}
+            ${!this._showAdvancedClimate ? html`<button type="button" class="secondary sensor-more-btn" @click=${() => { this._showAdvancedClimate = true; }}>More sensors (CO₂, VOC, PM2.5, AQI)</button>` : nothing}
+            ${this._showAdvancedClimate ? html`
+              ${this._renderPresetSensor("co2", "CO₂", "mdi:molecule-co2", config)}
+              ${this._renderPresetSensor("voc", "VOC", "mdi:flask-outline", config)}
+              ${this._renderPresetSensor("pm25", "PM2.5", "mdi:blur", config)}
+              ${this._renderPresetSensor("aqi", "AQI", "mdi:gauge", config)}
+              <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showAdvancedClimate = false; }}>← Hide</button>
+            ` : nothing}
           </div>
-          ${!this._showAdvancedClimate ? html`<div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedClimate = true; }}>Advanced settings</button></div>` : nothing}
-          ${this._showAdvancedClimate ? html`
-            ${this._renderSensorAlertConfig("humidity", "Humidity", config)}
-            ${this._renderSensorAlertConfig("co2", "CO2", config)}
-            ${this._renderSensorAlertConfig("voc", "VOC", config)}
-            ${this._renderSensorAlertConfig("pm25", "PM2.5", config)}
-            ${this._renderSensorAlertConfig("aqi", "AQI", config)}
-            <div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedClimate = false; }}>Back to simple settings</button></div>
-          ` : nothing}
+          <div class="panel-subtitle" style="margin-top:4px">Custom sensors — e.g. noise, CO, radiation</div>
+          <div class="climate-sensor-list">
+            ${customSensors.map((sensor, i) => this._renderCustomSensor(sensor, i, config))}
+          </div>
+          <div class="row single">
+            <button type="button" class="secondary" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
+          </div>
+          <div class="row single">
+            ${this._renderToggleField("Click opens details", "Tapping the climate strip opens a detail view.", config.ui?.header_climate_more_info ?? true, (checked) => this._setUi("header_climate_more_info", checked))}
+          </div>
         </div>
 
         <div class="panel">
-          <div class="panel-title">Header automations data</div>
-          <div class="panel-subtitle">Shows an icon badge with the count of enabled automations in this area, next to the room name. Requires a valid area ID.</div>
+          <div class="panel-title">Automations badge</div>
           <div class="row single">
-            ${this._renderToggleField("Automation badge", "Shows the number of enabled automations linked to this area.", automationEnabled, (checked) => this._setUi("automation_badge_enabled", checked), !this._isRoomIdValid(config.room_id))}
+            ${this._renderToggleField("Show automation count", "Shows a badge with the count of enabled automations in this area.", automationEnabled, (checked) => this._setUi("automation_badge_enabled", checked), !this._isRoomIdValid(config.room_id))}
           </div>
         </div>
       </section>
     `;
   }
 
-  private _renderSensorAlertConfig(
+  private _renderPresetSensor(
     key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi",
     label: string,
+    icon: string,
     config: SmartRoomCardConfig,
   ) {
     const alertConfig = config.sensors?.alerts?.[key];
-    const enabled = alertConfig?.enabled === true;
-    const roomName = this._areaName(this._config?.room_id) ?? "this room";
+    const alertEnabled = alertConfig?.enabled === true;
+    const entityId = config.sensors?.[key] ?? "";
     const restrictToRoom = config.sensors?.filters?.[key]?.restrict_to_room_area === true;
-    const customIcon = config.sensors?.icons?.[key] ?? "";
+    const roomName = this._areaName(this._config?.room_id) ?? "this room";
     return html`
-      <div class="panel">
-        <div class="panel-title">${this._renderClimateTitle(key, label, customIcon)}</div>
-        <div class="row">
-          <div class="field-card"><div class="field-title">${label} entity</div><span class="hint">Entity printed in the header for this climate metric. Leave it empty to hide this metric completely.</span>${this._renderEntityPicker(config.sensors?.[key] ?? "", (value) => this._setSensor(key, value), false, this._entitySelector(["sensor"], restrictToRoom, this._config?.room_id))}${this._renderCompactCheckField(`Only entities from ${roomName}`, "Limit this picker to the selected area.", restrictToRoom, (checked) => this._setSensorFilter(key, "restrict_to_room_area", checked))}</div>
-          ${this._renderToggleField("Enable room alert", "When enabled, this climate value can turn the room into alert state using the thresholds defined below.", enabled, (checked) => this._setSensorAlert(key, "enabled", checked))}
+      <div class="sensor-row">
+        <div class="sensor-row-main">
+          <span class="sensor-row-icon"><ha-icon icon=${icon}></ha-icon></span>
+          <span class="sensor-row-label">${label}</span>
+          <div class="sensor-row-entity">${this._renderEntityPicker(entityId, (v) => this._setSensor(key, v), false, this._entitySelector(["sensor"], restrictToRoom, this._config?.room_id))}</div>
+          <label class="sensor-row-restrict">${this._renderInlineToggle(restrictToRoom, (v) => this._setSensorFilter(key, "restrict_to_room_area", v))}<span>Only ${roomName}</span></label>
+          <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(key, "enabled", v))}<span>Alert</span></label>
         </div>
-        <div class="row single"><div class="inline-control"><div><div>Icon</div><div class="hint">Shown in the header climate strip and as alert badge. Supports any MDI icon.</div></div><div class="icon-picker-row">${this._renderIconPicker(customIcon, false, (value) => this._setSensorIcon(key, value))}</div></div></div>
-        ${enabled
-          ? html`
-              <div class="row">
-                <label>
-                  Min alert
-                  <input
-                    type="number"
-                    .value=${alertConfig?.min !== undefined ? String(alertConfig.min) : ""}
-                    @input=${(e: InputEvent) => this._setSensorAlert(key, "min", toNumberOrUndefined(valueFromEvent(e)))}
-                  />
-                </label>
-                <label>
-                  Max alert
-                  <input
-                    type="number"
-                    .value=${alertConfig?.max !== undefined ? String(alertConfig.max) : ""}
-                    @input=${(e: InputEvent) => this._setSensorAlert(key, "max", toNumberOrUndefined(valueFromEvent(e)))}
-                  />
-                </label>
-              </div>
-            `
-          : nothing}
+        ${alertEnabled ? html`
+          <div class="sensor-alert-row">
+            <label>Min<input type="number" .value=${alertConfig?.min !== undefined ? String(alertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+            <label>Max<input type="number" .value=${alertConfig?.max !== undefined ? String(alertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+            <label>Eq<input type="number" .value=${alertConfig?.eq !== undefined ? String(alertConfig.eq) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "eq", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+          </div>
+        ` : nothing}
+      </div>
+    `;
+  }
+
+  private _renderCustomSensor(sensor: import("./helpers").SmartRoomCustomSensor, i: number, config: SmartRoomCardConfig) {
+    const alertEnabled = sensor.alert?.enabled === true;
+    const restrictToRoom = sensor.restrict_to_room_area === true;
+    const roomName = this._areaName(this._config?.room_id) ?? "this room";
+    return html`
+      <div class="sensor-row sensor-row-custom">
+        <div class="sensor-row-main">
+          <span class="sensor-row-icon"><ha-icon icon=${sensor.icon || "mdi:gauge"}></ha-icon></span>
+          <input class="sensor-name-input" .value=${sensor.name} placeholder="Name" @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
+          <div class="sensor-row-entity">${this._renderEntityPicker(sensor.entity, (v) => this._updateCustomSensor(i, { entity: v }), false, this._entitySelector(["sensor"], restrictToRoom, config.room_id))}</div>
+          <label class="sensor-row-restrict">${this._renderInlineToggle(restrictToRoom, (v) => this._updateCustomSensor(i, { restrict_to_room_area: v }))}<span>Only ${roomName}</span></label>
+          <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._updateCustomSensorAlert(i, "enabled", v))}<span>Alert</span></label>
+          <button type="button" class="sensor-remove-btn" @click=${() => this._removeCustomSensor(i)}>✕</button>
+        </div>
+        <div class="sensor-row-icon-picker">${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}</div>
+        ${alertEnabled ? html`
+          <div class="sensor-alert-row">
+            <label>Min<input type="number" .value=${sensor.alert?.min !== undefined ? String(sensor.alert.min) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+            <label>Max<input type="number" .value=${sensor.alert?.max !== undefined ? String(sensor.alert.max) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+            <label>Eq<input type="number" .value=${sensor.alert?.eq !== undefined ? String(sensor.alert.eq) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "eq", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+          </div>
+        ` : nothing}
       </div>
     `;
   }
@@ -1122,7 +1129,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       },
     });
   }
-  private _setSensorAlert(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi", field: "enabled" | "min" | "max", value: boolean | number | undefined) {
+  private _setSensorAlert(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi", field: "enabled" | "min" | "max" | "eq", value: boolean | number | undefined) {
     this._patch({
       sensors: {
         ...(this._config?.sensors ?? {}),
@@ -1136,6 +1143,25 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       },
     });
   }
+  private _addCustomSensor() {
+    const custom = [...(this._config?.sensors?.custom ?? []), { name: "", icon: "mdi:gauge", entity: "" }];
+    this._patch({ sensors: { ...(this._config?.sensors ?? {}), custom } });
+  }
+  private _removeCustomSensor(i: number) {
+    const custom = (this._config?.sensors?.custom ?? []).filter((_, idx) => idx !== i);
+    this._patch({ sensors: { ...(this._config?.sensors ?? {}), custom } });
+  }
+  private _updateCustomSensor(i: number, patch: Partial<import("./helpers").SmartRoomCustomSensor>) {
+    const custom = [...(this._config?.sensors?.custom ?? [])];
+    custom[i] = { ...custom[i], ...patch };
+    this._patch({ sensors: { ...(this._config?.sensors ?? {}), custom } });
+  }
+  private _updateCustomSensorAlert(i: number, field: "enabled" | "min" | "max" | "eq", value: boolean | number | undefined) {
+    const custom = [...(this._config?.sensors?.custom ?? [])];
+    custom[i] = { ...custom[i], alert: { ...(custom[i].alert ?? {}), [field]: value } };
+    this._patch({ sensors: { ...(this._config?.sensors ?? {}), custom } });
+  }
+
   private _setDevice(index: number, key: keyof SmartRoomDeviceConfig, value: unknown) {
     const devices = [...(this._config?.devices ?? [])];
     const current = devices[index];

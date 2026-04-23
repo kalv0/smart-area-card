@@ -48,6 +48,29 @@ export function computeRenderModel(
     icon: alert.icon,
     messages: [alert.reason],
   }));
+
+  const customSensorEntries = (config.sensors?.custom ?? []).map((sc) => ({
+    config: sc,
+    entity: getEntity(states, sc.entity),
+  }));
+  customSensorEntries.forEach(({ config: sc, entity }, i) => {
+    if (!sc.alert?.enabled || !entity || isUnavailable(entity)) return;
+    const value = Number(entity.state);
+    if (!Number.isFinite(value)) return;
+    const { min, max, eq } = sc.alert;
+    if (
+      (min !== undefined && value < min) ||
+      (max !== undefined && value > max) ||
+      (eq !== undefined && value === eq)
+    ) {
+      const unit = entity.attributes.unit_of_measurement ? ` ${entity.attributes.unit_of_measurement}` : "";
+      climateAlertBadges.push({
+        key: `custom_${i}`,
+        icon: sc.icon || "mdi:gauge",
+        messages: [`${sc.name}: ${entity.state}${unit}`],
+      });
+    }
+  });
   const areaEntry = resolveAreaEntry(hassExt, config.room_id);
   const automationCount = config.ui?.automation_badge_enabled && areaEntry
     ? countEnabledRoomAutomations(hass, hassExt, config.room_id!)
@@ -60,7 +83,7 @@ export function computeRenderModel(
     activeMediaCount: devices.filter((d) => d.countsAsMediaActive).length,
     activeRecCount: devices.filter((d) => d.countsAsRecActive).length,
     badgeCounts,
-    hasAlert: deviceAlerts.some((d) => d.alertHeaderBorder) || climateAlerts.length > 0,
+    hasAlert: deviceAlerts.some((d) => d.alertHeaderBorder) || climateAlerts.length > 0 || climateAlertBadges.some((b) => b.key.startsWith("custom_")),
     alertsByBadge,
     climateAlertBadges,
     alertReasons: [
@@ -69,7 +92,11 @@ export function computeRenderModel(
       ),
       ...climateAlerts.map((item) => item.reason),
     ],
-    climateItems: buildClimateItems({ temp, humidity, co2, voc, pm25, aqi }, customIcons),
+    climateItems: buildClimateItems(
+      { temp, humidity, co2, voc, pm25, aqi },
+      customIcons,
+      customSensorEntries.map(({ config: sc, entity }) => ({ name: sc.name, icon: sc.icon, entity })),
+    ),
     climateEntities: getClimateEntities(config.sensors),
     areaIcon: areaEntry?.icon || "mdi:home-outline",
     roomBackground: normalizeAssetPath(

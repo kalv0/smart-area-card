@@ -149,6 +149,14 @@ export interface SmartRoomDeviceConfig {
   double_tap_action?: SmartRoomActionConfig;
 }
 
+export interface SmartRoomCustomSensor {
+  name: string;
+  icon?: string;
+  entity: string;
+  restrict_to_room_area?: boolean;
+  alert?: { enabled?: boolean; min?: number; max?: number; eq?: number };
+}
+
 export interface SmartRoomCardConfig {
   type: string;
   room: string;
@@ -170,12 +178,12 @@ export interface SmartRoomCardConfig {
       aqi?: { restrict_to_room_area?: boolean };
     };
     alerts?: {
-      temperature?: { enabled?: boolean; min?: number; max?: number };
-      humidity?: { enabled?: boolean; min?: number; max?: number };
-      co2?: { enabled?: boolean; min?: number; max?: number };
-      voc?: { enabled?: boolean; min?: number; max?: number };
-      pm25?: { enabled?: boolean; min?: number; max?: number };
-      aqi?: { enabled?: boolean; min?: number; max?: number };
+      temperature?: { enabled?: boolean; min?: number; max?: number; eq?: number };
+      humidity?: { enabled?: boolean; min?: number; max?: number; eq?: number };
+      co2?: { enabled?: boolean; min?: number; max?: number; eq?: number };
+      voc?: { enabled?: boolean; min?: number; max?: number; eq?: number };
+      pm25?: { enabled?: boolean; min?: number; max?: number; eq?: number };
+      aqi?: { enabled?: boolean; min?: number; max?: number; eq?: number };
     };
     icons?: {
       temperature?: string;
@@ -185,6 +193,7 @@ export interface SmartRoomCardConfig {
       pm25?: string;
       aqi?: string;
     };
+    custom?: SmartRoomCustomSensor[];
   };
   ui?: {
     blur?: boolean;

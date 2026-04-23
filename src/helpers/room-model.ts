@@ -47,15 +47,17 @@ export function createCardSignature(
 
 export function getClimateEntities(sensors: SmartRoomCardConfig["sensors"]): string[] {
   if (!sensors) return [];
-  return [sensors.temperature, sensors.humidity, sensors.co2, sensors.voc, sensors.pm25, sensors.aqi].filter(
+  const presets = [sensors.temperature, sensors.humidity, sensors.co2, sensors.voc, sensors.pm25, sensors.aqi].filter(
     (value): value is string => Boolean(value),
   );
+  const custom = (sensors.custom ?? []).map((s) => s.entity).filter(Boolean);
+  return [...presets, ...custom];
 }
 
 export function evaluateClimateAlert(
   key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi",
   entity: HassEntity | undefined,
-  alertConfig: { enabled?: boolean; min?: number; max?: number } | undefined,
+  alertConfig: { enabled?: boolean; min?: number; max?: number; eq?: number } | undefined,
   label: string,
   icon: string,
 ): ClimateAlert | undefined {
@@ -74,8 +76,10 @@ export function evaluateClimateAlert(
   if (alertConfig.min !== undefined && value < alertConfig.min) {
     return { key, label, reason: message, icon };
   }
-
   if (alertConfig.max !== undefined && value > alertConfig.max) {
+    return { key, label, reason: message, icon };
+  }
+  if (alertConfig.eq !== undefined && value === alertConfig.eq) {
     return { key, label, reason: message, icon };
   }
 
@@ -118,6 +122,7 @@ export function buildClimateItems(
     aqi?: HassEntity;
   },
   customIcons?: Record<string, string | undefined>,
+  customSensors?: Array<{ name: string; icon?: string; entity?: HassEntity }>,
 ): Array<{ key: string; icon: string; value: string; className: string }> {
   const items: Array<{ key: string; icon: string; value: string; className: string }> = [];
   const resolveIcon = (key: string) => customIcons?.[key] || CLIMATE_DEFAULT_ICONS[key] || "mdi:gauge";
@@ -125,24 +130,29 @@ export function buildClimateItems(
     key: string,
     className: string,
     entity?: HassEntity,
+    icon?: string,
     formatter?: (value: string, unit?: string) => string,
   ) => {
     if (!entity || isUnavailable(entity)) return;
     const unit = entity.attributes.unit_of_measurement ? String(entity.attributes.unit_of_measurement) : undefined;
     const raw = String(entity.state);
     const value = formatter ? formatter(raw, unit) : `${raw}${unit ? ` ${unit}` : ""}`;
-    items.push({ key, icon: resolveIcon(key), value, className });
+    items.push({ key, icon: icon ?? resolveIcon(key), value, className });
   };
 
-  pushItem("temperature", "temp", entities.temp, (value, unit) => {
+  pushItem("temperature", "temp", entities.temp, undefined, (value, unit) => {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? `${numeric.toFixed(1)}${unit ?? " deg"}` : `${value}${unit ? ` ${unit}` : ""}`;
   });
-  pushItem("humidity", "humidity", entities.humidity, (value, unit) => `${value}${unit ?? "%"}`);
+  pushItem("humidity", "humidity", entities.humidity, undefined, (value, unit) => `${value}${unit ?? "%"}`);
   pushItem("co2", "co2", entities.co2);
   pushItem("voc", "voc", entities.voc);
   pushItem("pm25", "pm25", entities.pm25);
   pushItem("aqi", "aqi", entities.aqi);
+
+  (customSensors ?? []).forEach((sensor, i) => {
+    pushItem(`custom_${i}`, "custom", sensor.entity, sensor.icon || "mdi:gauge");
+  });
 
   return items;
 }

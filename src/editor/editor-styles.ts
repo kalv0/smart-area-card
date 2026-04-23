@@ -1331,6 +1331,147 @@ export const calvoRoomCardEditorStyles = css`
     background: rgba(96, 165, 250, 0.22);
   }
 
+  /* ─── Climate sensor rows ────────────────────────────── */
+
+  .climate-sensor-list {
+    display: grid;
+    gap: 6px;
+  }
+
+  .sensor-row {
+    display: grid;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(8, 12, 18, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  .sensor-row-custom {
+    border-color: rgba(76, 201, 240, 0.28);
+    background: rgba(76, 201, 240, 0.05);
+  }
+
+  .sensor-row-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .sensor-row-icon {
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
+    --mdc-icon-size: 18px;
+    color: var(--editor-muted);
+  }
+
+  .sensor-row-label {
+    flex: 0 0 auto;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--editor-text);
+    min-width: 84px;
+  }
+
+  .sensor-row-entity {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+
+  .sensor-row-restrict,
+  .sensor-row-alert-toggle {
+    /* reset label card styling */
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    /* own layout */
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--editor-muted);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* strip ios-toggle card styling when nested inline */
+  .sensor-row-restrict .ios-toggle,
+  .sensor-row-alert-toggle .ios-toggle {
+    padding: 0;
+    border: none;
+    background: none;
+    min-height: 0;
+    border-radius: 0;
+    gap: 0;
+  }
+
+  .sensor-alert-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .sensor-alert-row label {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    gap: 3px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--editor-muted);
+  }
+
+  .sensor-alert-row input {
+    padding: 5px 8px;
+    font-size: 0.8rem;
+  }
+
+  .sensor-name-input {
+    flex: 1 1 100px;
+    width: auto;
+    min-width: 80px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .sensor-remove-btn {
+    flex: 0 0 auto;
+    min-width: 30px;
+    min-height: 30px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(185, 28, 28, 0.7);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    border: 1px solid rgba(255, 190, 190, 0.2);
+    line-height: 1;
+  }
+
+  .sensor-remove-btn:hover {
+    background: rgba(220, 38, 38, 0.9);
+  }
+
+  .sensor-more-btn {
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    min-height: 36px;
+  }
+
+  .sensor-row-icon-picker {
+    padding-top: 2px;
+  }
+
   /* ─── Responsive ─────────────────────────────────────── */
 
   @media (max-width: 720px) {
