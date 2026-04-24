@@ -240,12 +240,9 @@ export const calvoRoomCardEditorStyles = css`
     background: rgba(0, 0, 0, 0.28);
   }
 
-  .bg-preview--banner {
-    height: 60px;
-  }
-
+  .bg-preview--banner,
   .bg-preview--split {
-    height: 96px;
+    height: 110px;
   }
 
   .bg-preview-img {
@@ -258,21 +255,10 @@ export const calvoRoomCardEditorStyles = css`
     display: block;
   }
 
+  /* Diagonal clip: right ~55% is dark, left ~45% is normal — no hard line */
   .bg-preview-img--dark {
     filter: brightness(0.18) saturate(0.4) hue-rotate(200deg);
-    clip-path: polygon(calc(50% + 18px) 0%, 100% 0%, 100% 100%, calc(50% - 18px) 100%);
-  }
-
-  .bg-preview-divider {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 2px;
-    transform: skewX(-8deg) translateX(-50%);
-    background: rgba(255, 255, 255, 0.75);
-    box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
-    pointer-events: none;
+    clip-path: polygon(calc(50% + 22px) 0%, 100% 0%, 100% 100%, calc(50% - 22px) 100%);
   }
 
   .bg-preview-tag {

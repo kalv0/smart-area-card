@@ -64,16 +64,33 @@ export class SmartAreaCardEditor extends LitElement {
     this._fetchLocalImages();
   }
 
+  protected updated(changedProps: Map<string, unknown>): void {
+    // Retry once when hass becomes available (firstUpdated may fire before hass is set)
+    if (changedProps.has("hass") && this.hass && this._localImages.length === 0) {
+      this._fetchLocalImages();
+    }
+  }
+
   private async _fetchLocalImages(): Promise<void> {
     if (!this.hass) return;
     try {
       const result = await this.hass.callWS<{
-        children?: Array<{ title: string; thumbnail?: string; media_content_type?: string }>;
+        children?: Array<{
+          title: string;
+          thumbnail?: string;
+          media_class?: string;
+          media_content_type?: string;
+        }>;
       }>({ type: "media_source/browse_media", media_content_id: "media-source://media_source/local/img/areas" });
       this._localImages = (result.children ?? [])
-        .filter((item) => /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(item.title))
-        .map((item) => `/local/img/areas/${item.title}`);
-    } catch {
+        .filter((item) =>
+          item.media_class === "image" ||
+          (item.media_content_type ?? "").startsWith("image/") ||
+          /\.(png|jpe?g|gif|webp|svg|avif|bmp|tiff?)$/i.test(item.title ?? ""),
+        )
+        .map((item) => item.thumbnail ?? `/local/img/areas/${item.title}`);
+    } catch (err) {
+      console.warn("[smart-area-card] Could not load images from /local/img/areas/:", err);
       this._localImages = [];
     }
   }
@@ -197,7 +214,6 @@ export class SmartAreaCardEditor extends LitElement {
               <div class="bg-preview bg-preview--split">
                 <img class="bg-preview-img" src=${bgOn} alt="" />
                 <img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt="" />
-                <div class="bg-preview-divider"></div>
                 <span class="bg-preview-tag bg-preview-tag--left">ON</span>
                 <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
               </div>
