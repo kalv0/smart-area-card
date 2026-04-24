@@ -25,6 +25,7 @@ import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUnd
 import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
 import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
 import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered } from "./editor/registry-helpers";
+import { patchSensor, patchSensorIcon, patchSensorFilter, patchSensorAlert, addCustomSensor, removeCustomSensor, updateCustomSensor, updateCustomSensorAlert } from "./editor/sensor-config";
 
 const SENSOR_DEVICE_CLASSES: Partial<Record<string, string[]>> = {
   temperature: ["temperature"],
@@ -1098,55 +1099,21 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   }
   private _setExpander(key: string, value: unknown) { this._patch({ expander: { ...(this._config?.expander ?? {}), [key]: value } }); }
   private _setRoomImage(key: "background_on" | "background_off", value: string) { this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...(this._config?.ui?.images ?? {}), [key]: value || undefined } } }); }
-  private _setSensor(key: string, value: string) { this._patch({ sensors: { ...(this._config?.sensors ?? {}), [key]: value || undefined } }); }
-  private _setSensorIcon(key: string, value: string) {
-    this._patch({ sensors: { ...(this._config?.sensors ?? {}), icons: { ...(this._config?.sensors?.icons ?? {}), [key]: value || undefined } } });
-  }
+  private _setSensor(key: string, value: string) { this._patch({ sensors: patchSensor(this._config?.sensors, key, value) }); }
+  private _setSensorIcon(key: string, value: string) { this._patch({ sensors: patchSensorIcon(this._config?.sensors, key, value) }); }
   private _setSensorFilter(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", field: "restrict_to_room_area", value: boolean) {
-    this._patch({
-      sensors: {
-        ...(this._config?.sensors ?? {}),
-        filters: {
-          ...(this._config?.sensors?.filters ?? {}),
-          [key]: {
-            ...(this._config?.sensors?.filters?.[key] ?? {}),
-            [field]: value,
-          },
-        },
-      },
-    });
+    this._patch({ sensors: patchSensorFilter(this._config?.sensors, key, field, value) });
   }
   private _setSensorAlert(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", field: "enabled" | "min" | "max" | "eq", value: boolean | number | string | undefined) {
-    this._patch({
-      sensors: {
-        ...(this._config?.sensors ?? {}),
-        alerts: {
-          ...(this._config?.sensors?.alerts ?? {}),
-          [key]: {
-            ...(this._config?.sensors?.alerts?.[key] ?? {}),
-            [field]: value,
-          },
-        },
-      },
-    });
+    this._patch({ sensors: patchSensorAlert(this._config?.sensors, key, field, value) });
   }
-  private _addCustomSensor() {
-    const custom = [...(this._config?.sensors?.custom ?? []), { name: "", icon: "mdi:gauge", entity: "" }];
-    this._patch({ sensors: { ...(this._config?.sensors ?? {}), custom } });
-  }
-  private _removeCustomSensor(i: number) {
-    const custom = (this._config?.sensors?.custom ?? []).filter((_, idx) => idx !== i);
-    this._patch({ sensors: { ...(this._config?.sensors ?? {}), custom } });
-  }
+  private _addCustomSensor() { this._patch({ sensors: addCustomSensor(this._config?.sensors) }); }
+  private _removeCustomSensor(i: number) { this._patch({ sensors: removeCustomSensor(this._config?.sensors, i) }); }
   private _updateCustomSensor(i: number, patch: Partial<import("./helpers").SmartRoomCustomSensor>) {
-    const custom = [...(this._config?.sensors?.custom ?? [])];
-    custom[i] = { ...custom[i], ...patch };
-    this._patch({ sensors: { ...(this._config?.sensors ?? {}), custom } });
+    this._patch({ sensors: updateCustomSensor(this._config?.sensors, i, patch) });
   }
   private _updateCustomSensorAlert(i: number, field: "enabled" | "min" | "max" | "eq", value: boolean | number | undefined) {
-    const custom = [...(this._config?.sensors?.custom ?? [])];
-    custom[i] = { ...custom[i], alert: { ...(custom[i].alert ?? {}), [field]: value } };
-    this._patch({ sensors: { ...(this._config?.sensors ?? {}), custom } });
+    this._patch({ sensors: updateCustomSensorAlert(this._config?.sensors, i, field, value) });
   }
 
   private _setDevice(index: number, key: keyof SmartRoomDeviceConfig, value: unknown) {
