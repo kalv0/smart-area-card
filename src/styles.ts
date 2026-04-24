@@ -178,49 +178,36 @@ export const smartRoomCardStyles = css`
     --mdc-icon-size: 1em;
   }
 
+  /* ── Unified header badge base ─────────────────────────────────── */
   .active-pill,
   .media-pill,
   .header-pill,
-  .chip,
-  .overlay-toggle {
+  .camera-rec,
+  .automation-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    min-height: 34px;
-    padding: 0 var(--sr-space-3);
+    gap: 2px;
+    height: 20px;
+    padding: 0 6px;
     border-radius: var(--sr-radius-full);
     border: 1px solid rgba(255, 255, 255, 0.28);
     background: rgba(255, 255, 255, 0.22);
     color: white;
-  }
-
-  .camera-rec {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    min-height: 20px;
-    padding: 0 6px;
-    border-radius: var(--sr-radius-full);
-    background: rgba(255, 59, 48, 0.9);
-    color: white;
     font-size: var(--sr-text-sm);
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    box-shadow: 0 0 10px rgba(255, 59, 48, 0.4);
+    line-height: 1;
+    white-space: nowrap;
+    vertical-align: middle;
   }
 
-  .header-pill {
-    min-height: 20px;
-    padding: 0 6px;
-    gap: 2px;
-    font-size: var(--sr-text-sm);
-  }
-
-  .header-pill ha-icon {
+  .active-pill ha-icon,
+  .media-pill ha-icon,
+  .header-pill ha-icon,
+  .automation-badge ha-icon {
     --mdc-icon-size: 15px;
+    flex-shrink: 0;
   }
 
+  /* ── Badge color variants ───────────────────────────────────────── */
   .header-pill-white {
     color: rgba(255, 255, 255, 0.92);
     border-color: rgba(255, 255, 255, 0.32);
@@ -245,53 +232,39 @@ export const smartRoomCardStyles = css`
     background: color-mix(in srgb, var(--smart-room-warning) 22%, transparent);
   }
 
+  /* Camera-rec: solid opaque fill (recording-active indicator) */
+  .camera-rec {
+    background: rgba(255, 59, 48, 0.9);
+    border-color: transparent;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    box-shadow: 0 0 10px rgba(255, 59, 48, 0.4);
+  }
+
+  /* Automation badge: HA primary color */
   .automation-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    height: 20px;
-    border-radius: var(--sr-radius-full);
-    background: var(--primary-color, #1565c0);
-    border: 0;
-    padding: 0 6px;
-    cursor: default;
     font: inherit;
     font-size: var(--sr-text-sm);
-    color: white;
-    line-height: 1;
-    white-space: nowrap;
-    vertical-align: middle;
+    border-color: color-mix(in srgb, var(--primary-color, #1565c0) 55%, transparent);
+    background: color-mix(in srgb, var(--primary-color, #1565c0) 32%, transparent);
+    cursor: default;
   }
 
-  .automation-badge ha-icon {
-    --mdc-icon-size: 15px;
-    color: white;
-    flex-shrink: 0;
-  }
-
-  .automation-badge-clickable {
-    cursor: pointer;
-    opacity: 0.9;
-    transition: opacity 140ms ease, transform 140ms ease;
-  }
-
-  .automation-badge-clickable:hover {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-
+  /* ── Interactive states ─────────────────────────────────────────── */
   .header-pill-button {
     appearance: none;
     -webkit-appearance: none;
     cursor: default;
   }
 
-  .header-pill-clickable {
+  .header-pill-clickable,
+  .automation-badge-clickable {
     cursor: pointer;
     transition: opacity 140ms ease, transform 140ms ease;
   }
 
-  .header-pill-clickable:hover {
+  .header-pill-clickable:hover,
+  .automation-badge-clickable:hover {
     opacity: 0.8;
     transform: scale(1.08);
   }
@@ -614,28 +587,13 @@ export const smartRoomCardStyles = css`
   }
 
   .active-pill {
-    min-height: 20px;
-    padding: 0 6px;
-    gap: 2px;
-    font-size: var(--sr-text-sm);
     color: var(--smart-room-active);
-    border-color: color-mix(in srgb, var(--smart-room-active) 30%, transparent);
-    background: color-mix(in srgb, var(--smart-room-active) 12%, transparent);
+    border-color: color-mix(in srgb, var(--smart-room-active) 40%, transparent);
+    background: color-mix(in srgb, var(--smart-room-active) 22%, transparent);
   }
 
   .active-pill ha-icon {
     color: var(--smart-room-active);
-    --mdc-icon-size: 15px;
-  }
-
-  .media-pill {
-    min-height: 20px;
-    padding: 0 6px;
-    gap: 2px;
-    font-size: var(--sr-text-sm);
-    color: white;
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.14);
   }
 
   .media-main {
@@ -651,10 +609,6 @@ export const smartRoomCardStyles = css`
     line-height: 1;
   }
 
-  .media-pill ha-icon {
-    color: white;
-    --mdc-icon-size: 15px;
-  }
 
   .media-waves {
     display: inline-flex;
