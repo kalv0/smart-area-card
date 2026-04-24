@@ -104,6 +104,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   @state() private _expanded = false;
   @state() private _everExpanded = false;
   @state() private _showAutomationPanel = false;
+  @state() private _showClimateHistory = false;
   @state() private _alertsHidden = false;
 
   private _renderModel?: RenderModel;
@@ -155,6 +156,32 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     return 4 + Math.max(deviceRows, 1);
   }
 
+  protected updated(changedProps: Map<string, unknown>): void {
+    if (this._showClimateHistory) {
+      if (changedProps.has("_showClimateHistory") || changedProps.has("_config")) {
+        this._buildHistoryCharts();
+      } else if (changedProps.has("hass")) {
+        this.shadowRoot?.querySelectorAll(".climate-charts > *").forEach((el) => {
+          (el as HTMLElement & { hass: HomeAssistant }).hass = this.hass;
+        });
+      }
+    }
+  }
+
+  private _buildHistoryCharts(): void {
+    const container = this.shadowRoot?.querySelector<HTMLElement>(".climate-charts");
+    if (!container) return;
+    container.innerHTML = "";
+    const HistoryCard = customElements.get("hui-history-graph-card") as (new () => HTMLElement) | undefined;
+    if (!HistoryCard) return;
+    for (const entityId of this._renderModel?.climateEntities ?? []) {
+      const card = new HistoryCard() as HTMLElement & { hass: HomeAssistant; setConfig(c: unknown): void };
+      card.hass = this.hass;
+      card.setConfig({ type: "history-graph", entities: [{ entity: entityId }], hours_to_show: 24 });
+      container.appendChild(card);
+    }
+  }
+
   protected willUpdate(changedProps: Map<string, unknown>): void {
     if (changedProps.has("hass") || changedProps.has("_config")) {
       if (this._config && this.hass) {
@@ -184,6 +211,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       changedProps.has("_config") ||
       changedProps.has("_expanded") ||
       changedProps.has("_showAutomationPanel") ||
+      changedProps.has("_showClimateHistory") ||
       changedProps.has("_alertsHidden")
     ) {
       return true;
@@ -229,6 +257,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         <div class="shell">
           <section class="summary-zone">
             ${this._renderHeader()}
+            ${this._renderClimateHistoryPanel()}
             ${this._renderAlertPanels()}
             ${this._renderAutomationPanel()}
           </section>
@@ -350,6 +379,28 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._showAutomationPanel = !this._showAutomationPanel;
     this._persistAutomationPanel();
   };
+
+  private _renderClimateHistoryPanel(): TemplateResult | typeof nothing {
+    if (!this._showClimateHistory) return nothing;
+    const entities = this._renderModel?.climateEntities ?? [];
+    if (!entities.length) return nothing;
+    const historyPath = `/history?entity_id=${entities.join(",")}`;
+    const navigate = (e: Event): void => {
+      e.stopPropagation();
+      e.preventDefault();
+      window.history.pushState(null, "", historyPath);
+      window.dispatchEvent(new CustomEvent("location-changed", { bubbles: true }));
+    };
+    return html`
+      <div class="climate-history-panel">
+        <div class="climate-charts"></div>
+        <a class="climate-history-more" href=${historyPath} @click=${navigate}>
+          <ha-icon icon="mdi:history"></ha-icon>
+          Mostrar historial completo
+        </a>
+      </div>
+    `;
+  }
 
   private _renderAutomationPanel(): TemplateResult | typeof nothing {
     if (!this._showAutomationPanel) return nothing;
@@ -503,18 +554,9 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       this._toggleExpanded();
       return;
     }
-
     const entities = this._renderModel?.climateEntities ?? [];
     if (!entities.length) return;
-
-    this._openPopupOrInfo(entities[0], {
-      title: "Climate",
-      size: "wide",
-      card: {
-        type: "entities",
-        entities,
-      },
-    });
+    this._showClimateHistory = !this._showClimateHistory;
   };
 
   private _handleDevicePointerDown(event: PointerEvent, device: ComputedDeviceModel): void {

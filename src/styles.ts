@@ -540,6 +540,52 @@ export const smartRoomCardStyles = css`
     min-width: 0;
   }
 
+  .climate-history-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sr-space-2);
+  }
+
+  .climate-charts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sr-space-2);
+  }
+
+  .climate-charts > * {
+    border-radius: var(--sr-radius-md);
+    overflow: hidden;
+    --ha-card-border-radius: var(--sr-radius-md);
+    --ha-card-background: rgba(10, 16, 28, 0.55);
+    --ha-card-border-width: 0;
+  }
+
+  .climate-history-more {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sr-space-2);
+    align-self: flex-start;
+    padding: 6px 12px;
+    border-radius: var(--sr-radius-full);
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 140ms ease, color 140ms ease;
+  }
+
+  .climate-history-more:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+
+  .climate-history-more ha-icon {
+    --mdc-icon-size: 16px;
+  }
+
   .automation-panel {
     display: flex;
     align-items: flex-start;
