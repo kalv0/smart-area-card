@@ -110,47 +110,189 @@ export const calvoRoomCardEditorStyles = css`
     align-items: center;
   }
 
-  /* ─── Image preview ──────────────────────────────────── */
-  .image-preview-wrap {
+  /* ─── Custom image-selector dropdown ────────────────────────────── */
+  .img-select {
     position: relative;
-    border-radius: var(--editor-radius-md);
-    overflow: hidden;
-    background: rgba(0, 0, 0, 0.28);
-    border: 1px solid var(--editor-border);
-    max-height: 160px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 
-  .image-preview {
+  .img-select[open] .img-select-chevron {
+    transform: rotate(180deg);
+  }
+
+  .img-select-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: var(--editor-radius-md);
+    background: var(--editor-field);
+    border: 1px solid var(--editor-border);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    min-height: 44px;
+  }
+
+  .img-select-trigger::-webkit-details-marker {
+    display: none;
+  }
+
+  .img-select-thumb {
+    width: 56px;
+    height: 36px;
+    object-fit: cover;
+    object-position: top center;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .img-select-placeholder-icon {
+    --mdc-icon-size: 28px;
+    color: var(--editor-muted);
+    flex-shrink: 0;
+  }
+
+  .img-select-name {
+    flex: 1;
+    font-size: 0.88rem;
+    color: var(--editor-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .img-select-chevron {
+    --mdc-icon-size: 18px;
+    color: var(--editor-muted);
+    flex-shrink: 0;
+    transition: transform 180ms ease;
+  }
+
+  .img-select-list {
+    position: relative;
+    margin-top: 4px;
+    border-radius: var(--editor-radius-md);
+    background: var(--editor-panel-2);
+    border: 1px solid var(--editor-border);
+    overflow-y: auto;
+    max-height: 260px;
+    display: grid;
+    gap: 2px;
+    padding: 4px;
+    z-index: 10;
+  }
+
+  .img-select-empty {
+    padding: 12px;
+    font-size: 0.82rem;
+    color: var(--editor-muted);
+    text-align: center;
+  }
+
+  .img-select-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-align: left;
+    color: var(--editor-text);
+    font: inherit;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+
+  .img-select-option:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .img-select-option--active {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.45);
+  }
+
+  .img-select-option-thumb {
+    width: 72px;
+    height: 44px;
+    object-fit: cover;
+    object-position: top center;
+    border-radius: 6px;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .img-select-option-name {
+    font-size: 0.86rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  /* ─── Background preview (below selector) ───────────────────────── */
+  .bg-preview {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--editor-radius-md);
+    border: 1px solid var(--editor-border);
+    background: rgba(0, 0, 0, 0.28);
+  }
+
+  .bg-preview--banner {
+    height: 60px;
+  }
+
+  .bg-preview--split {
+    height: 96px;
+  }
+
+  .bg-preview-img {
+    position: absolute;
+    inset: 0;
     width: 100%;
-    height: 160px;
+    height: 100%;
     object-fit: cover;
     object-position: top center;
     display: block;
   }
 
-  .image-preview--dark {
+  .bg-preview-img--dark {
     filter: brightness(0.18) saturate(0.4) hue-rotate(200deg);
+    clip-path: polygon(calc(50% + 18px) 0%, 100% 0%, 100% 100%, calc(50% - 18px) 100%);
   }
 
-  .image-preview-label {
+  .bg-preview-divider {
     position: absolute;
-    bottom: 6px;
-    right: 8px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.6);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    transform: skewX(-8deg) translateX(-50%);
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
     pointer-events: none;
   }
 
-  .image-compare-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+  .bg-preview-tag {
+    position: absolute;
+    top: 6px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.72);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+  }
+
+  .bg-preview-tag--left {
+    left: 8px;
+  }
+
+  .bg-preview-tag--right {
+    right: 8px;
   }
 
   /* ─── Cards & panels ─────────────────────────────────── */

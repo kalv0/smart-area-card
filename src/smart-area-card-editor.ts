@@ -54,12 +54,28 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _showAdvancedBattery = false;
   @state() private _entityRegistry: EntityRegistryEntry[] = [];
   @state() private _deviceRegistry: DeviceRegistryEntry[] = [];
+  @state() private _localImages: string[] = [];
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
   private _touchDragPointerId?: number;
 
   protected firstUpdated(): void {
     this._refreshRegistries();
+    this._fetchLocalImages();
+  }
+
+  private async _fetchLocalImages(): Promise<void> {
+    if (!this.hass) return;
+    try {
+      const result = await this.hass.callWS<{
+        children?: Array<{ title: string; thumbnail?: string; media_content_type?: string }>;
+      }>({ type: "media_source/browse_media", media_content_id: "media-source://media_source/local/img/areas" });
+      this._localImages = (result.children ?? [])
+        .filter((item) => /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(item.title))
+        .map((item) => `/local/img/areas/${item.title}`);
+    } catch {
+      this._localImages = [];
+    }
   }
 
   public setConfig(config: SmartRoomCardConfig): void {
@@ -109,6 +125,40 @@ export class SmartAreaCardEditor extends LitElement {
     return device.restrict_to_room_area ?? this._typeRestrictsToRoomArea(device.type);
   }
 
+  private _renderImageSelector(value: string, onChange: (v: string) => void) {
+    const nameOf = (url: string) => url.split("/").pop()?.replace(/\.[^.]+$/, "") ?? url;
+    const images = this._localImages;
+    return html`
+      <details class="img-select">
+        <summary class="img-select-trigger">
+          ${value
+            ? html`<img class="img-select-thumb" src=${value} alt="" />`
+            : html`<ha-icon icon="mdi:image-outline" class="img-select-placeholder-icon"></ha-icon>`}
+          <span class="img-select-name">${value ? nameOf(value) : "Select image…"}</span>
+          <ha-icon class="img-select-chevron" icon="mdi:chevron-down"></ha-icon>
+        </summary>
+        <div class="img-select-list">
+          ${images.length === 0
+            ? html`<div class="img-select-empty">No images found in /local/img/areas/</div>`
+            : images.map((url) => html`
+              <button
+                type="button"
+                class="img-select-option${url === value ? " img-select-option--active" : ""}"
+                @click=${(e: Event) => {
+                  onChange(url);
+                  const det = (e.target as HTMLElement).closest<HTMLDetailsElement>("details");
+                  if (det) det.open = false;
+                }}
+              >
+                <img class="img-select-option-thumb" src=${url} alt=${nameOf(url)} />
+                <span class="img-select-option-name">${nameOf(url)}</span>
+              </button>
+            `)}
+        </div>
+      </details>
+    `;
+  }
+
   private _renderGeneral(config: SmartRoomCardConfig) {
     const areaName = this._areaName(config.room_id);
     const images = config.ui?.images ?? {};
@@ -137,19 +187,27 @@ export class SmartAreaCardEditor extends LitElement {
         <div class="panel">
           <div class="panel-title">Room background</div>
 
-          <!-- ha-selector image: HA media browser + built-in preview -->
-          <div class="row single">
-            <label>
-              Room image
-              <span class="hint">Shown as the card background. Use the browse button to pick from /local/.</span>
-            </label>
-            <ha-selector
-              .hass=${this.hass}
-              .selector=${{ image: {} }}
-              .value=${bgOn}
-              @value-changed=${(e: CustomEvent) => this._setRoomImage("background_on", String(e.detail?.value ?? ""))}
-            ></ha-selector>
-          </div>
+          <!-- Custom thumbnail dropdown -->
+          ${this._renderImageSelector(bgOn, (url) => this._setRoomImage("background_on", url))}
+
+          <!-- Preview -->
+          ${bgOn ? html`
+            ${darkEnabled ? html`
+              <!-- Diagonal split: left=normal, right=dark -->
+              <div class="bg-preview bg-preview--split">
+                <img class="bg-preview-img" src=${bgOn} alt="" />
+                <img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt="" />
+                <div class="bg-preview-divider"></div>
+                <span class="bg-preview-tag bg-preview-tag--left">ON</span>
+                <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
+              </div>
+            ` : html`
+              <!-- Full-width banner preview (how it looks collapsed) -->
+              <div class="bg-preview bg-preview--banner">
+                <img class="bg-preview-img" src=${bgOn} alt="" />
+              </div>
+            `}
+          ` : nothing}
 
           <!-- Dark version toggle -->
           <div class="row single">
@@ -162,21 +220,7 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
 
           ${darkEnabled ? html`
-            <!-- Side-by-side previews: normal vs dark -->
-            ${bgOn ? html`
-              <div class="image-compare-row">
-                <div class="image-preview-wrap">
-                  <img class="image-preview" src=${bgOn} alt="Lights on" />
-                  <span class="image-preview-label">Lights on</span>
-                </div>
-                <div class="image-preview-wrap">
-                  <img class="image-preview image-preview--dark" src=${bgOn} alt="Lights off" />
-                  <span class="image-preview-label">Lights off</span>
-                </div>
-              </div>
-            ` : nothing}
-
-            <!-- Condition -->
+            <!-- Condition (only shown when dark is enabled) -->
             <div class="row single">
               <label>
                 Switch to dark when
@@ -213,21 +257,7 @@ export class SmartAreaCardEditor extends LitElement {
                 </label>
               </div>
             ` : nothing}
-          ` : html`
-            <!-- Legacy: separate off-state image when dark mode is disabled -->
-            <div class="row single">
-              <label>
-                Background when off (optional)
-                <span class="hint">Leave empty to use the same image for all states.</span>
-              </label>
-              <ha-selector
-                .hass=${this.hass}
-                .selector=${{ image: {} }}
-                .value=${images.background_off ?? ""}
-                @value-changed=${(e: CustomEvent) => this._setRoomImage("background_off", String(e.detail?.value ?? ""))}
-              ></ha-selector>
-            </div>
-          `}
+          ` : nothing}
         </div>
 
         <!-- ③ Autofill (after image section) -->
