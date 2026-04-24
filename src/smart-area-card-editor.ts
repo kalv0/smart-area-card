@@ -26,6 +26,7 @@ import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/p
 import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
 import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered } from "./editor/registry-helpers";
 import { patchSensor, patchSensorIcon, patchSensorFilter, patchSensorAlert, addCustomSensor, removeCustomSensor, updateCustomSensor, updateCustomSensorAlert } from "./editor/sensor-config";
+import { addNamedState, removeNamedState, updateNamedState, resetPresetState, resetPresetAlert, resetPresetOffline, addNamedAlert, removeNamedAlert, updateNamedAlert } from "./editor/named-item-config";
 
 const SENSOR_DEVICE_CLASSES: Partial<Record<string, string[]>> = {
   temperature: ["temperature"],
@@ -1215,206 +1216,67 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     const devices = [...(this._config?.devices ?? [])];
     const device = devices[index];
     if (!device) return;
-    const currentState = device.states?.states?.[stateIndex];
-    const presetSource = currentState?.preset_source;
-    if (!presetSource) return;
-    const defaults = this._buildResolvedPresetDevice(device);
-    const replacement = defaults.states?.states?.find((item) => item.preset_source === presetSource);
-    if (!replacement) return;
-    const nextStates = [...(device.states?.states ?? [])];
-    nextStates[stateIndex] = replacement;
-    devices[index] = {
-      ...device,
-      states: {
-        ...(device.states ?? {}),
-        states: nextStates,
-      },
-    };
+    const next = resetPresetState(device, stateIndex, this._buildResolvedPresetDevice(device));
+    if (!next) return;
+    devices[index] = next;
     this._patch({ devices });
   }
   private _resetPresetAlert(index: number, alertIndex: number) {
     const devices = [...(this._config?.devices ?? [])];
     const device = devices[index];
     if (!device) return;
-    const currentAlert = device.states?.alerts?.[alertIndex];
-    const presetSource = currentAlert?.preset_source;
-    if (!presetSource || presetSource === "battery") return;
-    const defaults = this._buildResolvedPresetDevice(device);
-    const replacement = defaults.states?.alerts?.find((item) => item.preset_source === presetSource);
-    if (!replacement) return;
-    const nextAlerts = [...(device.states?.alerts ?? [])];
-    nextAlerts[alertIndex] = replacement;
-    devices[index] = {
-      ...device,
-      states: {
-        ...(device.states ?? {}),
-        alerts: nextAlerts,
-      },
-    };
+    const next = resetPresetAlert(device, alertIndex, this._buildResolvedPresetDevice(device));
+    if (!next) return;
+    devices[index] = next;
     this._patch({ devices });
   }
   private _resetPresetOffline(index: number) {
     const devices = [...(this._config?.devices ?? [])];
     const device = devices[index];
     if (!device) return;
-    const defaults = this._buildResolvedPresetDevice(device);
-    devices[index] = {
-      ...device,
-      offline: defaults.offline,
-    };
+    devices[index] = resetPresetOffline(device, this._buildResolvedPresetDevice(device));
     this._patch({ devices });
   }
   private _addNamedState(index: number) {
     const devices = [...(this._config?.devices ?? [])];
-    const current = devices[index].states?.states ?? [];
-    devices[index] = {
-      ...devices[index],
-      states: {
-        ...(devices[index].states ?? {}),
-        states: [
-          ...current,
-          {
-            name: "",
-            enabled: true,
-            text: "",
-            outlined: false,
-            border_color: "white",
-            icon_active_color: "white",
-            icon_inactive_color: "white",
-            image_active: "",
-            image_inactive: "",
-            conditions: [],
-            header_badge_active: "none",
-            header_badge_inactive: "none",
-            count_light: false,
-            count_media: false,
-            count_rec: false,
-          },
-        ],
-      },
-    };
+    if (!devices[index]) return;
+    devices[index] = addNamedState(devices[index]);
     this._patch({ devices });
   }
 
   private _removeNamedState(index: number, stateIndex: number) {
     const devices = [...(this._config?.devices ?? [])];
-    const current = devices[index].states?.states ?? [];
-    devices[index] = {
-      ...devices[index],
-      states: {
-        ...(devices[index].states ?? {}),
-        states: current.filter((_, itemIndex) => itemIndex !== stateIndex),
-      },
-    };
+    if (!devices[index]) return;
+    devices[index] = removeNamedState(devices[index], stateIndex);
     this._patch({ devices });
   }
 
-  private _updateNamedState(
-    index: number,
-    stateIndex: number,
-    key: keyof SmartRoomNamedStateConfig,
-    value: unknown,
-  ) {
+  private _updateNamedState(index: number, stateIndex: number, key: keyof SmartRoomNamedStateConfig, value: unknown) {
     const devices = [...(this._config?.devices ?? [])];
-    const current = [...(devices[index].states?.states ?? [])];
-    current[stateIndex] = {
-      ...(current[stateIndex] ?? {
-        name: "",
-        enabled: true,
-        text: "",
-        outlined: false,
-        border_color: "white",
-        icon_active_color: "white",
-        icon_inactive_color: "white",
-        image_active: "",
-        image_inactive: "",
-        conditions: [],
-        header_badge_active: "none",
-        header_badge_inactive: "none",
-        count_light: false,
-        count_media: false,
-        count_rec: false,
-      }),
-      [key]: value,
-    };
-    devices[index] = {
-      ...devices[index],
-      states: {
-        ...(devices[index].states ?? {}),
-        states: current,
-      },
-    };
+    if (!devices[index]) return;
+    devices[index] = updateNamedState(devices[index], stateIndex, key, value);
     this._patch({ devices });
   }
 
   private _addNamedAlert(index: number) {
     const devices = [...(this._config?.devices ?? [])];
-    const current = (devices[index].states?.alerts ?? []).filter((item) => item.preset_source !== "battery");
-    devices[index] = {
-      ...devices[index],
-      states: {
-        ...(devices[index].states ?? {}),
-        alerts: [
-          ...current,
-          {
-            enabled: true,
-            message: "",
-            conditions: [],
-            outlined: true,
-            border_color: "red",
-            icon: "",
-            icon_color: "red",
-            header_badge: "alert_generic",
-          },
-        ],
-      },
-    };
+    if (!devices[index]) return;
+    devices[index] = addNamedAlert(devices[index]);
     devices[index] = this._applyDerivedBatteryAlert(devices[index], this._config?.ui?.battery_threshold ?? 20);
     this._patch({ devices });
   }
 
   private _removeNamedAlert(index: number, alertIndex: number) {
     const devices = [...(this._config?.devices ?? [])];
-    const current = devices[index].states?.alerts ?? [];
-    devices[index] = {
-      ...devices[index],
-      states: {
-        ...(devices[index].states ?? {}),
-        alerts: current.filter((_, itemIndex) => itemIndex !== alertIndex),
-      },
-    };
+    if (!devices[index]) return;
+    devices[index] = removeNamedAlert(devices[index], alertIndex);
     this._patch({ devices });
   }
 
-  private _updateNamedAlert(
-    index: number,
-    alertIndex: number,
-    key: keyof SmartRoomNamedAlertConfig,
-    value: unknown,
-  ) {
+  private _updateNamedAlert(index: number, alertIndex: number, key: keyof SmartRoomNamedAlertConfig, value: unknown) {
     const devices = [...(this._config?.devices ?? [])];
-    const current = [...(devices[index].states?.alerts ?? [])];
-    current[alertIndex] = {
-      ...(current[alertIndex] ?? {
-        name: "",
-        enabled: true,
-        message: "Device alert",
-        conditions: [],
-        outlined: true,
-        border_color: "red",
-        icon: "",
-        icon_color: "red",
-        header_badge: "none",
-      }),
-      [key]: value,
-    };
-    devices[index] = {
-      ...devices[index],
-      states: {
-        ...(devices[index].states ?? {}),
-        alerts: current,
-      },
-    };
+    if (!devices[index]) return;
+    devices[index] = updateNamedAlert(devices[index], alertIndex, key, value);
     this._patch({ devices });
   }
 
