@@ -173,7 +173,8 @@ describe("addNamedAlert", () => {
     const result = addNamedAlert(device());
     // battery alert removed + new blank appended = 1 original type alert + 1 blank
     expect(result.states?.alerts).toHaveLength(2);
-    const last = result.states?.alerts?.at(-1);
+    const alerts = result.states?.alerts ?? [];
+    const last = alerts[alerts.length - 1];
     expect(last?.message).toBe("");
     expect(last?.preset_source).toBeUndefined();
   });

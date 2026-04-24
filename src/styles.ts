@@ -189,8 +189,8 @@ export const smartRoomCardStyles = css`
     min-height: 34px;
     padding: 0 var(--sr-space-3);
     border-radius: var(--sr-radius-full);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.22);
     color: white;
   }
 
@@ -223,26 +223,26 @@ export const smartRoomCardStyles = css`
 
   .header-pill-white {
     color: rgba(255, 255, 255, 0.92);
-    border-color: rgba(255, 255, 255, 0.22);
-    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.32);
+    background: rgba(255, 255, 255, 0.22);
   }
 
   .header-pill-green {
     color: var(--smart-room-success);
-    border-color: color-mix(in srgb, var(--smart-room-success) 28%, transparent);
-    background: color-mix(in srgb, var(--smart-room-success) 12%, transparent);
+    border-color: color-mix(in srgb, var(--smart-room-success) 40%, transparent);
+    background: color-mix(in srgb, var(--smart-room-success) 22%, transparent);
   }
 
   .header-pill-red {
-    color: var(--smart-room-alert);
-    border-color: color-mix(in srgb, var(--smart-room-alert) 28%, transparent);
-    background: color-mix(in srgb, var(--smart-room-alert) 12%, transparent);
+    color: white;
+    border-color: color-mix(in srgb, var(--smart-room-alert) 55%, transparent);
+    background: color-mix(in srgb, var(--smart-room-alert) 32%, transparent);
   }
 
   .header-pill-orange {
     color: var(--smart-room-warning);
-    border-color: color-mix(in srgb, var(--smart-room-warning) 28%, transparent);
-    background: color-mix(in srgb, var(--smart-room-warning) 12%, transparent);
+    border-color: color-mix(in srgb, var(--smart-room-warning) 40%, transparent);
+    background: color-mix(in srgb, var(--smart-room-warning) 22%, transparent);
   }
 
   .automation-badge {

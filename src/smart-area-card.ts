@@ -38,21 +38,6 @@ declare global {
   }
 }
 
-function groupClimateAlertsByIcon(
-  badges: Array<{ key: string; icon: string; messages: string[] }>,
-): Array<{ key: string; icon: string; messages: string[] }> {
-  const byIcon = new Map<string, { key: string; icon: string; messages: string[] }>();
-  for (const badge of badges) {
-    if (!badge.messages.length) continue;
-    const existing = byIcon.get(badge.icon);
-    if (existing) {
-      existing.messages = [...existing.messages, ...badge.messages];
-    } else {
-      byIcon.set(badge.icon, { key: badge.icon, icon: badge.icon, messages: [...badge.messages] });
-    }
-  }
-  return [...byIcon.values()];
-}
 
 const BADGE_CONFIG: Partial<Record<SmartRoomHeaderBadge, { pillClass: string; icon: string }>> = {
   alert_generic: { pillClass: "header-pill header-pill-red",    icon: "mdi:alert-circle-outline" },
@@ -119,7 +104,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   @state() private _expanded = false;
   @state() private _everExpanded = false;
   @state() private _showAutomationPanel = false;
-  @state() private _closedAlertPanels = new Set<string>();
+  @state() private _alertsHidden = false;
 
   private _renderModel?: RenderModel;
   private _lastSignature = "";
@@ -248,6 +233,14 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     `;
   }
 
+  private _totalAlertCount(): number {
+    const badgeTotal = Object.values(this._renderModel?.alertsByBadge ?? {})
+      .reduce((sum, msgs) => sum + (msgs?.length ?? 0), 0);
+    const climateTotal = (this._renderModel?.climateAlertBadges ?? [])
+      .reduce((sum, b) => sum + b.messages.length, 0);
+    return badgeTotal + climateTotal;
+  }
+
   private _renderHeader(): TemplateResult {
     const model = this._renderModel!;
     const room = this._config!.room;
@@ -258,21 +251,17 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       </div>
     `);
 
-    const climatePills = groupClimateAlertsByIcon(this._renderModel?.climateAlertBadges ?? [])
-      .map((b) => html`<button class="header-pill header-pill-red header-pill-button header-pill-clickable" @click=${(e: Event) => this._handleAlertBadgeClick(b.key, e)}><ha-icon icon=${b.icon}></ha-icon></button>`);
-
-    const alertPills = (["alert_generic", "door_open", "lock_open", "fire", "water", "plug_off", "low_battery"] as SmartRoomHeaderBadge[])
-      .map((b) => this._renderHeaderBadge(b))
-      .filter((t): t is TemplateResult => t !== nothing);
-
-    const allAlertPills = [...climatePills, ...alertPills];
+    const totalAlerts = this._totalAlertCount();
+    const alertBadge = totalAlerts > 0
+      ? html`<div class="header-alerts"><button class="header-pill header-pill-red header-pill-button header-pill-clickable" @click=${(e: Event) => this._handleAlertBadgeClick(e)}><ha-icon icon="mdi:alert-circle-outline"></ha-icon>${totalAlerts > 1 ? html`<span class="badge-count">${totalAlerts}</span>` : nothing}</button></div>`
+      : nothing;
 
     return html`
       <section class="header">
         <div class="header-top">
           <div class="title-line">
             ${this._config?.ui?.show_area_icon && model.areaIcon ? html`<ha-icon icon=${model.areaIcon}></ha-icon>` : nothing}
-            ${allAlertPills.length ? html`<div class="header-alerts">${allAlertPills}</div>` : nothing}
+            ${alertBadge}
             <span>${room}</span>
             <div class="header-states">
               ${this._renderAutomationBadge()}
@@ -308,56 +297,47 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       default: {
         const cfg = BADGE_CONFIG[badge];
         if (!cfg) return nothing;
-        if ((this._renderModel?.alertsByBadge?.[badge]?.length ?? 0) > 0) {
-          return html`<button class="${cfg.pillClass} header-pill-button header-pill-clickable" @click=${(e: Event) => this._handleAlertBadgeClick(badge, e)}><ha-icon icon=${cfg.icon}></ha-icon>${countLabel}</button>`;
-        }
         return html`<span class="${cfg.pillClass}"><ha-icon icon=${cfg.icon}></ha-icon>${countLabel}</span>`;
       }
     }
   }
 
   private _renderAlertPanels(): TemplateResult | typeof nothing {
-    const panels: Array<{ key: string; icon: string; messages: string[] }> = [];
+    const flatPanels: Array<{ icon: string; message: string }> = [];
 
     const alertsByBadge = this._renderModel?.alertsByBadge ?? {};
     (Object.entries(alertsByBadge) as [SmartRoomHeaderBadge, string[]][])
       .filter(([, messages]) => messages.length > 0)
-      .forEach(([badge, messages]) => panels.push({ key: badge, icon: BADGE_CONFIG[badge]?.icon ?? "mdi:alert-circle-outline", messages }));
+      .forEach(([badge, messages]) => {
+        const icon = BADGE_CONFIG[badge]?.icon ?? "mdi:alert-circle-outline";
+        messages.forEach((message) => flatPanels.push({ icon, message }));
+      });
 
-    groupClimateAlertsByIcon(this._renderModel?.climateAlertBadges ?? [])
-      .forEach((b) => panels.push(b));
+    (this._renderModel?.climateAlertBadges ?? [])
+      .filter((b) => b.messages.length > 0)
+      .forEach((b) => b.messages.forEach((message) => flatPanels.push({ icon: b.icon, message })));
 
-    // Clean up stale dismissed keys for alerts that no longer exist.
-    // This ensures alerts reappear after resolving and re-triggering.
-    const activeKeys = new Set(panels.map((p) => p.key));
-    const staleKeys = [...this._closedAlertPanels].filter((k) => !activeKeys.has(k));
-    if (staleKeys.length) {
-      this._closedAlertPanels = new Set([...this._closedAlertPanels].filter((k) => activeKeys.has(k)));
-      this._persistAlertPanels();
+    if (!flatPanels.length) {
+      if (this._alertsHidden) {
+        this._alertsHidden = false;
+        this._persistAlertPanels();
+      }
+      return nothing;
     }
 
-    const visible = panels.filter((p) => !this._closedAlertPanels.has(p.key));
-    if (!visible.length) return nothing;
+    if (this._alertsHidden) return nothing;
 
-    return html`${visible.map(({ icon, messages }) => html`
+    return html`${flatPanels.map(({ icon, message }) => html`
       <section class="alert-bar">
         <ha-icon icon=${icon}></ha-icon>
-        <div class="alert-lines">
-          ${messages.map((msg) => html`<div>${msg}</div>`)}
-        </div>
+        <div class="alert-lines"><div>${message}</div></div>
       </section>
     `)}`;
   }
 
-  private _handleAlertBadgeClick(badge: string, event: Event): void {
+  private _handleAlertBadgeClick(event: Event): void {
     event.stopPropagation();
-    const next = new Set(this._closedAlertPanels);
-    if (next.has(badge)) {
-      next.delete(badge);
-    } else {
-      next.add(badge);
-    }
-    this._closedAlertPanels = next;
+    this._alertsHidden = !this._alertsHidden;
     this._persistAlertPanels();
   }
 
@@ -684,24 +664,15 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _restoreAlertPanels(): void {
     if (!this._config) return;
     if (this._config.expander?.persist_state === false) {
-      this._closedAlertPanels = new Set();
+      this._alertsHidden = false;
       return;
     }
-    try {
-      const raw = window.localStorage.getItem(storageKey(this._config, "alerts-closed"));
-      const parsed = raw ? JSON.parse(raw) as string[] : [];
-      this._closedAlertPanels = new Set<string>(parsed);
-    } catch {
-      this._closedAlertPanels = new Set();
-    }
+    this._alertsHidden = window.localStorage.getItem(storageKey(this._config, "alerts-closed")) === "true";
   }
 
   private _persistAlertPanels(): void {
     if (!this._config || this._config.expander?.persist_state === false) return;
-    window.localStorage.setItem(
-      storageKey(this._config, "alerts-closed"),
-      JSON.stringify([...this._closedAlertPanels]),
-    );
+    window.localStorage.setItem(storageKey(this._config, "alerts-closed"), String(this._alertsHidden));
   }
 
   private _getInitialExpandedState(): boolean {
