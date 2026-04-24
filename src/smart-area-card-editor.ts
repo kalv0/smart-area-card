@@ -55,44 +55,40 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _entityRegistry: EntityRegistryEntry[] = [];
   @state() private _deviceRegistry: DeviceRegistryEntry[] = [];
   @state() private _localImages: string[] = [];
+  @state() private _galleryInput = "";
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
   private _touchDragPointerId?: number;
 
   protected firstUpdated(): void {
     this._refreshRegistries();
-    this._fetchLocalImages();
+    this._syncGallery();
   }
 
   protected updated(changedProps: Map<string, unknown>): void {
-    // Retry once when hass becomes available (firstUpdated may fire before hass is set)
-    if (changedProps.has("hass") && this.hass && this._localImages.length === 0) {
-      this._fetchLocalImages();
+    if (changedProps.has("_config")) {
+      this._syncGallery();
     }
   }
 
-  private async _fetchLocalImages(): Promise<void> {
-    if (!this.hass) return;
-    try {
-      const result = await this.hass.callWS<{
-        children?: Array<{
-          title: string;
-          thumbnail?: string;
-          media_class?: string;
-          media_content_type?: string;
-        }>;
-      }>({ type: "media_source/browse_media", media_content_id: "media-source://media_source/local/img/areas" });
-      this._localImages = (result.children ?? [])
-        .filter((item) =>
-          item.media_class === "image" ||
-          (item.media_content_type ?? "").startsWith("image/") ||
-          /\.(png|jpe?g|gif|webp|svg|avif|bmp|tiff?)$/i.test(item.title ?? ""),
-        )
-        .map((item) => item.thumbnail ?? `/local/img/areas/${item.title}`);
-    } catch (err) {
-      console.warn("[smart-area-card] Could not load images from /local/img/areas/:", err);
-      this._localImages = [];
-    }
+  /** Populate _localImages from the config gallery (single source of truth). */
+  private _syncGallery(): void {
+    const gallery = this._config?.ui?.images?.gallery ?? [];
+    this._localImages = [...gallery];
+  }
+
+  private _addGalleryImage(): void {
+    const url = this._galleryInput.trim();
+    if (!url) return;
+    const existing = this._config?.ui?.images?.gallery ?? [];
+    if (existing.includes(url)) { this._galleryInput = ""; return; }
+    this._setImageKey("gallery", [...existing, url]);
+    this._galleryInput = "";
+  }
+
+  private _removeGalleryImage(url: string): void {
+    const existing = this._config?.ui?.images?.gallery ?? [];
+    this._setImageKey("gallery", existing.filter((u) => u !== url));
   }
 
   public setConfig(config: SmartRoomCardConfig): void {
@@ -204,7 +200,33 @@ export class SmartAreaCardEditor extends LitElement {
         <div class="panel">
           <div class="panel-title">Room background</div>
 
-          <!-- Custom thumbnail dropdown -->
+          <!-- Gallery management: add/remove image paths -->
+          <div class="gallery-list">
+            ${(images.gallery ?? []).map((url) => html`
+              <div class="gallery-item">
+                <img class="gallery-item-thumb" src=${url} alt="" />
+                <span class="gallery-item-name">${url.split("/").pop()?.replace(/\.[^.]+$/, "") ?? url}</span>
+                <button type="button" class="gallery-item-remove" title="Remove" @click=${() => this._removeGalleryImage(url)}>
+                  <ha-icon icon="mdi:close"></ha-icon>
+                </button>
+              </div>
+            `)}
+          </div>
+          <div class="gallery-add-row">
+            <input
+              class="gallery-add-input"
+              type="text"
+              placeholder="/local/img/areas/imagen.png"
+              .value=${this._galleryInput}
+              @input=${(e: InputEvent) => { this._galleryInput = valueFromEvent(e); }}
+              @keydown=${(e: KeyboardEvent) => { if (e.key === "Enter") { e.preventDefault(); this._addGalleryImage(); } }}
+            />
+            <button type="button" class="gallery-add-btn" @click=${() => this._addGalleryImage()}>
+              <ha-icon icon="mdi:plus"></ha-icon>
+            </button>
+          </div>
+
+          <!-- Dropdown to select from gallery -->
           ${this._renderImageSelector(bgOn, (url) => this._setRoomImage("background_on", url))}
 
           <!-- Preview -->

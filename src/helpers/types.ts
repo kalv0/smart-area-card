@@ -241,6 +241,7 @@ export interface SmartRoomCardConfig {
     images?: {
       background_on?: string;
       background_off?: string;
+      gallery?: string[];
       dark_mode_enabled?: boolean;
       dark_mode_condition?: "always" | "daytime" | "lux";
       dark_mode_lux_entity?: string;

@@ -110,6 +110,102 @@ export const calvoRoomCardEditorStyles = css`
     align-items: center;
   }
 
+  /* ─── Gallery management ─────────────────────────────────────────── */
+  .gallery-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .gallery-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 8px;
+    background: var(--editor-panel-3);
+    border: 1px solid var(--editor-border);
+  }
+
+  .gallery-item-thumb {
+    width: 52px;
+    height: 32px;
+    object-fit: cover;
+    object-position: top center;
+    border-radius: 5px;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .gallery-item-name {
+    flex: 1;
+    font-size: 0.82rem;
+    color: var(--editor-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gallery-item-remove {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--editor-muted);
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    border-radius: 4px;
+    transition: color 120ms ease, background 120ms ease;
+  }
+
+  .gallery-item-remove:hover {
+    color: var(--editor-danger-text);
+    background: var(--editor-danger);
+  }
+
+  .gallery-item-remove ha-icon {
+    --mdc-icon-size: 16px;
+  }
+
+  .gallery-add-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .gallery-add-input {
+    min-width: 0;
+  }
+
+  .gallery-add-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--editor-accent);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    color: white;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .gallery-add-btn:hover {
+    opacity: 0.82;
+  }
+
+  .gallery-add-btn ha-icon {
+    --mdc-icon-size: 18px;
+  }
+
   /* ─── Custom image-selector dropdown ────────────────────────────── */
   .img-select {
     position: relative;
