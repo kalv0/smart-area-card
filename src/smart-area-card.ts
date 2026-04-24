@@ -164,6 +164,11 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         }
         try {
           this._renderModel = computeRenderModel(this._config, this.hass, this._automationEntityIds);
+          // Auto-reset hidden flag when all alerts clear so next alert always shows.
+          if (this._alertsHidden && this._totalAlertCount() === 0) {
+            this._alertsHidden = false;
+            this._persistAlertPanels();
+          }
         } catch (err) {
           console.error("[smart-area-card] computeRenderModel failed:", err);
         }
@@ -179,7 +184,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       changedProps.has("_config") ||
       changedProps.has("_expanded") ||
       changedProps.has("_showAutomationPanel") ||
-      changedProps.has("_closedAlertPanels")
+      changedProps.has("_alertsHidden")
     ) {
       return true;
     }
@@ -317,15 +322,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       .filter((b) => b.messages.length > 0)
       .forEach((b) => b.messages.forEach((message) => flatPanels.push({ icon: b.icon, message })));
 
-    if (!flatPanels.length) {
-      if (this._alertsHidden) {
-        this._alertsHidden = false;
-        this._persistAlertPanels();
-      }
-      return nothing;
-    }
-
-    if (this._alertsHidden) return nothing;
+    if (!flatPanels.length || this._alertsHidden) return nothing;
 
     return html`${flatPanels.map(({ icon, message }) => html`
       <section class="alert-bar">

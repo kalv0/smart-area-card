@@ -234,7 +234,7 @@ export const smartRoomCardStyles = css`
   }
 
   .header-pill-red {
-    color: white;
+    color: var(--smart-room-alert);
     border-color: color-mix(in srgb, var(--smart-room-alert) 55%, transparent);
     background: color-mix(in srgb, var(--smart-room-alert) 32%, transparent);
   }
