@@ -54,41 +54,13 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _showAdvancedBattery = false;
   @state() private _entityRegistry: EntityRegistryEntry[] = [];
   @state() private _deviceRegistry: DeviceRegistryEntry[] = [];
-  @state() private _localImages: string[] = [];
-  @state() private _galleryInput = "";
+  @state() private _bgPreviewValid = false;
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
   private _touchDragPointerId?: number;
 
   protected firstUpdated(): void {
     this._refreshRegistries();
-    this._syncGallery();
-  }
-
-  protected updated(changedProps: Map<string, unknown>): void {
-    if (changedProps.has("_config")) {
-      this._syncGallery();
-    }
-  }
-
-  /** Populate _localImages from the config gallery (single source of truth). */
-  private _syncGallery(): void {
-    const gallery = this._config?.ui?.images?.gallery ?? [];
-    this._localImages = [...gallery];
-  }
-
-  private _addGalleryImage(): void {
-    const url = this._galleryInput.trim();
-    if (!url) return;
-    const existing = this._config?.ui?.images?.gallery ?? [];
-    if (existing.includes(url)) { this._galleryInput = ""; return; }
-    this._setImageKey("gallery", [...existing, url]);
-    this._galleryInput = "";
-  }
-
-  private _removeGalleryImage(url: string): void {
-    const existing = this._config?.ui?.images?.gallery ?? [];
-    this._setImageKey("gallery", existing.filter((u) => u !== url));
   }
 
   public setConfig(config: SmartRoomCardConfig): void {
@@ -138,40 +110,6 @@ export class SmartAreaCardEditor extends LitElement {
     return device.restrict_to_room_area ?? this._typeRestrictsToRoomArea(device.type);
   }
 
-  private _renderImageSelector(value: string, onChange: (v: string) => void) {
-    const nameOf = (url: string) => url.split("/").pop()?.replace(/\.[^.]+$/, "") ?? url;
-    const images = this._localImages;
-    return html`
-      <details class="img-select">
-        <summary class="img-select-trigger">
-          ${value
-            ? html`<img class="img-select-thumb" src=${value} alt="" />`
-            : html`<ha-icon icon="mdi:image-outline" class="img-select-placeholder-icon"></ha-icon>`}
-          <span class="img-select-name">${value ? nameOf(value) : "Select image…"}</span>
-          <ha-icon class="img-select-chevron" icon="mdi:chevron-down"></ha-icon>
-        </summary>
-        <div class="img-select-list">
-          ${images.length === 0
-            ? html`<div class="img-select-empty">No images found in /local/img/areas/</div>`
-            : images.map((url) => html`
-              <button
-                type="button"
-                class="img-select-option${url === value ? " img-select-option--active" : ""}"
-                @click=${(e: Event) => {
-                  onChange(url);
-                  const det = (e.target as HTMLElement).closest<HTMLDetailsElement>("details");
-                  if (det) det.open = false;
-                }}
-              >
-                <img class="img-select-option-thumb" src=${url} alt=${nameOf(url)} />
-                <span class="img-select-option-name">${nameOf(url)}</span>
-              </button>
-            `)}
-        </div>
-      </details>
-    `;
-  }
-
   private _renderGeneral(config: SmartRoomCardConfig) {
     const areaName = this._areaName(config.room_id);
     const images = config.ui?.images ?? {};
@@ -200,51 +138,43 @@ export class SmartAreaCardEditor extends LitElement {
         <div class="panel">
           <div class="panel-title">Room background</div>
 
-          <!-- Gallery management: add/remove image paths -->
-          <div class="gallery-list">
-            ${(images.gallery ?? []).map((url) => html`
-              <div class="gallery-item">
-                <img class="gallery-item-thumb" src=${url} alt="" />
-                <span class="gallery-item-name">${url.split("/").pop()?.replace(/\.[^.]+$/, "") ?? url}</span>
-                <button type="button" class="gallery-item-remove" title="Remove" @click=${() => this._removeGalleryImage(url)}>
-                  <ha-icon icon="mdi:close"></ha-icon>
-                </button>
-              </div>
-            `)}
-          </div>
-          <div class="gallery-add-row">
-            <input
-              class="gallery-add-input"
-              type="text"
-              placeholder="/local/img/areas/imagen.png"
-              .value=${this._galleryInput}
-              @input=${(e: InputEvent) => { this._galleryInput = valueFromEvent(e); }}
-              @keydown=${(e: KeyboardEvent) => { if (e.key === "Enter") { e.preventDefault(); this._addGalleryImage(); } }}
-            />
-            <button type="button" class="gallery-add-btn" @click=${() => this._addGalleryImage()}>
-              <ha-icon icon="mdi:plus"></ha-icon>
-            </button>
+          <!-- Plain URL input — preview appears when the image is valid -->
+          <div class="row single">
+            <label>
+              Room image
+              <span class="hint">e.g. /local/img/areas/bedroom.png</span>
+              <input
+                type="text"
+                .value=${bgOn}
+                placeholder="/local/img/areas/bedroom.png"
+                @input=${(e: InputEvent) => {
+                  this._bgPreviewValid = false;
+                  this._setRoomImage("background_on", valueFromEvent(e));
+                }}
+              />
+            </label>
           </div>
 
-          <!-- Dropdown to select from gallery -->
-          ${this._renderImageSelector(bgOn, (url) => this._setRoomImage("background_on", url))}
-
-          <!-- Preview -->
+          <!-- Preview: shown only when image loads successfully -->
           ${bgOn ? html`
-            ${darkEnabled ? html`
-              <!-- Diagonal split: left=normal, right=dark -->
-              <div class="bg-preview bg-preview--split">
-                <img class="bg-preview-img" src=${bgOn} alt="" />
+            <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"
+                 style=${this._bgPreviewValid ? "" : "display:none"}>
+              <img class="bg-preview-img" src=${bgOn} alt=""
+                @load=${() => { this._bgPreviewValid = true; }}
+                @error=${() => { this._bgPreviewValid = false; }}
+              />
+              ${darkEnabled ? html`
                 <img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt="" />
                 <span class="bg-preview-tag bg-preview-tag--left">ON</span>
                 <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
-              </div>
-            ` : html`
-              <!-- Full-width banner preview (how it looks collapsed) -->
-              <div class="bg-preview bg-preview--banner">
-                <img class="bg-preview-img" src=${bgOn} alt="" />
-              </div>
-            `}
+              ` : nothing}
+            </div>
+            <!-- Invisible probe so @load fires even when preview is hidden -->
+            ${!this._bgPreviewValid ? html`
+              <img style="display:none;position:absolute" src=${bgOn} alt=""
+                @load=${() => { this._bgPreviewValid = true; }}
+              />
+            ` : nothing}
           ` : nothing}
 
           <!-- Dark version toggle -->
@@ -258,7 +188,6 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
 
           ${darkEnabled ? html`
-            <!-- Condition (only shown when dark is enabled) -->
             <div class="row single">
               <label>
                 Switch to dark when

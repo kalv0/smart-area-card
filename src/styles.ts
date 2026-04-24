@@ -82,7 +82,7 @@ export const smartRoomCardStyles = css`
   }
 
   .room-image--dark {
-    filter: brightness(0.18) saturate(0.4) hue-rotate(200deg);
+    filter: brightness(0.38) saturate(0.5);
   }
 
   .room-mask {
