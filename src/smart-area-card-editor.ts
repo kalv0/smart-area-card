@@ -24,6 +24,7 @@ import { INITIAL_STATES, OPERATORS, COLOR_OPTIONS, HEADER_BADGE_OPTIONS, ALERT_H
 import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUndefined, valueFromEvent } from "./editor/editor-utils";
 import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
 import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
+import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered } from "./editor/registry-helpers";
 
 const SENSOR_DEVICE_CLASSES: Partial<Record<string, string[]>> = {
   temperature: ["temperature"],
@@ -463,8 +464,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   }
 
   private _normalizeSelectorDomains(values?: string[]): string[] {
-    const cleaned = [...new Set((values ?? []).map((item) => item.trim()).filter(Boolean))];
-    return cleaned.length ? cleaned : ["*"];
+    return normalizeDomains(values);
   }
 
   private _getDeviceSelectorOverride(
@@ -480,65 +480,23 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
 
   private _areaEntityIds(areaId?: string, domains?: string[]): string[] {
-    const normalizedAreaId = (areaId ?? "").trim();
-    if (!normalizedAreaId) return [];
-    const allowedDomains = new Set((domains ?? []).map((item) => item.trim()).filter(Boolean));
-    const devicesById = new Map(this._deviceRegistry.map((item) => [item.id, item]));
-    return this._entityRegistry
-      .filter((entry) => {
-        const domain = entry.entity_id.split(".")[0] ?? "";
-        if (allowedDomains.size && !allowedDomains.has(domain)) return false;
-        if (entry.area_id === normalizedAreaId) return true;
-        return Boolean(entry.device_id && devicesById.get(entry.device_id)?.area_id === normalizedAreaId);
-      })
-      .map((entry) => entry.entity_id)
-      .sort((a, b) => a.localeCompare(b));
+    return areaEntityIds(this._entityRegistry, this._deviceRegistry, areaId, domains);
   }
 
   private _areaEntityIdsFiltered(areaId?: string, domains?: string[], deviceClasses?: string[]): string[] {
-    const normalizedAreaId = (areaId ?? "").trim();
-    if (!normalizedAreaId) return [];
-    const allowedDomains = new Set((domains ?? []).map((d) => d.trim()).filter(Boolean));
-    const allowedClasses = deviceClasses && deviceClasses.length ? new Set(deviceClasses) : null;
-    const devicesById = new Map(this._deviceRegistry.map((item) => [item.id, item]));
-    return this._entityRegistry
-      .filter((entry) => {
-        const domain = entry.entity_id.split(".")[0] ?? "";
-        if (allowedDomains.size && !allowedDomains.has(domain)) return false;
-        const inArea = entry.area_id === normalizedAreaId ||
-          Boolean(entry.device_id && devicesById.get(entry.device_id)?.area_id === normalizedAreaId);
-        if (!inArea) return false;
-        if (!allowedClasses) return true;
-        const dc = this.hass?.states[entry.entity_id]?.attributes?.device_class as string | undefined;
-        return dc ? allowedClasses.has(dc) : false;
-      })
-      .map((entry) => entry.entity_id)
-      .sort((a, b) => a.localeCompare(b));
+    return areaEntityIdsFiltered(this._entityRegistry, this._deviceRegistry, this.hass?.states ?? {}, areaId, domains, deviceClasses);
   }
 
   private _entitySelector(domains?: string[], restrictToArea = false, areaId?: string, extra?: Record<string, unknown>): Record<string, unknown> {
-    const selector: Record<string, unknown> = { entity: { ...(extra ?? {}) } };
-    const entitySelector = selector.entity as Record<string, unknown>;
-    const uniqueDomains = [...new Set((domains ?? []).map((item) => item.trim()).filter(Boolean).map((item) => item.endsWith(".") ? item.slice(0, -1) : item))];
-    if (uniqueDomains.length) {
-      entitySelector.domain = uniqueDomains;
-    }
-    if (restrictToArea) {
-      entitySelector.include_entities = this._areaEntityIds(areaId, uniqueDomains.length ? uniqueDomains : undefined);
-    }
-    return selector;
+    const uniqueDomains = [...new Set((domains ?? []).map((d) => d.trim()).filter(Boolean).map((d) => d.endsWith(".") ? d.slice(0, -1) : d))];
+    const includeEntities = restrictToArea ? this._areaEntityIds(areaId, uniqueDomains.length ? uniqueDomains : undefined) : undefined;
+    return buildEntitySelector(uniqueDomains, includeEntities, extra);
   }
 
   private _entitySelectorFiltered(domains: string[] | undefined, restrictToArea: boolean, areaId: string | undefined, deviceClasses?: string[]): Record<string, unknown> {
-    const entitySpec: Record<string, unknown> = {};
     const uniqueDomains = [...new Set((domains ?? []).map((d) => d.trim()).filter(Boolean).map((d) => d.endsWith(".") ? d.slice(0, -1) : d))];
-    if (uniqueDomains.length) entitySpec.domain = uniqueDomains;
-    if (restrictToArea) {
-      entitySpec.include_entities = this._areaEntityIdsFiltered(areaId, uniqueDomains.length ? uniqueDomains : undefined, deviceClasses);
-    } else if (deviceClasses && deviceClasses.length) {
-      entitySpec.device_class = deviceClasses.length === 1 ? deviceClasses[0] : deviceClasses;
-    }
-    return { entity: entitySpec };
+    const includeEntities = restrictToArea ? this._areaEntityIdsFiltered(areaId, uniqueDomains.length ? uniqueDomains : undefined, deviceClasses) : undefined;
+    return buildEntitySelectorFiltered(uniqueDomains, includeEntities, deviceClasses);
   }
 
   private _renderSmartEntityPicker(
