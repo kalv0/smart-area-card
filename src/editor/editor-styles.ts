@@ -147,6 +147,12 @@ export const calvoRoomCardEditorStyles = css`
     pointer-events: none;
   }
 
+  .image-compare-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
   /* ─── Cards & panels ─────────────────────────────────── */
 
   .section,
@@ -1300,6 +1306,11 @@ export const calvoRoomCardEditorStyles = css`
     min-height: 54px;
     font-size: 0.92rem;
     border-radius: 14px;
+  }
+
+  .autofill-button--full {
+    width: 100%;
+    min-width: 0;
   }
 
   .editor-bullet-list {

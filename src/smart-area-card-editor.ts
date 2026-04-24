@@ -126,35 +126,30 @@ export class SmartAreaCardEditor extends LitElement {
         <!-- ① Area picker — most prominent element -->
         <div class="area-picker-block">
           <div class="area-picker-label">Area</div>
-          <div class="area-picker-row">
-            <ha-area-picker
-              .hass=${this.hass}
-              .value=${config.room_id ?? ""}
-              @value-changed=${(e: CustomEvent) => this._setAreaId(String(e.detail?.value ?? ""))}
-            ></ha-area-picker>
-            <button type="button" class="autofill-button" ?disabled=${!this._isRoomIdValid(config.room_id)} @click=${this._handleRoomAutofill}>Autofill</button>
-          </div>
+          <ha-area-picker
+            .hass=${this.hass}
+            .value=${config.room_id ?? ""}
+            @value-changed=${(e: CustomEvent) => this._setAreaId(String(e.detail?.value ?? ""))}
+          ></ha-area-picker>
         </div>
 
-        <!-- ② Room image -->
+        <!-- ② Room image (before Autofill) -->
         <div class="panel">
           <div class="panel-title">Room background</div>
+
+          <!-- ha-selector image: HA media browser + built-in preview -->
           <div class="row single">
             <label>
-              Image URL
-              <span class="hint">Path to the room image, e.g. /local/img/rooms/bedroom.jpg</span>
-              <input
-                .value=${bgOn}
-                placeholder="/local/img/rooms/bedroom.jpg"
-                @input=${(e: InputEvent) => this._setRoomImage("background_on", valueFromEvent(e))}
-              />
+              Room image
+              <span class="hint">Shown as the card background. Use the browse button to pick from /local/.</span>
             </label>
+            <ha-selector
+              .hass=${this.hass}
+              .selector=${{ image: {} }}
+              .value=${bgOn}
+              @value-changed=${(e: CustomEvent) => this._setRoomImage("background_on", String(e.detail?.value ?? ""))}
+            ></ha-selector>
           </div>
-          ${bgOn ? html`
-            <div class="image-preview-wrap">
-              <img class="image-preview" src=${bgOn} alt="Preview" />
-            </div>
-          ` : nothing}
 
           <!-- Dark version toggle -->
           <div class="row single">
@@ -167,18 +162,24 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
 
           ${darkEnabled ? html`
-            <!-- Dark preview -->
+            <!-- Side-by-side previews: normal vs dark -->
             ${bgOn ? html`
-              <div class="image-preview-wrap">
-                <img class="image-preview image-preview--dark" src=${bgOn} alt="Dark preview" />
-                <span class="image-preview-label">Lights off</span>
+              <div class="image-compare-row">
+                <div class="image-preview-wrap">
+                  <img class="image-preview" src=${bgOn} alt="Lights on" />
+                  <span class="image-preview-label">Lights on</span>
+                </div>
+                <div class="image-preview-wrap">
+                  <img class="image-preview image-preview--dark" src=${bgOn} alt="Lights off" />
+                  <span class="image-preview-label">Lights off</span>
+                </div>
               </div>
             ` : nothing}
 
             <!-- Condition -->
             <div class="row single">
               <label>
-                Show dark version when
+                Switch to dark when
                 <select
                   .value=${darkCond}
                   @change=${(e: Event) => this._setImageKey("dark_mode_condition", valueFromEvent(e))}
@@ -192,15 +193,13 @@ export class SmartAreaCardEditor extends LitElement {
 
             ${darkCond === "lux" ? html`
               <div class="row single">
-                <label>
-                  Lux sensor
-                  <ha-selector
-                    .hass=${this.hass}
-                    .selector=${{ entity: { domain: "sensor", device_class: "illuminance" } }}
-                    .value=${images.dark_mode_lux_entity ?? ""}
-                    @value-changed=${(e: CustomEvent) => this._setImageKey("dark_mode_lux_entity", e.detail?.value || undefined)}
-                  ></ha-selector>
-                </label>
+                <label>Lux sensor</label>
+                <ha-selector
+                  .hass=${this.hass}
+                  .selector=${{ entity: { domain: "sensor", device_class: "illuminance" } }}
+                  .value=${images.dark_mode_lux_entity ?? ""}
+                  @value-changed=${(e: CustomEvent) => this._setImageKey("dark_mode_lux_entity", e.detail?.value || undefined)}
+                ></ha-selector>
               </div>
               <div class="row single">
                 <label>
@@ -219,18 +218,24 @@ export class SmartAreaCardEditor extends LitElement {
             <div class="row single">
               <label>
                 Background when off (optional)
-                <span class="hint">Leave empty to use the same image regardless of device state.</span>
-                <input
-                  .value=${images.background_off ?? ""}
-                  placeholder="/local/img/rooms/bedroom_off.jpg"
-                  @input=${(e: InputEvent) => this._setRoomImage("background_off", valueFromEvent(e))}
-                />
+                <span class="hint">Leave empty to use the same image for all states.</span>
               </label>
+              <ha-selector
+                .hass=${this.hass}
+                .selector=${{ image: {} }}
+                .value=${images.background_off ?? ""}
+                @value-changed=${(e: CustomEvent) => this._setRoomImage("background_off", String(e.detail?.value ?? ""))}
+              ></ha-selector>
             </div>
           `}
         </div>
 
-        <!-- ③ Advanced settings (collapsible) -->
+        <!-- ③ Autofill (after image section) -->
+        <div class="row single">
+          <button type="button" class="autofill-button autofill-button--full" ?disabled=${!this._isRoomIdValid(config.room_id)} @click=${this._handleRoomAutofill}>Autofill devices from area</button>
+        </div>
+
+        <!-- ④ Advanced settings (collapsible) -->
         ${!this._showAdvancedCardSetup ? html`
           <div class="row single">
             <button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = true; }}>Advanced settings</button>
