@@ -89,6 +89,64 @@ export const calvoRoomCardEditorStyles = css`
     max-width: 100%;
   }
 
+  /* ─── Area picker block ──────────────────────────────── */
+  .area-picker-block {
+    display: grid;
+    gap: 6px;
+  }
+
+  .area-picker-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--editor-muted);
+  }
+
+  .area-picker-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+  }
+
+  /* ─── Image preview ──────────────────────────────────── */
+  .image-preview-wrap {
+    position: relative;
+    border-radius: var(--editor-radius-md);
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--editor-border);
+    max-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .image-preview {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+  }
+
+  .image-preview--dark {
+    filter: brightness(0.18) saturate(0.4) hue-rotate(200deg);
+  }
+
+  .image-preview-label {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    pointer-events: none;
+  }
+
   /* ─── Cards & panels ─────────────────────────────────── */
 
   .section,

@@ -63,8 +63,41 @@ export const smartRoomCardStyles = css`
     transform: scale(0.992);
   }
 
+  /* ── Room background (dark-mode <img> path) ─────────────────────── */
+  .room-frame {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    border-radius: inherit;
+  }
+
+  .room-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+    transition: filter 600ms ease;
+  }
+
+  .room-image--dark {
+    filter: brightness(0.18) saturate(0.4) hue-rotate(200deg);
+  }
+
+  .room-mask {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.18) 0%,
+      rgba(0, 0, 0, 0.42) 100%
+    );
+  }
+
   .shell {
     position: relative;
+    z-index: 1;
     display: grid;
     gap: var(--sr-space-2);
     min-height: 0;

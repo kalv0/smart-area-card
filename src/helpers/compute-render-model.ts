@@ -43,9 +43,26 @@ export function computeRenderModel(
   const noise = getEntity(states, config.sensors?.noise);
   const sun = getEntity(states, "sun.sun");
 
+  const devicesActive = devices.some((device) => device.countsAsRoomActive);
   const keepOnUntilSunset = config.ui?.keep_background_on_until_sunset === true;
   const useDaylightOnBackground = keepOnUntilSunset && sun && !isUnavailable(sun) && sun.state === "above_horizon";
-  const roomIsActive = devices.some((device) => device.countsAsRoomActive) || useDaylightOnBackground;
+  const roomIsActive = devicesActive || useDaylightOnBackground;
+
+  const darkModeEnabled = config.ui?.images?.dark_mode_enabled === true;
+  let roomImageDark = false;
+  if (darkModeEnabled) {
+    const cond = config.ui?.images?.dark_mode_condition ?? "always";
+    if (cond === "always") {
+      roomImageDark = !devicesActive;
+    } else if (cond === "daytime") {
+      roomImageDark = !devicesActive && sun?.state === "above_horizon";
+    } else if (cond === "lux") {
+      const luxId = config.ui?.images?.dark_mode_lux_entity;
+      const luxThreshold = config.ui?.images?.dark_mode_lux_threshold ?? 50;
+      const luxVal = luxId ? Number(states[luxId]?.state) : NaN;
+      roomImageDark = Number.isFinite(luxVal) && luxVal < luxThreshold;
+    }
+  }
 
   const alertsConfig = config.sensors?.alerts;
   const customIcons = config.sensors?.icons ?? {};
@@ -134,12 +151,16 @@ export function computeRenderModel(
     climateEntities: getClimateEntities(config.sensors),
     areaAutomations,
     areaIcon: areaEntry?.icon || "mdi:home-outline",
-    roomBackground: normalizeAssetPath(
-      roomIsActive
-        ? config.ui?.images?.background_on
-        : config.ui?.images?.background_off,
-      "room",
-    ),
+    roomBackground: darkModeEnabled
+      ? undefined
+      : normalizeAssetPath(
+          roomIsActive ? config.ui?.images?.background_on : config.ui?.images?.background_off,
+          "room",
+        ),
+    roomImageUrl: darkModeEnabled
+      ? normalizeAssetPath(config.ui?.images?.background_on, "room")
+      : undefined,
+    roomImageDark,
   };
 }
 

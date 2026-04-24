@@ -111,24 +111,142 @@ export class SmartAreaCardEditor extends LitElement {
 
   private _renderGeneral(config: SmartRoomCardConfig) {
     const areaName = this._areaName(config.room_id);
-    return html`<section class="section"><div class="section-header"><div><div class="section-title">Card setup</div><div class="section-subtitle">Room identity and card defaults.</div></div></div>
-      <div class="setup-inline">
-        <label>Area ID<span class="hint">Home Assistant area linked to this card.</span><ha-area-picker .hass=${this.hass} .value=${config.room_id ?? ""} @value-changed=${(e: CustomEvent) => this._setAreaId(String(e.detail?.value ?? ""))}></ha-area-picker></label>
-        <button type="button" class="autofill-button" ?disabled=${!this._isRoomIdValid(config.room_id)} @click=${this._handleRoomAutofill}>Autofill</button>
-      </div>
-      ${!this._showAdvancedCardSetup ? html`<div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = true; }}>Advanced settings</button></div>` : nothing}
-      ${this._showAdvancedCardSetup ? html`
-      <div class="row single"><label>Room name<span class="hint">Header label. Defaults to the area name.</span><input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} /></label></div>
-      <div class="row single">${this._renderToggleField("Show area icon", "Shows the area icon before the room name.", config.ui?.show_area_icon ?? false, (checked) => this._setUi("show_area_icon", checked))}</div>
-      <div class="row single"><label>Initial expanded state<span class="hint">Default open state for the device grid.</span><select .value=${config.expander?.initial_state ?? "closed"} @change=${(e: Event) => this._setExpander("initial_state", valueFromEvent(e))}>${INITIAL_STATES.map((v) => html`<option value=${v}>${v}</option>`)}</select></label></div>
-      <div class="row single">${this._renderToggleField("Remember expanded state", "Restores the last open or closed state from the browser.", config.expander?.persist_state ?? true, (checked) => this._setExpander("persist_state", checked))}</div>
-      <div class="row single">${this._renderToggleField("Show entity icons", "Shows each entity icon next to the device name.", config.ui?.show_entity_icons ?? false, (checked) => this._setUi("show_entity_icons", checked))}</div>
-      <div class="row single">${this._renderToggleField("Keep ON background until sunset", "Keeps the ON room background while sun.sun is above the horizon.", config.ui?.keep_background_on_until_sunset ?? false, (checked) => this._setUi("keep_background_on_until_sunset", checked))}</div>
-      <div class="row single"><label>Room background on<span class="hint">Background used while the room is active.</span><input .value=${config.ui?.images?.background_on ?? ""} @input=${(e: InputEvent) => this._setRoomImage("background_on", valueFromEvent(e))} /><span class="hint">Example: /local/img/rooms/bedroom_on.png</span></label></div>
-      <div class="row single"><label>Room background off<span class="hint">Background used while the room is inactive.</span><input .value=${config.ui?.images?.background_off ?? ""} @input=${(e: InputEvent) => this._setRoomImage("background_off", valueFromEvent(e))} /><span class="hint">Example: /local/img/rooms/bedroom_off.png</span></label></div>
-      ${(config.expander?.initial_state ?? "closed") === "conditional" ? html`<div class="panel"><div class="panel-title">Open condition</div>${this._renderConditionEditor(config.expander?.condition, (next) => this._setExpander("condition", next))}</div>` : nothing}
-        <div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = false; }}>Back to simple settings</button></div>
-        ` : nothing}</section>`;
+    const images = config.ui?.images ?? {};
+    const darkEnabled = images.dark_mode_enabled === true;
+    const darkCond = images.dark_mode_condition ?? "always";
+    const bgOn = images.background_on ?? "";
+
+    return html`
+      <section class="section">
+        <div class="section-header"><div>
+          <div class="section-title">Card setup</div>
+          <div class="section-subtitle">Room identity and background.</div>
+        </div></div>
+
+        <!-- ① Area picker — most prominent element -->
+        <div class="area-picker-block">
+          <div class="area-picker-label">Area</div>
+          <div class="area-picker-row">
+            <ha-area-picker
+              .hass=${this.hass}
+              .value=${config.room_id ?? ""}
+              @value-changed=${(e: CustomEvent) => this._setAreaId(String(e.detail?.value ?? ""))}
+            ></ha-area-picker>
+            <button type="button" class="autofill-button" ?disabled=${!this._isRoomIdValid(config.room_id)} @click=${this._handleRoomAutofill}>Autofill</button>
+          </div>
+        </div>
+
+        <!-- ② Room image -->
+        <div class="panel">
+          <div class="panel-title">Room background</div>
+          <div class="row single">
+            <label>
+              Image URL
+              <span class="hint">Path to the room image, e.g. /local/img/rooms/bedroom.jpg</span>
+              <input
+                .value=${bgOn}
+                placeholder="/local/img/rooms/bedroom.jpg"
+                @input=${(e: InputEvent) => this._setRoomImage("background_on", valueFromEvent(e))}
+              />
+            </label>
+          </div>
+          ${bgOn ? html`
+            <div class="image-preview-wrap">
+              <img class="image-preview" src=${bgOn} alt="Preview" />
+            </div>
+          ` : nothing}
+
+          <!-- Dark version toggle -->
+          <div class="row single">
+            ${this._renderToggleField(
+              "Dark version when lights are off",
+              "Applies a dark filter to the same image when all devices are inactive.",
+              darkEnabled,
+              (checked) => this._setImageKey("dark_mode_enabled", checked || undefined),
+            )}
+          </div>
+
+          ${darkEnabled ? html`
+            <!-- Dark preview -->
+            ${bgOn ? html`
+              <div class="image-preview-wrap">
+                <img class="image-preview image-preview--dark" src=${bgOn} alt="Dark preview" />
+                <span class="image-preview-label">Lights off</span>
+              </div>
+            ` : nothing}
+
+            <!-- Condition -->
+            <div class="row single">
+              <label>
+                Show dark version when
+                <select
+                  .value=${darkCond}
+                  @change=${(e: Event) => this._setImageKey("dark_mode_condition", valueFromEvent(e))}
+                >
+                  <option value="always">Always (devices off)</option>
+                  <option value="daytime">Daytime (devices off + sun above horizon)</option>
+                  <option value="lux">Lux sensor below threshold</option>
+                </select>
+              </label>
+            </div>
+
+            ${darkCond === "lux" ? html`
+              <div class="row single">
+                <label>
+                  Lux sensor
+                  <ha-selector
+                    .hass=${this.hass}
+                    .selector=${{ entity: { domain: "sensor", device_class: "illuminance" } }}
+                    .value=${images.dark_mode_lux_entity ?? ""}
+                    @value-changed=${(e: CustomEvent) => this._setImageKey("dark_mode_lux_entity", e.detail?.value || undefined)}
+                  ></ha-selector>
+                </label>
+              </div>
+              <div class="row single">
+                <label>
+                  Threshold (lux)
+                  <input
+                    type="number"
+                    min="0"
+                    .value=${String(images.dark_mode_lux_threshold ?? 50)}
+                    @input=${(e: InputEvent) => this._setImageKey("dark_mode_lux_threshold", Number(valueFromEvent(e)) || undefined)}
+                  />
+                </label>
+              </div>
+            ` : nothing}
+          ` : html`
+            <!-- Legacy: separate off-state image when dark mode is disabled -->
+            <div class="row single">
+              <label>
+                Background when off (optional)
+                <span class="hint">Leave empty to use the same image regardless of device state.</span>
+                <input
+                  .value=${images.background_off ?? ""}
+                  placeholder="/local/img/rooms/bedroom_off.jpg"
+                  @input=${(e: InputEvent) => this._setRoomImage("background_off", valueFromEvent(e))}
+                />
+              </label>
+            </div>
+          `}
+        </div>
+
+        <!-- ③ Advanced settings (collapsible) -->
+        ${!this._showAdvancedCardSetup ? html`
+          <div class="row single">
+            <button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = true; }}>Advanced settings</button>
+          </div>
+        ` : html`
+          <div class="row single"><label>Room name<span class="hint">Header label. Defaults to the area name.</span><input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} /></label></div>
+          <div class="row single">${this._renderToggleField("Show area icon", "Shows the area icon before the room name.", config.ui?.show_area_icon ?? false, (checked) => this._setUi("show_area_icon", checked))}</div>
+          <div class="row single"><label>Initial expanded state<span class="hint">Default open state for the device grid.</span><select .value=${config.expander?.initial_state ?? "closed"} @change=${(e: Event) => this._setExpander("initial_state", valueFromEvent(e))}>${INITIAL_STATES.map((v) => html`<option value=${v}>${v}</option>`)}</select></label></div>
+          <div class="row single">${this._renderToggleField("Remember expanded state", "Restores the last open or closed state from the browser.", config.expander?.persist_state ?? true, (checked) => this._setExpander("persist_state", checked))}</div>
+          <div class="row single">${this._renderToggleField("Show entity icons", "Shows each entity icon next to the device name.", config.ui?.show_entity_icons ?? false, (checked) => this._setUi("show_entity_icons", checked))}</div>
+          <div class="row single">${this._renderToggleField("Keep ON background until sunset", "Keeps the ON room background while sun.sun is above the horizon.", config.ui?.keep_background_on_until_sunset ?? false, (checked) => this._setUi("keep_background_on_until_sunset", checked))}</div>
+          ${(config.expander?.initial_state ?? "closed") === "conditional" ? html`<div class="panel"><div class="panel-title">Open condition</div>${this._renderConditionEditor(config.expander?.condition, (next) => this._setExpander("condition", next))}</div>` : nothing}
+          <div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = false; }}>← Back to basic settings</button></div>
+        `}
+      </section>
+    `;
   }
 
   private _renderHeaderData(config: SmartRoomCardConfig) {
@@ -1100,6 +1218,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   }
   private _setExpander(key: string, value: unknown) { this._patch({ expander: { ...(this._config?.expander ?? {}), [key]: value } }); }
   private _setRoomImage(key: "background_on" | "background_off", value: string) { this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...(this._config?.ui?.images ?? {}), [key]: value || undefined } } }); }
+  private _setImageKey(key: string, value: unknown) { this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...(this._config?.ui?.images ?? {}), [key]: value } } }); }
   private _setSensor(key: string, value: string) { this._patch({ sensors: patchSensor(this._config?.sensors, key, value) }); }
   private _setSensorIcon(key: string, value: string) { this._patch({ sensors: patchSensorIcon(this._config?.sensors, key, value) }); }
   private _setSensorFilter(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", field: "restrict_to_room_area", value: boolean) {

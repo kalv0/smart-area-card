@@ -234,6 +234,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       return html``;
     }
 
+    const model = this._renderModel;
     const colors = this._config.ui?.colors;
     const cardStyles = {
       "--smart-room-active": colors?.active ?? "#ffd700",
@@ -242,10 +243,14 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       "--smart-room-surface": colors?.surface ?? "rgba(10, 16, 28, 0.42)",
       "--smart-room-text": colors?.text ?? "white",
       "--smart-room-muted": colors?.muted ?? "rgba(255,255,255,0.76)",
-      backgroundImage: buildRoomBackgroundImage(this._renderModel.roomBackground),
-      backgroundSize: this._renderModel.roomBackground ? "cover, cover" : "auto",
-      backgroundPosition: this._renderModel.roomBackground ? "top center, top center" : "center",
-      backgroundRepeat: "no-repeat",
+      ...(model.roomImageUrl
+        ? {}
+        : {
+            backgroundImage: buildRoomBackgroundImage(model.roomBackground),
+            backgroundSize: model.roomBackground ? "cover, cover" : "auto",
+            backgroundPosition: model.roomBackground ? "top center, top center" : "center",
+            backgroundRepeat: "no-repeat",
+          }),
     };
 
     return html`
@@ -254,6 +259,12 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         aria-expanded=${this._config.expander?.enabled !== false ? String(this._expanded) : nothing}
         @click=${this._handleCardClick}
       >
+        ${model.roomImageUrl ? html`
+          <div class="room-frame">
+            <img class="room-image${model.roomImageDark ? " room-image--dark" : ""}" src=${model.roomImageUrl} alt="" aria-hidden="true" />
+            <div class="room-mask"></div>
+          </div>
+        ` : nothing}
         <div class="shell">
           <section class="summary-zone">
             ${this._renderHeader()}
