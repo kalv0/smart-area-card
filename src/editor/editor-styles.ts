@@ -230,6 +230,9 @@ export const calvoRoomCardEditorStyles = css`
     position: relative;
     border-left: 6px solid var(--editor-custom);
     background: #1f4b58;
+    grid-template-columns: 36px 1fr;
+    padding: 0;
+    overflow: hidden;
     border-color: rgba(76, 201, 240, 0.42);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   }
@@ -265,6 +268,26 @@ export const calvoRoomCardEditorStyles = css`
   .device-card.drop-target {
     outline: 2px dashed var(--editor-accent);
     outline-offset: 2px;
+  }
+
+  /* Left order column — same pattern as sensor-row-order */
+  .device-order-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 10px 4px;
+    background: rgba(0, 0, 0, 0.15);
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
+    align-self: stretch;
+  }
+
+  .device-body {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    min-width: 0;
   }
 
   .panel-type-light {
@@ -387,7 +410,7 @@ export const calvoRoomCardEditorStyles = css`
     gap: 8px;
     min-width: 0;
     flex: 1 1 auto;
-    padding-left: 38px;
+    padding-left: 0;
     padding-right: 0;
     max-width: 100%;
     overflow: visible;
@@ -407,8 +430,7 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .device-header-actions {
-    display: grid;
-    grid-template-columns: repeat(3, max-content);
+    display: flex;
     justify-content: flex-start;
     gap: 8px;
     margin-top: 0;
@@ -683,14 +705,11 @@ export const calvoRoomCardEditorStyles = css`
   /* ─── Drag handle ────────────────────────────────────── */
 
   .drag-handle {
-    position: absolute;
-    top: -2px;
-    left: 0;
-    height: 100%;
     display: inline-grid;
     place-items: center;
-    min-width: 42px;
-    width: 42px;
+    flex: 1 1 auto;
+    width: 28px;
+    min-width: 28px;
     padding: 0;
     background: transparent;
     color: var(--editor-muted);
@@ -699,7 +718,7 @@ export const calvoRoomCardEditorStyles = css`
     touch-action: none;
     border: 0;
     box-shadow: none;
-    font-size: 2rem;
+    font-size: 1.6rem;
     letter-spacing: 1px;
   }
 
@@ -1490,15 +1509,17 @@ export const calvoRoomCardEditorStyles = css`
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    gap: 2px;
-    padding: 6px 4px;
+    gap: 4px;
+    padding: 10px 4px;
     background: rgba(255, 255, 255, 0.04);
     border-right: 1px solid rgba(255, 255, 255, 0.07);
+    align-self: stretch;
   }
 
-  .sensor-row-wrapper .sensor-row {
+  .sensor-row-wrapper > .sensor-row {
     border: none;
     border-radius: 0;
+    padding: 10px;
   }
 
   .sensor-row {

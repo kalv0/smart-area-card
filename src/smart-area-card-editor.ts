@@ -359,6 +359,7 @@ export class SmartAreaCardEditor extends LitElement {
               const orderControls = html`
                 <div class="sensor-row-order">
                   ${isFirst ? html`<span class="sensor-primary-badge" title="Primary sensor — displayed largest in the card">★</span>` : nothing}
+                  <button class="secondary icon-button" type="button" ?disabled=${isFirst} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
                   <button class="drag-handle" type="button" draggable="true" title="Drag to reorder" aria-label="Drag to reorder"
                     @dragstart=${() => this._sensorDragStart(idx)}
                     @dragend=${this._handleSensorDragEnd}
@@ -366,7 +367,6 @@ export class SmartAreaCardEditor extends LitElement {
                     @pointermove=${this._handleSensorTouchDragMove}
                     @pointerup=${this._handleSensorTouchDragEnd}
                     @pointercancel=${this._handleSensorTouchDragCancel}>⋮⋮</button>
-                  <button class="secondary icon-button" type="button" ?disabled=${isFirst} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
                   <button class="secondary icon-button" type="button" ?disabled=${isLast} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
                 </div>
               `;
@@ -509,20 +509,49 @@ export class SmartAreaCardEditor extends LitElement {
     const roomReady = this._isRoomIdValid(this._config?.room_id);
     const entityValid = this._isEntityValid(device.entity) && this._isEntityAllowedForDevice(device, device.entity);
     const configBlocked = !roomReady || (entityRequired && !entityValid);
-    return html`<section class="device-card ${this._dragIndex === index ? "dragging" : ""} ${this._dropIndex === index && this._dragIndex !== index ? "drop-target" : ""}" data-type=${device.type ?? "custom"} data-device-index=${String(index)} @dragover=${this._handleDragOver} @drop=${() => this._handleDrop(index)}>
-      <div class="device-header"><div class="device-header-main"><button class="drag-handle" type="button" draggable="true" title="Drag to reorder" aria-label="Drag to reorder" @dragstart=${() => this._handleDragStart(index)} @dragend=${this._handleDragEnd} @pointerdown=${(e: PointerEvent) => this._handleTouchDragStart(e, index)} @pointermove=${this._handleTouchDragMove} @pointerup=${this._handleTouchDragEnd} @pointercancel=${this._handleTouchDragCancel}>⋮⋮</button><div class="device-header-copy"><div class="device-title">${device.name || device.entity || `Device ${index + 1}`}</div><div class="device-subtitle">${device.entity || "Configure the entity and behavior for this tile."}</div><div class="pill device-type-pill">${this._renderTypePill(device.type ?? "custom")}</div><div class="device-header-actions"><button class="secondary icon-button" type="button" ?disabled=${isFirst} @click=${() => this._moveDevice(index, -1)} aria-label="Move up">↑</button><button class="secondary icon-button" type="button" ?disabled=${isLast} @click=${() => this._moveDevice(index, 1)} aria-label="Move down">↓</button><button class="secondary icon-button" type="button" @click=${() => this._toggleDeviceExpanded(index)}>${expanded ? "Hide" : "Edit"}</button></div></div><div class="device-tools"><button class="danger device-remove" type="button" @click=${() => this._confirmRemoveDevice(index)}>Remove</button><button class="secondary device-duplicate" type="button" @click=${() => this._duplicateDevice(index)}>Duplicate</button></div></div>
-      ${expanded ? html`
-        ${this._renderIdentityPanel(device, index, entityRequired, entityValid)}
-        ${configBlocked ? html`<div class="panel locked-panel"><div class="panel-title">${!roomReady ? "Area ID required" : "Entity required"}</div><div class="required-note">${!roomReady ? "Set a valid Area ID first. Then this type can limit the main entity selector to entities from that room." : "Enter a valid Home Assistant entity to unlock visuals, offline behavior, state rules and actions for this device type."}</div></div>` : html`
-          ${this._renderVisualsPanel(device, index)}
-          ${this._renderActionsPanel(device, index)}
-          ${!this._isDeviceAdvanced(index) ? html`<div class="row single"><button type="button" class="secondary" @click=${() => this._setDeviceAdvanced(index, true)}>Advanced settings</button></div>` : html`
-            ${this._renderStatesPanel(device, index)}
-            <div class="row single"><button type="button" class="secondary" @click=${() => this._setDeviceAdvanced(index, false)}>Back to simple device setup</button></div>
-          `}
-        `}
-      ` : nothing}
-    </section>`;
+    return html`
+      <section class="device-card ${this._dragIndex === index ? "dragging" : ""} ${this._dropIndex === index && this._dragIndex !== index ? "drop-target" : ""}"
+               data-type=${device.type ?? "custom"} data-device-index=${String(index)}
+               @dragover=${this._handleDragOver} @drop=${() => this._handleDrop(index)}>
+        <div class="device-order-col">
+          <button class="secondary icon-button" type="button" ?disabled=${isFirst} @click=${() => this._moveDevice(index, -1)} aria-label="Move up">↑</button>
+          <button class="drag-handle" type="button" draggable="true" title="Drag to reorder" aria-label="Drag to reorder"
+            @dragstart=${() => this._handleDragStart(index)} @dragend=${this._handleDragEnd}
+            @pointerdown=${(e: PointerEvent) => this._handleTouchDragStart(e, index)}
+            @pointermove=${this._handleTouchDragMove} @pointerup=${this._handleTouchDragEnd}
+            @pointercancel=${this._handleTouchDragCancel}>⋮⋮</button>
+          <button class="secondary icon-button" type="button" ?disabled=${isLast} @click=${() => this._moveDevice(index, 1)} aria-label="Move down">↓</button>
+        </div>
+        <div class="device-body">
+          <div class="device-header">
+            <div class="device-header-main">
+              <div class="device-header-copy">
+                <div class="device-title">${device.name || device.entity || `Device ${index + 1}`}</div>
+                <div class="device-subtitle">${device.entity || "Configure the entity and behavior for this tile."}</div>
+                <div class="pill device-type-pill">${this._renderTypePill(device.type ?? "custom")}</div>
+                <div class="device-header-actions">
+                  <button class="secondary icon-button" type="button" @click=${() => this._toggleDeviceExpanded(index)}>${expanded ? "Hide" : "Edit"}</button>
+                </div>
+              </div>
+              <div class="device-tools">
+                <button class="danger device-remove" type="button" @click=${() => this._confirmRemoveDevice(index)}>Remove</button>
+                <button class="secondary device-duplicate" type="button" @click=${() => this._duplicateDevice(index)}>Duplicate</button>
+              </div>
+            </div>
+          </div>
+          ${expanded ? html`
+            ${this._renderIdentityPanel(device, index, entityRequired, entityValid)}
+            ${configBlocked ? html`<div class="panel locked-panel"><div class="panel-title">${!roomReady ? "Area ID required" : "Entity required"}</div><div class="required-note">${!roomReady ? "Set a valid Area ID first. Then this type can limit the main entity selector to entities from that room." : "Enter a valid Home Assistant entity to unlock visuals, offline behavior, state rules and actions for this device type."}</div></div>` : html`
+              ${this._renderVisualsPanel(device, index)}
+              ${this._renderActionsPanel(device, index)}
+              ${!this._isDeviceAdvanced(index) ? html`<div class="row single"><button type="button" class="secondary" @click=${() => this._setDeviceAdvanced(index, true)}>Advanced settings</button></div>` : html`
+                ${this._renderStatesPanel(device, index)}
+                <div class="row single"><button type="button" class="secondary" @click=${() => this._setDeviceAdvanced(index, false)}>Back to simple device setup</button></div>
+              `}
+            `}
+          ` : nothing}
+        </div>
+      </section>`;
   }
 
   private _renderIdentityPanel(device: SmartRoomDeviceConfig, index: number, entityRequired: boolean, entityValid: boolean) {
