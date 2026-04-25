@@ -134,10 +134,11 @@ export const calvoRoomCardEditorStyles = css`
     display: block;
   }
 
-  /* Diagonal clip: right ~55% is dark, left ~45% is normal — no hard line */
+  /* Diagonal clip: right ~55% is dark, left ~45% is normal — no hard line.
+     Overextend to 102% to avoid sub-pixel gap at border-radius edges. */
   .bg-preview-img--dark {
     filter: brightness(0.38) saturate(0.5);
-    clip-path: polygon(calc(50% + 22px) 0%, 100% 0%, 100% 100%, calc(50% - 22px) 100%);
+    clip-path: polygon(calc(50% + 22px) -1%, 102% -1%, 102% 102%, calc(50% - 22px) 102%);
   }
 
   .bg-preview-tag {
@@ -162,13 +163,14 @@ export const calvoRoomCardEditorStyles = css`
 
   .bg-preview-room-name {
     position: absolute;
-    bottom: 8px;
+    top: 50%;
     left: 10px;
-    font-size: 2.3rem;
+    transform: translateY(-50%);
+    font-size: 3rem;
     font-weight: 800;
     color: white;
     line-height: 1.05;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.55);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.65);
     pointer-events: none;
     z-index: 2;
   }
