@@ -59,6 +59,7 @@ export class SmartAreaCardEditor extends LitElement {
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
   private _touchDragPointerId?: number;
+  private _touchSensorDragPointerId?: number;
 
   protected firstUpdated(): void {
     this._refreshRegistries();
@@ -118,6 +119,43 @@ export class SmartAreaCardEditor extends LitElement {
     const darkCond = images.dark_mode_condition ?? "always";
     const bgOn = images.background_on ?? "";
 
+    // Primary sensor for preview
+    const _previewSensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
+    const _primaryKey = _previewSensorOrder[0];
+    let _primarySensorIcon = "";
+    let _primarySensorValue = "";
+    const _SENSOR_ICONS: Record<string, string> = {
+      temperature: "mdi:thermometer", humidity: "mdi:water-percent", co2: "mdi:molecule-co2",
+      voc: "mdi:flask-outline", pm25: "mdi:blur", aqi: "mdi:gauge", presence: "mdi:motion-sensor", noise: "mdi:volume-high",
+    };
+    if (_primaryKey) {
+      if (_primaryKey.startsWith("custom_")) {
+        const _ci = Number(_primaryKey.slice(7));
+        const _sc = config.sensors?.custom?.[_ci];
+        if (_sc?.entity) {
+          const _e = this.hass?.states[_sc.entity];
+          if (_e) {
+            const _u = _e.attributes["unit_of_measurement"] as string | undefined ?? "";
+            _primarySensorValue = `${_e.state}${_u ? ` ${_u}` : ""}`;
+            _primarySensorIcon = _sc.icon || "mdi:gauge";
+          }
+        }
+      } else {
+        const _eid = (config.sensors as Record<string, unknown> | undefined)?.[_primaryKey] as string | undefined;
+        if (_eid) {
+          const _e = this.hass?.states[_eid];
+          if (_e) {
+            const _u = _e.attributes["unit_of_measurement"] as string | undefined ?? "";
+            const _raw = _e.state;
+            _primarySensorValue = _primaryKey === "temperature" && Number.isFinite(Number(_raw))
+              ? `${Number(_raw).toFixed(1)}${_u || "°"}`
+              : `${_raw}${_u ? ` ${_u}` : ""}`;
+            _primarySensorIcon = (config.sensors?.icons as Record<string, string> | undefined)?.[_primaryKey] || _SENSOR_ICONS[_primaryKey] || "mdi:gauge";
+          }
+        }
+      }
+    }
+
     return html`
       <section class="section">
         <div class="section-header"><div>
@@ -175,6 +213,12 @@ export class SmartAreaCardEditor extends LitElement {
                 <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
               ` : nothing}
               ${config.room ? html`<span class="bg-preview-room-name">${config.room}</span>` : nothing}
+              ${_primarySensorValue ? html`
+                <div class="bg-preview-primary-sensor">
+                  <ha-icon icon=${_primarySensorIcon}></ha-icon>
+                  <span>${_primarySensorValue}</span>
+                </div>
+              ` : nothing}
             </div>
             <!-- Invisible probe so @load fires even when preview is hidden -->
             ${!this._bgPreviewValid ? html`
@@ -314,9 +358,14 @@ export class SmartAreaCardEditor extends LitElement {
               const isDropTarget = this._sensorDropIndex === idx && this._sensorDragIndex !== idx;
               const orderControls = html`
                 <div class="sensor-row-order">
-                  <button class="drag-handle" type="button" draggable="true" title="Drag to reorder"
+                  ${isFirst ? html`<span class="sensor-primary-badge" title="Primary sensor — displayed largest in the card">★</span>` : nothing}
+                  <button class="drag-handle" type="button" draggable="true" title="Drag to reorder" aria-label="Drag to reorder"
                     @dragstart=${() => this._sensorDragStart(idx)}
-                    @dragend=${this._handleSensorDragEnd}>⋮⋮</button>
+                    @dragend=${this._handleSensorDragEnd}
+                    @pointerdown=${(e: PointerEvent) => this._handleSensorTouchDragStart(e, idx)}
+                    @pointermove=${this._handleSensorTouchDragMove}
+                    @pointerup=${this._handleSensorTouchDragEnd}
+                    @pointercancel=${this._handleSensorTouchDragCancel}>⋮⋮</button>
                   <button class="secondary icon-button" type="button" ?disabled=${isFirst} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
                   <button class="secondary icon-button" type="button" ?disabled=${isLast} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
                 </div>
@@ -326,8 +375,9 @@ export class SmartAreaCardEditor extends LitElement {
                 const sensor = customSensors[i];
                 if (!sensor) return nothing;
                 return html`
-                  <div class="sensor-row-wrapper ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
-                       @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDrop(idx)}>
+                  <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
+                       data-sensor-index=${String(idx)}
+                       @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
                     ${orderControls}
                     ${this._renderCustomSensor(sensor, i, config)}
                   </div>`;
@@ -335,8 +385,9 @@ export class SmartAreaCardEditor extends LitElement {
               const meta = PRESET_META[key];
               if (!meta) return nothing;
               return html`
-                <div class="sensor-row-wrapper ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
-                     @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDrop(idx)}>
+                <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
+                     data-sensor-index=${String(idx)}
+                     @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
                   ${orderControls}
                   ${this._renderPresetSensor(key as "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", meta.label, meta.icon, config, meta.domains)}
                 </div>`;
@@ -1086,16 +1137,56 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   }
 
   private _sensorDragStart(idx: number) { this._sensorDragIndex = idx; this._sensorDropIndex = idx; }
-  private _handleSensorDragOver = (e: DragEvent) => { e.preventDefault(); };
-  private _handleSensorDrop(idx: number) {
-    if (this._sensorDragIndex === undefined || this._sensorDragIndex === idx) {
-      this._sensorDragIndex = undefined; this._sensorDropIndex = undefined; return;
-    }
-    const customCount = this._config?.sensors?.custom?.length ?? 0;
-    this._patch({ sensors: reorderSensorsInOrder(this._config?.sensors, this._sensorDragIndex, idx, customCount) });
-    this._sensorDragIndex = undefined; this._sensorDropIndex = undefined;
-  }
+  private _handleSensorDragOver = (event: DragEvent) => { event.preventDefault(); };
+  private _handleSensorDropTarget(idx: number) { this._reorderSensorTo(idx); }
   private _handleSensorDragEnd = () => { this._sensorDragIndex = undefined; this._sensorDropIndex = undefined; };
+
+  private _handleSensorTouchDragStart(event: PointerEvent, idx: number) {
+    if (event.pointerType === "mouse") return;
+    this._sensorDragIndex = idx;
+    this._sensorDropIndex = idx;
+    this._touchSensorDragPointerId = event.pointerId;
+    (event.currentTarget as HTMLElement | null)?.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  }
+  private _handleSensorTouchDragMove = (event: PointerEvent) => {
+    if (this._touchSensorDragPointerId !== event.pointerId) return;
+    const targetIndex = this._sensorIndexFromPoint(event.clientX, event.clientY);
+    if (targetIndex !== undefined) this._sensorDropIndex = targetIndex;
+    event.preventDefault();
+  };
+  private _handleSensorTouchDragEnd = (event: PointerEvent) => {
+    if (this._touchSensorDragPointerId !== event.pointerId) return;
+    const targetIndex = this._sensorDropIndex ?? this._sensorIndexFromPoint(event.clientX, event.clientY);
+    if (targetIndex !== undefined) this._reorderSensorTo(targetIndex); else { this._sensorDragIndex = undefined; this._sensorDropIndex = undefined; }
+    this._touchSensorDragPointerId = undefined;
+    event.preventDefault();
+  };
+  private _handleSensorTouchDragCancel = (event: PointerEvent) => {
+    if (this._touchSensorDragPointerId !== event.pointerId) return;
+    this._touchSensorDragPointerId = undefined;
+    this._sensorDragIndex = undefined;
+    this._sensorDropIndex = undefined;
+  };
+  private _reorderSensorTo(targetIdx: number) {
+    if (this._sensorDragIndex === undefined || this._sensorDragIndex === targetIdx) { this._sensorDragIndex = undefined; this._sensorDropIndex = undefined; return; }
+    const customCount = this._config?.sensors?.custom?.length ?? 0;
+    this._patch({ sensors: reorderSensorsInOrder(this._config?.sensors, this._sensorDragIndex, targetIdx, customCount) });
+    this._sensorDragIndex = undefined;
+    this._sensorDropIndex = undefined;
+  }
+  private _sensorIndexFromPoint(x: number, y: number): number | undefined {
+    const elements = this.shadowRoot?.elementsFromPoint(x, y) ?? [];
+    for (const element of elements) {
+      const card = (element as HTMLElement).closest?.("[data-sensor-index]") as HTMLElement | null;
+      if (!card) continue;
+      const raw = card.dataset["sensorIndex"];
+      if (raw === undefined) continue;
+      const index = Number(raw);
+      if (Number.isInteger(index)) return index;
+    }
+    return undefined;
+  }
 
   private _indexFromPoint(x: number, y: number): number | undefined {
     const elements = this.shadowRoot?.elementsFromPoint(x, y) ?? [];

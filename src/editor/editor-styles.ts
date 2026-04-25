@@ -175,6 +175,26 @@ export const calvoRoomCardEditorStyles = css`
     z-index: 2;
   }
 
+  .bg-preview-primary-sensor {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.65);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .bg-preview-primary-sensor ha-icon {
+    --mdc-icon-size: 22px;
+  }
+
   /* ─── Cards & panels ─────────────────────────────────── */
 
   .section,
@@ -1445,12 +1465,24 @@ export const calvoRoomCardEditorStyles = css`
     transition: opacity 150ms ease;
   }
 
+  .sensor-row-wrapper--primary {
+    border-color: rgba(245, 200, 76, 0.5);
+    background: rgba(245, 200, 76, 0.04);
+  }
+
   .sensor-row-wrapper.dragging {
     opacity: 0.4;
   }
 
   .sensor-row-wrapper.drop-target {
     border-color: var(--editor-accent);
+  }
+
+  .sensor-primary-badge {
+    font-size: 0.85rem;
+    color: var(--editor-light);
+    line-height: 1;
+    user-select: none;
   }
 
   .sensor-row-order {
