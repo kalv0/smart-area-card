@@ -25,7 +25,7 @@ import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUnd
 import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
 import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
 import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered } from "./editor/registry-helpers";
-import { patchSensor, patchSensorIcon, patchSensorFilter, patchSensorAlert, addCustomSensor, removeCustomSensor, updateCustomSensor, updateCustomSensorAlert } from "./editor/sensor-config";
+import { patchSensor, patchSensorIcon, patchSensorFilter, patchSensorAlert, addCustomSensor, removeCustomSensor, updateCustomSensor, updateCustomSensorAlert, getNormalizedSensorOrder, moveSensorInOrder, reorderSensorsInOrder, bubbleSensorAboveEmpty } from "./editor/sensor-config";
 import { addNamedState, removeNamedState, updateNamedState, resetPresetState, resetPresetAlert, resetPresetOffline, addNamedAlert, removeNamedAlert, updateNamedAlert } from "./editor/named-item-config";
 
 const SENSOR_DEVICE_CLASSES: Partial<Record<string, string[]>> = {
@@ -48,9 +48,10 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _advancedDevices: number[] = [];
   @state() private _dragIndex?: number;
   @state() private _dropIndex?: number;
+  @state() private _sensorDragIndex?: number;
+  @state() private _sensorDropIndex?: number;
   @state() private _showAddTypePicker = false;
   @state() private _showAdvancedCardSetup = false;
-  @state() private _showAdvancedClimate = false;
   @state() private _showAdvancedBattery = false;
   @state() private _entityRegistry: EntityRegistryEntry[] = [];
   @state() private _deviceRegistry: DeviceRegistryEntry[] = [];
@@ -264,6 +265,20 @@ export class SmartAreaCardEditor extends LitElement {
     const batteryHeaderBadge = config.ui?.battery_alert_header_badge ?? "low_battery";
     const batteryHeaderBorder = config.ui?.battery_alert_header_border !== false;
     const customSensors = config.sensors?.custom ?? [];
+    const customCount = customSensors.length;
+    const sensorOrder = getNormalizedSensorOrder(config.sensors, customCount);
+
+    const PRESET_META: Record<string, { label: string; icon: string; domains: string[] }> = {
+      temperature: { label: "Temperature", icon: "mdi:thermometer", domains: ["sensor"] },
+      humidity: { label: "Humidity", icon: "mdi:water-percent", domains: ["sensor"] },
+      co2: { label: "CO₂", icon: "mdi:molecule-co2", domains: ["sensor"] },
+      voc: { label: "VOC", icon: "mdi:flask-outline", domains: ["sensor"] },
+      pm25: { label: "PM2.5", icon: "mdi:blur", domains: ["sensor"] },
+      aqi: { label: "AQI", icon: "mdi:gauge", domains: ["sensor"] },
+      presence: { label: "Presence", icon: "mdi:motion-sensor", domains: ["binary_sensor", "sensor"] },
+      noise: { label: "Noise", icon: "mdi:volume-high", domains: ["sensor"] },
+    };
+
     return html`
       <section class="section">
         <div class="section-header"><div>
@@ -290,24 +305,42 @@ export class SmartAreaCardEditor extends LitElement {
 
         <div class="panel">
           <div class="panel-title">Sensors</div>
-          <div class="panel-subtitle">Only sensors with a configured entity are displayed. Click opens details can be toggled below.</div>
-          <div class="climate-sensor-list">
-            ${this._renderPresetSensor("temperature", "Temperature", "mdi:thermometer", config)}
-            ${this._renderPresetSensor("humidity", "Humidity", "mdi:water-percent", config)}
-            ${this._renderPresetSensor("presence", "Presence", "mdi:motion-sensor", config, ["binary_sensor", "sensor"])}
-            ${!this._showAdvancedClimate ? html`<button type="button" class="secondary sensor-more-btn" @click=${() => { this._showAdvancedClimate = true; }}>More sensors (CO₂, VOC, PM2.5, AQI, Noise)</button>` : nothing}
-            ${this._showAdvancedClimate ? html`
-              ${this._renderPresetSensor("co2", "CO₂", "mdi:molecule-co2", config)}
-              ${this._renderPresetSensor("voc", "VOC", "mdi:flask-outline", config)}
-              ${this._renderPresetSensor("pm25", "PM2.5", "mdi:blur", config)}
-              ${this._renderPresetSensor("aqi", "AQI", "mdi:gauge", config)}
-              ${this._renderPresetSensor("noise", "Noise", "mdi:volume-high", config)}
-              <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showAdvancedClimate = false; }}>← Hide</button>
-            ` : nothing}
-          </div>
-          <div class="panel-subtitle" style="margin-top:4px">Custom sensors — e.g. noise, CO, radiation</div>
-          <div class="climate-sensor-list">
-            ${customSensors.map((sensor, i) => this._renderCustomSensor(sensor, i, config))}
+          <div class="panel-subtitle">Drag or use arrows to reorder. The top sensor is displayed largest in the card.</div>
+          <div class="sensor-ordered-list">
+            ${sensorOrder.map((key, idx) => {
+              const isFirst = idx === 0;
+              const isLast = idx === sensorOrder.length - 1;
+              const isDragging = this._sensorDragIndex === idx;
+              const isDropTarget = this._sensorDropIndex === idx && this._sensorDragIndex !== idx;
+              const orderControls = html`
+                <div class="sensor-row-order">
+                  <button class="drag-handle" type="button" draggable="true" title="Drag to reorder"
+                    @dragstart=${() => this._sensorDragStart(idx)}
+                    @dragend=${this._handleSensorDragEnd}>⋮⋮</button>
+                  <button class="secondary icon-button" type="button" ?disabled=${isFirst} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
+                  <button class="secondary icon-button" type="button" ?disabled=${isLast} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
+                </div>
+              `;
+              if (key.startsWith("custom_")) {
+                const i = Number(key.slice(7));
+                const sensor = customSensors[i];
+                if (!sensor) return nothing;
+                return html`
+                  <div class="sensor-row-wrapper ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
+                       @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDrop(idx)}>
+                    ${orderControls}
+                    ${this._renderCustomSensor(sensor, i, config)}
+                  </div>`;
+              }
+              const meta = PRESET_META[key];
+              if (!meta) return nothing;
+              return html`
+                <div class="sensor-row-wrapper ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
+                     @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDrop(idx)}>
+                  ${orderControls}
+                  ${this._renderPresetSensor(key as "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", meta.label, meta.icon, config, meta.domains)}
+                </div>`;
+            })}
           </div>
           <div class="row single">
             <button type="button" class="secondary" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
@@ -1047,6 +1080,23 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     this._dropIndex = undefined;
   }
 
+  private _moveSensorKey(idx: number, dir: -1 | 1) {
+    const customCount = this._config?.sensors?.custom?.length ?? 0;
+    this._patch({ sensors: moveSensorInOrder(this._config?.sensors, idx, dir, customCount) });
+  }
+
+  private _sensorDragStart(idx: number) { this._sensorDragIndex = idx; this._sensorDropIndex = idx; }
+  private _handleSensorDragOver = (e: DragEvent) => { e.preventDefault(); };
+  private _handleSensorDrop(idx: number) {
+    if (this._sensorDragIndex === undefined || this._sensorDragIndex === idx) {
+      this._sensorDragIndex = undefined; this._sensorDropIndex = undefined; return;
+    }
+    const customCount = this._config?.sensors?.custom?.length ?? 0;
+    this._patch({ sensors: reorderSensorsInOrder(this._config?.sensors, this._sensorDragIndex, idx, customCount) });
+    this._sensorDragIndex = undefined; this._sensorDropIndex = undefined;
+  }
+  private _handleSensorDragEnd = () => { this._sensorDragIndex = undefined; this._sensorDropIndex = undefined; };
+
   private _indexFromPoint(x: number, y: number): number | undefined {
     const elements = this.shadowRoot?.elementsFromPoint(x, y) ?? [];
     for (const element of elements) {
@@ -1230,7 +1280,12 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   private _setExpander(key: string, value: unknown) { this._patch({ expander: { ...(this._config?.expander ?? {}), [key]: value } }); }
   private _setRoomImage(key: "background_on" | "background_off", value: string) { this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...(this._config?.ui?.images ?? {}), [key]: value || undefined } } }); }
   private _setImageKey(key: string, value: unknown) { this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...(this._config?.ui?.images ?? {}), [key]: value } } }); }
-  private _setSensor(key: string, value: string) { this._patch({ sensors: patchSensor(this._config?.sensors, key, value) }); }
+  private _setSensor(key: string, value: string) {
+    const hadEntity = Boolean((this._config?.sensors as Record<string, unknown>)?.[key]);
+    let newSensors = patchSensor(this._config?.sensors, key, value);
+    if (value && !hadEntity) newSensors = bubbleSensorAboveEmpty(newSensors, key);
+    this._patch({ sensors: newSensors });
+  }
   private _setSensorIcon(key: string, value: string) { this._patch({ sensors: patchSensorIcon(this._config?.sensors, key, value) }); }
   private _setSensorFilter(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", field: "restrict_to_room_area", value: boolean) {
     this._patch({ sensors: patchSensorFilter(this._config?.sensors, key, field, value) });

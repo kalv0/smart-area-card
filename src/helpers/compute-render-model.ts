@@ -147,6 +147,7 @@ export function computeRenderModel(
       { temp, humidity, co2, voc, pm25, aqi, presence, noise },
       customIcons,
       customSensorEntries.map(({ config: sc, entity }) => ({ name: sc.name, icon: sc.icon, entity })),
+      config.sensors?.sensor_order,
     ),
     climateEntities: getClimateEntities(config.sensors),
     areaAutomations,

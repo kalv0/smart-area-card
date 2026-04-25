@@ -170,38 +170,52 @@ export function buildClimateItems(
   },
   customIcons?: Record<string, string | undefined>,
   customSensors?: Array<{ name: string; icon?: string; entity?: HassEntity }>,
+  sensorOrder?: string[],
 ): Array<{ key: string; icon: string; value: string; className: string }> {
-  const items: Array<{ key: string; icon: string; value: string; className: string }> = [];
   const resolveIcon = (key: string) => customIcons?.[key] || CLIMATE_DEFAULT_ICONS[key] || "mdi:gauge";
-  const pushItem = (
-    key: string,
-    className: string,
-    entity?: HassEntity,
-    icon?: string,
-    formatter?: (value: string, unit?: string) => string,
-  ) => {
-    if (!entity || isUnavailable(entity)) return;
-    const unit = entity.attributes.unit_of_measurement ? String(entity.attributes.unit_of_measurement) : undefined;
-    const raw = String(entity.state);
-    const value = formatter ? formatter(raw, unit) : `${raw}${unit ? ` ${unit}` : ""}`;
-    items.push({ key, icon: icon ?? resolveIcon(key), value, className });
+
+  type ItemDef = { entity?: HassEntity; formatter?: (v: string, u?: string) => string };
+  const presetMap: Record<string, ItemDef> = {
+    temperature: { entity: entities.temp, formatter: (v, u) => { const n = Number(v); return Number.isFinite(n) ? `${n.toFixed(1)}${u ?? " deg"}` : `${v}${u ? ` ${u}` : ""}`; } },
+    humidity: { entity: entities.humidity, formatter: (v, u) => `${v}${u ?? "%"}` },
+    co2: { entity: entities.co2 },
+    voc: { entity: entities.voc },
+    pm25: { entity: entities.pm25 },
+    aqi: { entity: entities.aqi },
+    presence: { entity: entities.presence },
+    noise: { entity: entities.noise },
   };
 
-  pushItem("temperature", "temp", entities.temp, undefined, (value, unit) => {
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? `${numeric.toFixed(1)}${unit ?? " deg"}` : `${value}${unit ? ` ${unit}` : ""}`;
-  });
-  pushItem("humidity", "humidity", entities.humidity, undefined, (value, unit) => `${value}${unit ?? "%"}`);
-  pushItem("co2", "co2", entities.co2);
-  pushItem("voc", "voc", entities.voc);
-  pushItem("pm25", "pm25", entities.pm25);
-  pushItem("aqi", "aqi", entities.aqi);
-  pushItem("presence", "presence", entities.presence);
-  pushItem("noise", "noise", entities.noise);
+  const DEFAULT_ORDER = ["temperature", "humidity", "presence", "co2", "voc", "pm25", "aqi", "noise"];
+  const customCount = customSensors?.length ?? 0;
+  const order: string[] = [...(sensorOrder ?? DEFAULT_ORDER)];
+  for (const key of DEFAULT_ORDER) {
+    if (!order.includes(key)) order.push(key);
+  }
+  for (let i = 0; i < customCount; i++) {
+    const key = `custom_${i}`;
+    if (!order.includes(key)) order.push(key);
+  }
 
-  (customSensors ?? []).forEach((sensor, i) => {
-    pushItem(`custom_${i}`, "custom", sensor.entity, sensor.icon || "mdi:gauge");
-  });
+  const items: Array<{ key: string; icon: string; value: string; className: string }> = [];
+
+  for (const key of order) {
+    const posClass = items.length === 0 ? " primary" : items.length === 1 ? " secondary" : "";
+    if (key.startsWith("custom_")) {
+      const i = Number(key.slice(7));
+      const sensor = customSensors?.[i];
+      if (!sensor?.entity || isUnavailable(sensor.entity)) continue;
+      const unit = sensor.entity.attributes.unit_of_measurement ? String(sensor.entity.attributes.unit_of_measurement) : undefined;
+      items.push({ key, icon: sensor.icon || "mdi:gauge", value: `${sensor.entity.state}${unit ? ` ${unit}` : ""}`, className: `custom${posClass}` });
+    } else {
+      const def = presetMap[key];
+      if (!def?.entity || isUnavailable(def.entity)) continue;
+      const unit = def.entity.attributes.unit_of_measurement ? String(def.entity.attributes.unit_of_measurement) : undefined;
+      const raw = String(def.entity.state);
+      const value = def.formatter ? def.formatter(raw, unit) : `${raw}${unit ? ` ${unit}` : ""}`;
+      items.push({ key, icon: resolveIcon(key), value, className: `${key}${posClass}` });
+    }
+  }
 
   return items;
 }

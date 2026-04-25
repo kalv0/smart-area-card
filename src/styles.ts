@@ -338,12 +338,14 @@ export const smartRoomCardStyles = css`
     pointer-events: none;
   }
 
-  .temp {
+  .temp,
+  .climate-item.primary {
     font-size: var(--sr-text-lg);
     font-weight: 700;
   }
 
-  .humidity {
+  .humidity,
+  .climate-item.secondary {
     font-size: var(--sr-text-md);
     color: rgba(255, 255, 255, 0.82);
   }

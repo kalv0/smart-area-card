@@ -1427,6 +1427,46 @@ export const calvoRoomCardEditorStyles = css`
     gap: 6px;
   }
 
+  /* wrapper for ordered sensor list (preset + custom) */
+  .sensor-ordered-list {
+    display: grid;
+    gap: 6px;
+  }
+
+  .sensor-row-wrapper {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 0;
+    border-radius: var(--editor-radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    overflow: hidden;
+    transition: opacity 150ms ease;
+  }
+
+  .sensor-row-wrapper.dragging {
+    opacity: 0.4;
+  }
+
+  .sensor-row-wrapper.drop-target {
+    border-color: var(--editor-accent);
+  }
+
+  .sensor-row-order {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 6px 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .sensor-row-wrapper .sensor-row {
+    border: none;
+    border-radius: 0;
+  }
+
   .sensor-row {
     display: grid;
     gap: 6px;

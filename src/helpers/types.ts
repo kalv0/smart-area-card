@@ -184,6 +184,7 @@ export interface SmartRoomCardConfig {
     aqi?: string;
     presence?: string;
     noise?: string;
+    sensor_order?: string[];
     filters?: {
       temperature?: { restrict_to_room_area?: boolean };
       humidity?: { restrict_to_room_area?: boolean };
