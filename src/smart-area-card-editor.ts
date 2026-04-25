@@ -134,6 +134,11 @@ export class SmartAreaCardEditor extends LitElement {
           ></ha-area-picker>
         </div>
 
+        <!-- ① b Room name -->
+        <div class="row single">
+          <label>Room name<span class="hint">Header label displayed on the card.</span><input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} /></label>
+        </div>
+
         <!-- ② Room image (before Autofill) -->
         <div class="panel">
           <div class="panel-title">Room background</div>
@@ -168,6 +173,7 @@ export class SmartAreaCardEditor extends LitElement {
                 <span class="bg-preview-tag bg-preview-tag--left">ON</span>
                 <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
               ` : nothing}
+              ${config.room ? html`<span class="bg-preview-room-name">${config.room}</span>` : nothing}
             </div>
             <!-- Invisible probe so @load fires even when preview is hidden -->
             ${!this._bgPreviewValid ? html`
@@ -238,7 +244,6 @@ export class SmartAreaCardEditor extends LitElement {
             <button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = true; }}>Advanced settings</button>
           </div>
         ` : html`
-          <div class="row single"><label>Room name<span class="hint">Header label. Defaults to the area name.</span><input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} /></label></div>
           <div class="row single">${this._renderToggleField("Show area icon", "Shows the area icon before the room name.", config.ui?.show_area_icon ?? false, (checked) => this._setUi("show_area_icon", checked))}</div>
           <div class="row single"><label>Initial expanded state<span class="hint">Default open state for the device grid.</span><select .value=${config.expander?.initial_state ?? "closed"} @change=${(e: Event) => this._setExpander("initial_state", valueFromEvent(e))}>${INITIAL_STATES.map((v) => html`<option value=${v}>${v}</option>`)}</select></label></div>
           <div class="row single">${this._renderToggleField("Remember expanded state", "Restores the last open or closed state from the browser.", config.expander?.persist_state ?? true, (checked) => this._setExpander("persist_state", checked))}</div>
@@ -1183,10 +1188,14 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
   private _setAreaId(areaId: string): void {
     const nextAreaId = areaId.trim();
-    const areaName = this._areaName(nextAreaId);
+    const prevAreaName = this._areaName(this._config?.room_id);
+    const currentRoom = this._config?.room ?? "";
+    const newAreaName = this._areaName(nextAreaId);
+    // Auto-fill room name only when it's empty or still equals the previous area's auto-filled name
+    const shouldAutoFill = !currentRoom || currentRoom === prevAreaName;
     this._patch({
       room_id: nextAreaId || undefined,
-      ...(areaName ? { room: areaName } : {}),
+      ...(shouldAutoFill && newAreaName ? { room: newAreaName } : {}),
     });
   }
 

@@ -160,6 +160,19 @@ export const calvoRoomCardEditorStyles = css`
     right: 8px;
   }
 
+  .bg-preview-room-name {
+    position: absolute;
+    bottom: 8px;
+    left: 10px;
+    font-size: 2.3rem;
+    font-weight: 800;
+    color: white;
+    line-height: 1.05;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.55);
+    pointer-events: none;
+    z-index: 2;
+  }
+
   /* ─── Cards & panels ─────────────────────────────────── */
 
   .section,
