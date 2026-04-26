@@ -355,6 +355,13 @@ export class SmartAreaCardEditor extends LitElement {
           <div class="panel-subtitle">Drag or use arrows to reorder. The top sensor is displayed largest in the card.</div>
 
           ${(() => {
+            const hasEntityForKey = (k: string) => k.startsWith("custom_")
+              ? Boolean(customSensors[Number(k.slice(7))]?.entity)
+              : Boolean((config.sensors as Record<string, unknown>)?.[k]);
+            const alwaysVisible = (k: string) => k === "temperature" || k === "humidity" || hasEntityForKey(k);
+            const visibleKeys = sensorOrder.filter(alwaysVisible);
+            const hiddenKeys = sensorOrder.filter(k => !alwaysVisible(k));
+
             const renderSensorRow = (key: string, idx: number) => {
               const isFirst = idx === 0;
               const isLast = idx === sensorOrder.length - 1;
@@ -394,16 +401,19 @@ export class SmartAreaCardEditor extends LitElement {
                   ${orderControls}${this._renderPresetSensor(key as "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", meta.label, meta.icon, config, meta.domains)}
                 </div>`;
             };
+
             return html`
               <div class="sensor-ordered-list">
-                ${sensorOrder.slice(0, 2).map((key, i) => renderSensorRow(key, i))}
+                ${visibleKeys.map(k => renderSensorRow(k, sensorOrder.indexOf(k)))}
               </div>
               ${!this._showMoreSensors ? html`
                 <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = true; }}>More sensors ▾</button>
               ` : html`
-                <div class="sensor-ordered-list">
-                  ${sensorOrder.slice(2).map((key, i) => renderSensorRow(key, i + 2))}
-                </div>
+                ${hiddenKeys.length ? html`
+                  <div class="sensor-ordered-list">
+                    ${hiddenKeys.map(k => renderSensorRow(k, sensorOrder.indexOf(k)))}
+                  </div>
+                ` : nothing}
                 <button type="button" class="sensor-add-row" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
                 <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = false; }}>Hide sensors ▴</button>
               `}
@@ -466,21 +476,22 @@ export class SmartAreaCardEditor extends LitElement {
     `;
   }
 
-  private _renderCustomSensor(sensor: import("./helpers").SmartRoomCustomSensor, i: number, config: SmartRoomCardConfig) {
+  private _renderCustomSensor(sensor: import("./helpers").SmartRoomCustomSensor, i: number, _config: SmartRoomCardConfig) {
     const alertEnabled = sensor.alert?.enabled === true;
-    const restrictToRoom = sensor.restrict_to_room_area === true;
-    const roomName = this._areaName(this._config?.room_id) ?? "this room";
+    const hasRoomId = Boolean(this._config?.room_id?.trim());
+    const restrictToRoom = hasRoomId && sensor.restrict_to_room_area === true;
     return html`
       <div class="sensor-row sensor-row-custom">
-        <div class="sensor-row-main">
+        <div class="sensor-row-header">
           <span class="sensor-row-icon"><ha-icon icon=${sensor.icon || "mdi:gauge"}></ha-icon></span>
-          <input class="sensor-name-input" .value=${sensor.name} placeholder="Name" @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
-          <div class="sensor-row-entity">${this._renderEntityPicker(sensor.entity, (v) => this._updateCustomSensor(i, { entity: v }), false, this._entitySelector(["sensor"], restrictToRoom, config.room_id))}</div>
-          <label class="sensor-row-restrict">${this._renderInlineToggle(restrictToRoom, (v) => this._updateCustomSensor(i, { restrict_to_room_area: v }))}<span>Only ${roomName}</span></label>
+          <input class="sensor-name-input sensor-row-label" .value=${sensor.name} placeholder="Sensor name" @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
           <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._updateCustomSensorAlert(i, "enabled", v))}<span>Alert</span></label>
           <button type="button" class="sensor-remove-btn" @click=${() => this._removeCustomSensor(i)}>✕</button>
         </div>
-        <div class="sensor-row-icon-picker">${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}</div>
+        <div class="sensor-row-body">
+          ${this._renderSmartEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }))}
+          ${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}
+        </div>
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
             <label>Min<input type="number" .value=${sensor.alert?.min !== undefined ? String(sensor.alert.min) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
@@ -1434,6 +1445,12 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   }
   private _updateCustomSensorAlert(i: number, field: "enabled" | "min" | "max" | "eq", value: boolean | number | undefined) {
     this._patch({ sensors: updateCustomSensorAlert(this._config?.sensors, i, field, value) });
+  }
+  private _setCustomSensorEntity(i: number, value: string) {
+    const hadEntity = Boolean(this._config?.sensors?.custom?.[i]?.entity);
+    let newSensors = updateCustomSensor(this._config?.sensors, i, { entity: value });
+    if (value && !hadEntity) newSensors = bubbleSensorAboveEmpty(newSensors, `custom_${i}`);
+    this._patch({ sensors: newSensors });
   }
 
   private _setDevice(index: number, key: keyof SmartRoomDeviceConfig, value: unknown) {
