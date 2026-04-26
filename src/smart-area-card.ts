@@ -447,7 +447,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                 ? { label: this._config?.sensors?.custom?.[Number(item.key.slice(7))]?.name ?? item.key, color: "#94a3b8" }
                 : (POPUP_META[item.key] ?? { label: item.key, color: "#94a3b8" });
               return html`
-                <div class="sensor-popup-item">
+                <div class="sensor-popup-item ${entityId ? "sensor-popup-item--clickable" : ""}"
+                  ${entityId ? html`@click=${(e: Event) => { e.stopPropagation(); fireEvent(this, "hass-more-info", { entityId }); }}` : nothing}>
                   <div class="sensor-popup-item-row">
                     <div class="sensor-popup-item-icon" style="--sensor-accent:${meta.color}">
                       <ha-icon icon=${item.icon}></ha-icon>
@@ -457,12 +458,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                       <div class="sensor-popup-item-value">${item.value}</div>
                       ${entityId ? html`<div class="sensor-popup-item-updated">${this._relativeTime(this.hass.states[entityId]?.last_updated)}</div>` : nothing}
                     </div>
-                    ${entityId ? html`
-                      <button class="sensor-popup-info-btn" aria-label="More info"
-                        @click=${(e: Event) => { e.stopPropagation(); fireEvent(this, "hass-more-info", { entityId }); }}>
-                        <ha-icon icon="mdi:information-outline"></ha-icon>
-                      </button>
-                    ` : nothing}
+                    ${entityId ? html`<ha-icon class="sensor-popup-item-chevron" icon="mdi:chevron-right"></ha-icon>` : nothing}
                   </div>
                   ${entityId ? html`<div class="sensor-popup-chart" data-key=${item.key}></div>` : nothing}
                 </div>

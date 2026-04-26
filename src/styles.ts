@@ -734,26 +734,24 @@ export const smartRoomCardStyles = css`
     margin-top: 2px;
   }
 
-  .sensor-popup-info-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    --mdc-icon-size: 17px;
+  .sensor-popup-item--clickable {
     cursor: pointer;
-    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+    transition: background 140ms ease, border-color 140ms ease;
   }
 
-  .sensor-popup-info-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: white;
-    border-color: rgba(255, 255, 255, 0.25);
+  .sensor-popup-item--clickable:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .sensor-popup-item--clickable:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .sensor-popup-item-chevron {
+    --mdc-icon-size: 18px;
+    color: rgba(255, 255, 255, 0.22);
+    flex-shrink: 0;
   }
 
   .sensor-popup-chart {
