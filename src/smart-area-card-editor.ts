@@ -53,6 +53,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _showAddTypePicker = false;
   @state() private _showAdvancedCardSetup = false;
   @state() private _showAdvancedBattery = false;
+  @state() private _showMoreSensors = false;
   @state() private _entityRegistry: EntityRegistryEntry[] = [];
   @state() private _deviceRegistry: DeviceRegistryEntry[] = [];
   @state() private _bgPreviewValid = false;
@@ -352,8 +353,9 @@ export class SmartAreaCardEditor extends LitElement {
         <div class="panel">
           <div class="panel-title">Sensors</div>
           <div class="panel-subtitle">Drag or use arrows to reorder. The top sensor is displayed largest in the card.</div>
-          <div class="sensor-ordered-list">
-            ${sensorOrder.map((key, idx) => {
+
+          ${(() => {
+            const renderSensorRow = (key: string, idx: number) => {
               const isFirst = idx === 0;
               const isLast = idx === sensorOrder.length - 1;
               const isDragging = this._sensorDragIndex === idx;
@@ -380,8 +382,7 @@ export class SmartAreaCardEditor extends LitElement {
                   <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
                        data-sensor-index=${String(idx)}
                        @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
-                    ${orderControls}
-                    ${this._renderCustomSensor(sensor, i, config)}
+                    ${orderControls}${this._renderCustomSensor(sensor, i, config)}
                   </div>`;
               }
               const meta = PRESET_META[key];
@@ -390,16 +391,27 @@ export class SmartAreaCardEditor extends LitElement {
                 <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
                      data-sensor-index=${String(idx)}
                      @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
-                  ${orderControls}
-                  ${this._renderPresetSensor(key as "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", meta.label, meta.icon, config, meta.domains)}
+                  ${orderControls}${this._renderPresetSensor(key as "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", meta.label, meta.icon, config, meta.domains)}
                 </div>`;
-            })}
-          </div>
+            };
+            return html`
+              <div class="sensor-ordered-list">
+                ${sensorOrder.slice(0, 2).map((key, i) => renderSensorRow(key, i))}
+              </div>
+              ${!this._showMoreSensors ? html`
+                <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = true; }}>More sensors ▾</button>
+              ` : html`
+                <div class="sensor-ordered-list">
+                  ${sensorOrder.slice(2).map((key, i) => renderSensorRow(key, i + 2))}
+                </div>
+                <button type="button" class="sensor-add-row" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
+                <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = false; }}>Hide sensors ▴</button>
+              `}
+            `;
+          })()}
+
           <div class="row single">
-            <button type="button" class="secondary" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
-          </div>
-          <div class="row single">
-            ${this._renderToggleField("Click opens details", "Tapping the climate strip opens a detail view.", config.ui?.header_climate_more_info ?? true, (checked) => this._setUi("header_climate_more_info", checked))}
+            ${this._renderToggleField("Click opens details", "Tapping the climate strip opens a popup with sensor history.", config.ui?.header_climate_more_info ?? true, (checked) => this._setUi("header_climate_more_info", checked))}
           </div>
         </div>
 

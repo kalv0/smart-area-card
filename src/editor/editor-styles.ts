@@ -1725,6 +1725,29 @@ export const calvoRoomCardEditorStyles = css`
     min-height: 36px;
   }
 
+  .sensor-add-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    border-radius: var(--editor-radius-md);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--editor-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+  }
+
+  .sensor-add-row:hover {
+    border-color: rgba(255, 255, 255, 0.38);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--editor-text);
+  }
+
   .sensor-row-icon-picker {
     padding-top: 2px;
   }
