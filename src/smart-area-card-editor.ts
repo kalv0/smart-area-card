@@ -460,6 +460,7 @@ export class SmartAreaCardEditor extends LitElement {
         </div>
         <div class="sensor-row-body">
           ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(key, "restrict_to_room_area", !showAll))}
+          ${entityId ? html`<button type="button" class="sensor-clear-btn" @click=${() => this._setSensor(key, "")}>Remove entity ✕</button>` : nothing}
         </div>
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
@@ -490,6 +491,7 @@ export class SmartAreaCardEditor extends LitElement {
         </div>
         <div class="sensor-row-body">
           ${this._renderSmartEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }))}
+          ${sensor.entity ? html`<button type="button" class="sensor-clear-btn" @click=${() => this._setCustomSensorEntity(i, "")}>Remove entity ✕</button>` : nothing}
           ${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}
         </div>
         ${alertEnabled ? html`

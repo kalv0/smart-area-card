@@ -1718,6 +1718,24 @@ export const calvoRoomCardEditorStyles = css`
     background: rgba(220, 38, 38, 0.9);
   }
 
+  .sensor-clear-btn {
+    align-self: flex-start;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.72rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    line-height: 1;
+    min-height: 28px;
+  }
+
+  .sensor-clear-btn:hover {
+    background: rgba(185, 28, 28, 0.5);
+    color: #fff;
+    border-color: rgba(255, 190, 190, 0.3);
+  }
+
   .sensor-more-btn {
     width: 100%;
     font-size: 0.8rem;

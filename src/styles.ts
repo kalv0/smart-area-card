@@ -344,9 +344,7 @@ export const smartRoomCardStyles = css`
     font-weight: 700;
   }
 
-  .humidity,
-  .climate-item.secondary {
-    font-size: var(--sr-text-md);
+  .humidity {
     color: rgba(255, 255, 255, 0.82);
   }
 
