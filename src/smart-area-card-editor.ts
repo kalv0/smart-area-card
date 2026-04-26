@@ -358,7 +358,10 @@ export class SmartAreaCardEditor extends LitElement {
             const hasEntityForKey = (k: string) => k.startsWith("custom_")
               ? Boolean(customSensors[Number(k.slice(7))]?.entity)
               : Boolean((config.sensors as Record<string, unknown>)?.[k]);
-            const alwaysVisible = (k: string) => k === "temperature" || k === "humidity" || hasEntityForKey(k);
+            const anyHasEntity = sensorOrder.some(k => hasEntityForKey(k));
+            const alwaysVisible = (k: string) => anyHasEntity
+              ? hasEntityForKey(k)
+              : k === "temperature" || k === "humidity";
             const visibleKeys = sensorOrder.filter(alwaysVisible);
             const hiddenKeys = sensorOrder.filter(k => !alwaysVisible(k));
 
@@ -367,18 +370,20 @@ export class SmartAreaCardEditor extends LitElement {
               const isLast = idx === sensorOrder.length - 1;
               const isDragging = this._sensorDragIndex === idx;
               const isDropTarget = this._sensorDropIndex === idx && this._sensorDragIndex !== idx;
+              const canReorder = hasEntityForKey(key);
               const orderControls = html`
                 <div class="sensor-row-order">
-                  ${isFirst ? html`<span class="sensor-primary-badge" title="Primary sensor — displayed largest in the card">★</span>` : nothing}
-                  <button class="secondary icon-button" type="button" ?disabled=${isFirst} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
-                  <button class="drag-handle" type="button" draggable="true" title="Drag to reorder" aria-label="Drag to reorder"
-                    @dragstart=${() => this._sensorDragStart(idx)}
-                    @dragend=${this._handleSensorDragEnd}
-                    @pointerdown=${(e: PointerEvent) => this._handleSensorTouchDragStart(e, idx)}
-                    @pointermove=${this._handleSensorTouchDragMove}
-                    @pointerup=${this._handleSensorTouchDragEnd}
-                    @pointercancel=${this._handleSensorTouchDragCancel}>⋮⋮</button>
-                  <button class="secondary icon-button" type="button" ?disabled=${isLast} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
+                  ${isFirst && canReorder ? html`<span class="sensor-primary-badge" title="Primary sensor — displayed largest in the card">★</span>` : nothing}
+                  <button class="secondary icon-button" type="button" ?disabled=${isFirst || !canReorder} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
+                  <button class="drag-handle" type="button" .draggable=${canReorder} title="Drag to reorder" aria-label="Drag to reorder"
+                    ?disabled=${!canReorder}
+                    @dragstart=${canReorder ? () => this._sensorDragStart(idx) : nothing}
+                    @dragend=${canReorder ? this._handleSensorDragEnd : nothing}
+                    @pointerdown=${canReorder ? (e: PointerEvent) => this._handleSensorTouchDragStart(e, idx) : nothing}
+                    @pointermove=${canReorder ? this._handleSensorTouchDragMove : nothing}
+                    @pointerup=${canReorder ? this._handleSensorTouchDragEnd : nothing}
+                    @pointercancel=${canReorder ? this._handleSensorTouchDragCancel : nothing}>⋮⋮</button>
+                  <button class="secondary icon-button" type="button" ?disabled=${isLast || !canReorder} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
                 </div>
               `;
               if (key.startsWith("custom_")) {
@@ -459,7 +464,7 @@ export class SmartAreaCardEditor extends LitElement {
           <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(key, "enabled", v))}<span>Alert</span></label>
         </div>
         <div class="sensor-row-body">
-          ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(key, "restrict_to_room_area", !showAll), false, entityId ? () => this._setSensor(key, "") : undefined)}
+          ${this._renderSensorEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(key, "restrict_to_room_area", !showAll))}
         </div>
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
@@ -489,7 +494,7 @@ export class SmartAreaCardEditor extends LitElement {
           <button type="button" class="sensor-remove-btn" @click=${() => this._removeCustomSensor(i)}>✕</button>
         </div>
         <div class="sensor-row-body">
-          ${this._renderSmartEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }), false, sensor.entity ? () => this._setCustomSensorEntity(i, "") : undefined)}
+          ${this._renderSensorEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }))}
           ${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}
         </div>
         ${alertEnabled ? html`
@@ -773,16 +778,40 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     areaId: string | undefined,
     onToggleShowAll: (showAll: boolean) => void,
     disabled = false,
-    onClear?: () => void,
   ) {
     const hasRoom = Boolean(areaId?.trim());
     const selector = this._entitySelectorFiltered(domains, restrictToArea, areaId, deviceClasses);
     return html`
-      <div class="entity-field-wrap">
-        ${this._renderEntityPicker(value, onChange, disabled, selector)}
-        ${value && onClear ? html`<button type="button" class="entity-clear-x" aria-label="Clear entity" @click=${(e: Event) => { e.stopPropagation(); onClear(); }}><ha-icon icon="mdi:close"></ha-icon></button>` : nothing}
-      </div>
+      ${this._renderEntityPicker(value, onChange, disabled, selector)}
       ${hasRoom && !disabled ? html`<label class="show-all-check"><input type="checkbox" .checked=${!restrictToArea} @change=${(e: Event) => onToggleShowAll((e.target as HTMLInputElement).checked)} /><span>Show all entities</span></label>` : nothing}
+    `;
+  }
+
+  private _renderSensorEntityPicker(
+    value: string,
+    onChange: (value: string) => void,
+    domains: string[],
+    deviceClasses: string[] | undefined,
+    restrictToArea: boolean,
+    areaId: string | undefined,
+    onToggleShowAll: (showAll: boolean) => void,
+  ) {
+    const hasRoom = Boolean(areaId?.trim());
+    const includeEntities = restrictToArea ? this._areaEntityIdsFiltered(areaId, domains, deviceClasses) : undefined;
+    if (!this.hass) {
+      return html`<input .value=${value} @input=${(e: InputEvent) => onChange(valueFromEvent(e))} />`;
+    }
+    return html`
+      <ha-entity-picker
+        .hass=${this.hass}
+        .value=${value || ""}
+        .includeDomains=${domains}
+        .includeDeviceClasses=${deviceClasses}
+        .includeEntities=${includeEntities}
+        .clearable=${true}
+        @value-changed=${(e: CustomEvent) => onChange(String(e.detail?.value ?? ""))}
+      ></ha-entity-picker>
+      ${hasRoom ? html`<label class="show-all-check"><input type="checkbox" .checked=${!restrictToArea} @change=${(e: Event) => onToggleShowAll((e.target as HTMLInputElement).checked)} /><span>Show all entities</span></label>` : nothing}
     `;
   }
 

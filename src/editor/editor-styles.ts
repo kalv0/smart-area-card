@@ -1617,8 +1617,7 @@ export const calvoRoomCardEditorStyles = css`
 
   /* entity picker inside sensor-row body */
   .sensor-row-body ha-entity-picker,
-  .sensor-row-body ha-selector,
-  .sensor-row-body .entity-field-wrap {
+  .sensor-row-body ha-selector {
     width: 100%;
   }
 
@@ -1717,41 +1716,6 @@ export const calvoRoomCardEditorStyles = css`
 
   .sensor-remove-btn:hover {
     background: rgba(220, 38, 38, 0.9);
-  }
-
-  .entity-field-wrap {
-    position: relative;
-  }
-
-  .entity-field-wrap ha-selector,
-  .entity-field-wrap ha-entity-picker {
-    display: block;
-    width: 100%;
-  }
-
-  .entity-clear-x {
-    position: absolute;
-    right: 44px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 5;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: rgba(60, 60, 60, 0.85);
-    color: rgba(255, 255, 255, 0.75);
-    border: none;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    --mdc-icon-size: 13px;
-  }
-
-  .entity-clear-x:hover {
-    background: rgba(185, 28, 28, 0.85);
-    color: #fff;
   }
 
   .sensor-more-btn {
