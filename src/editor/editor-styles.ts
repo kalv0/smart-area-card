@@ -95,12 +95,6 @@ export const calvoRoomCardEditorStyles = css`
     gap: 6px;
   }
 
-  .area-picker-block--required ha-area-picker {
-    outline: 2px solid rgba(220, 38, 38, 0.7);
-    outline-offset: 2px;
-    border-radius: 8px;
-  }
-
   .area-picker-label {
     display: flex;
     align-items: center;
@@ -112,11 +106,33 @@ export const calvoRoomCardEditorStyles = css`
     color: var(--editor-muted);
   }
 
-  .area-picker-block--required .area-picker-label {
-    color: rgba(248, 113, 113, 0.9);
+  .area-picker-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
   }
 
-  .field-required-badge {
+  /* ─── Reusable required / validation system ────────────────────────── */
+
+  /* .req-outline — apply to any host element that needs a red ring */
+  .req-outline {
+    outline: 2px solid rgba(220, 38, 38, 0.7);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
+  /* .req-label — section label that turns red when invalid */
+  .req-label {
+    color: var(--editor-muted);
+    transition: color 0.15s;
+  }
+  .req-label--invalid {
+    color: rgba(248, 113, 113, 0.9) !important;
+  }
+
+  /* .req-badge — small "Required" pill inside a label */
+  .req-badge {
     font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -128,27 +144,40 @@ export const calvoRoomCardEditorStyles = css`
     padding: 1px 5px;
   }
 
-  .field-error {
+  /* .req-input-wrap — applied to <label> when its input is in error state */
+  .req-input-wrap {
     border-color: rgba(220, 38, 38, 0.6) !important;
     background: rgba(220, 38, 38, 0.05) !important;
   }
-
-  .field-error input {
+  .req-input-wrap input {
     color: rgba(248, 180, 180, 0.95);
   }
 
-  .field-error-msg {
+  /* .req-error — red message below a field */
+  .req-error {
     font-size: 0.72rem;
     color: rgba(248, 113, 113, 0.9);
     margin-top: -4px;
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
-  .area-picker-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
+  /* .req-autofill-btn — inline link-style autofill button inside .req-error */
+  .req-autofill-btn {
+    background: none;
+    border: 1px solid rgba(248, 113, 113, 0.45);
+    color: rgba(248, 113, 113, 0.9);
+    border-radius: 4px;
+    padding: 1px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s;
+  }
+  .req-autofill-btn:hover {
+    background: rgba(220, 38, 38, 0.15);
   }
 
   /* ─── Background preview ────────────────────────────────────────── */

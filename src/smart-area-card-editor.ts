@@ -57,6 +57,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _entityRegistry: EntityRegistryEntry[] = [];
   @state() private _deviceRegistry: DeviceRegistryEntry[] = [];
   @state() private _bgPreviewValid = false;
+  @state() private _bgPreviewError = false;
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
   private _touchDragPointerId?: number;
@@ -85,7 +86,15 @@ export class SmartAreaCardEditor extends LitElement {
     try {
       const config = this._config;
       if (!config) return nothing;
-      return html`<div class="editor-shell"><div class="stack">${this._renderGeneral(config)}${this._renderHeaderData(config)}${this._renderDevices(config)}</div></div>`;
+      const hasArea = this._isRoomIdValid(config.room_id);
+      const areaName = this._areaName(config.room_id);
+      const roomNameEmpty = hasArea && !(config.room ?? areaName ?? "").trim();
+      const canShowAll = hasArea && !roomNameEmpty;
+      return html`<div class="editor-shell"><div class="stack">
+        ${this._renderGeneral(config, hasArea, roomNameEmpty)}
+        ${canShowAll ? this._renderHeaderData(config) : nothing}
+        ${canShowAll ? this._renderDevices(config) : nothing}
+      </div></div>`;
     } catch {
       return html`<div class="section"><div class="section-title">Editor fallback</div><div class="section-subtitle">The visual editor recovered from an invalid configuration state.</div></div>`;
     }
@@ -113,14 +122,26 @@ export class SmartAreaCardEditor extends LitElement {
     return device.restrict_to_room_area ?? this._typeRestrictsToRoomArea(device.type);
   }
 
-  private _renderGeneral(config: SmartRoomCardConfig) {
+  /* ─── Reusable required / validation helpers ─────────────────────── */
+
+  private _reqBadge() {
+    return html`<span class="req-badge">Required</span>`;
+  }
+
+  private _reqError(msg: string, autofillLabel?: string, onAutofill?: () => void) {
+    return html`<div class="req-error">${msg}${autofillLabel ? html`<button type="button" class="req-autofill-btn" @click=${onAutofill}>${autofillLabel}</button>` : nothing}</div>`;
+  }
+
+  /* ──────────────────────────────────────────────────────────────────── */
+
+  private _renderGeneral(config: SmartRoomCardConfig, hasArea: boolean, roomNameEmpty: boolean) {
     const areaName = this._areaName(config.room_id);
     const images = config.ui?.images ?? {};
     const darkEnabled = images.dark_mode_enabled === true;
     const darkCond = images.dark_mode_condition ?? "always";
     const bgOn = images.background_on ?? "";
 
-    // All sensors with entities for preview strip
+    // Sensors for preview strip
     const _previewSensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
     const _SENSOR_ICONS: Record<string, string> = {
       temperature: "mdi:thermometer", humidity: "mdi:water-percent", co2: "mdi:molecule-co2",
@@ -155,9 +176,6 @@ export class SmartAreaCardEditor extends LitElement {
       }
     }
 
-    const hasArea = this._isRoomIdValid(config.room_id);
-    const roomNameEmpty = hasArea && !(config.room ?? areaName ?? "").trim();
-
     return html`
       <section class="section">
         <div class="section-header"><div>
@@ -165,10 +183,13 @@ export class SmartAreaCardEditor extends LitElement {
           <div class="section-subtitle">Room identity and background.</div>
         </div></div>
 
-        <!-- ① Area picker — most prominent element -->
-        <div class="area-picker-block ${hasArea ? "" : "area-picker-block--required"}">
-          <div class="area-picker-label">Area${!hasArea ? html`<span class="field-required-badge">Required</span>` : nothing}</div>
+        <!-- ① Area picker -->
+        <div class="area-picker-block">
+          <div class="area-picker-label req-label ${hasArea ? "" : "req-label--invalid"}">
+            Area${!hasArea ? this._reqBadge() : nothing}
+          </div>
           <ha-area-picker
+            class=${!hasArea ? "req-outline" : ""}
             .hass=${this.hass}
             .value=${config.room_id ?? ""}
             @value-changed=${(e: CustomEvent) => this._setAreaId(String(e.detail?.value ?? ""))}
@@ -179,15 +200,20 @@ export class SmartAreaCardEditor extends LitElement {
 
         <!-- ① b Room name -->
         <div class="row single">
-          <label class="${roomNameEmpty ? "field-error" : ""}">Room name<span class="hint">Header label displayed on the card.</span><input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} /></label>
-          ${roomNameEmpty ? html`<span class="field-error-msg">Room name is required</span>` : nothing}
+          <label class="${roomNameEmpty ? "req-input-wrap" : ""}">
+            Room name
+            <span class="hint">Header label displayed on the card.</span>
+            <input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} />
+          </label>
+          ${roomNameEmpty ? this._reqError("Room name is required.", "Use area name", () => { this._patch({ room: areaName }); }) : nothing}
         </div>
 
-        <!-- ② Room image (before Autofill) -->
+        ${roomNameEmpty ? nothing : html`
+
+        <!-- ② Room background -->
         <div class="panel">
           <div class="panel-title">Room background</div>
 
-          <!-- Plain URL input — preview appears when the image is valid -->
           <div class="row single">
             <label>
               Room image
@@ -197,23 +223,23 @@ export class SmartAreaCardEditor extends LitElement {
                 placeholder="/local/img/areas/bedroom.png"
                 @input=${(e: InputEvent) => {
                   this._bgPreviewValid = false;
+                  this._bgPreviewError = false;
                   this._setRoomImage("background_on", valueFromEvent(e));
                 }}
               />
             </label>
           </div>
 
-          <!-- Preview: shown only when image loads successfully -->
+          ${bgOn && this._bgPreviewError ? this._reqError("Image not valid or not found.") : nothing}
+
           ${bgOn ? html`
             <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"
                  style=${this._bgPreviewValid ? "" : "display:none"}>
               <img class="bg-preview-img" src=${bgOn} alt=""
-                @load=${() => { this._bgPreviewValid = true; }}
-                @error=${() => { this._bgPreviewValid = false; }}
+                @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
+                @error=${() => { this._bgPreviewValid = false; this._bgPreviewError = true; }}
               />
-              ${darkEnabled ? html`
-                <img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt="" />
-              ` : nothing}
+              ${darkEnabled ? html`<img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt="" />` : nothing}
               ${config.room ? html`<span class="bg-preview-room-name">${config.room}</span>` : nothing}
               ${_previewSensors.length ? html`
                 <div class="bg-preview-sensor-strip">
@@ -226,15 +252,13 @@ export class SmartAreaCardEditor extends LitElement {
                 </div>
               ` : nothing}
             </div>
-            <!-- Invisible probe so @load fires even when preview is hidden -->
             ${!this._bgPreviewValid ? html`
               <img style="display:none;position:absolute" src=${bgOn} alt=""
-                @load=${() => { this._bgPreviewValid = true; }}
+                @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
               />
             ` : nothing}
           ` : nothing}
 
-          <!-- Dark version toggle -->
           <div class="row single">
             ${this._renderToggleField(
               "Dark version when lights are off",
@@ -248,17 +272,13 @@ export class SmartAreaCardEditor extends LitElement {
             <div class="row single">
               <label>
                 Switch to dark when
-                <select
-                  .value=${darkCond}
-                  @change=${(e: Event) => this._setImageKey("dark_mode_condition", valueFromEvent(e))}
-                >
+                <select .value=${darkCond} @change=${(e: Event) => this._setImageKey("dark_mode_condition", valueFromEvent(e))}>
                   <option value="always">Always (devices off)</option>
                   <option value="daytime">Daytime (devices off + sun above horizon)</option>
                   <option value="lux">Lux sensor below threshold</option>
                 </select>
               </label>
             </div>
-
             ${darkCond === "lux" ? html`
               <div class="row single">
                 <label>Lux sensor</label>
@@ -272,9 +292,7 @@ export class SmartAreaCardEditor extends LitElement {
               <div class="row single">
                 <label>
                   Threshold (lux)
-                  <input
-                    type="number"
-                    min="0"
+                  <input type="number" min="0"
                     .value=${String(images.dark_mode_lux_threshold ?? 50)}
                     @input=${(e: InputEvent) => this._setImageKey("dark_mode_lux_threshold", Number(valueFromEvent(e)) || undefined)}
                   />
@@ -284,12 +302,12 @@ export class SmartAreaCardEditor extends LitElement {
           ` : nothing}
         </div>
 
-        <!-- ③ Autofill (after image section) -->
+        <!-- ③ Autofill -->
         <div class="row single">
-          <button type="button" class="autofill-button autofill-button--full" ?disabled=${!this._isRoomIdValid(config.room_id)} @click=${this._handleRoomAutofill}>Autofill devices from area</button>
+          <button type="button" class="autofill-button autofill-button--full" ?disabled=${!hasArea} @click=${this._handleRoomAutofill}>Autofill devices from area</button>
         </div>
 
-        <!-- ④ Advanced settings (collapsible) -->
+        <!-- ④ Advanced settings -->
         ${!this._showAdvancedCardSetup ? html`
           <div class="row single">
             <button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = true; }}>Advanced settings</button>
@@ -304,6 +322,7 @@ export class SmartAreaCardEditor extends LitElement {
           <div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = false; }}>← Back to basic settings</button></div>
         `}
 
+        `}<!-- end roomNameEmpty gate -->
         `}<!-- end hasArea gate -->
       </section>
     `;
