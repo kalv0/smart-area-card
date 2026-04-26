@@ -208,8 +208,6 @@ export class SmartAreaCardEditor extends LitElement {
               />
               ${darkEnabled ? html`
                 <img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt="" />
-                <span class="bg-preview-tag bg-preview-tag--left">ON</span>
-                <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
               ` : nothing}
               ${config.room ? html`<span class="bg-preview-room-name">${config.room}</span>` : nothing}
               ${_previewSensors.length ? html`
@@ -1392,14 +1390,10 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
   private _setAreaId(areaId: string): void {
     const nextAreaId = areaId.trim();
-    const prevAreaName = this._areaName(this._config?.room_id);
-    const currentRoom = this._config?.room ?? "";
     const newAreaName = this._areaName(nextAreaId);
-    // Auto-fill room name only when it's empty or still equals the previous area's auto-filled name
-    const shouldAutoFill = !currentRoom || currentRoom === prevAreaName;
     this._patch({
       room_id: nextAreaId || undefined,
-      ...(shouldAutoFill && newAreaName ? { room: newAreaName } : {}),
+      ...(newAreaName ? { room: newAreaName } : {}),
     });
   }
 

@@ -117,6 +117,7 @@ export const smartRoomCardStyles = css`
     z-index: 2;
     display: grid;
     gap: var(--sr-space-1);
+    margin-bottom: 6px;
   }
 
   .integration-banner {
@@ -173,7 +174,7 @@ export const smartRoomCardStyles = css`
 
   .header-top {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--sr-space-3);
   }
@@ -344,9 +345,6 @@ export const smartRoomCardStyles = css`
     font-weight: 700;
   }
 
-  .humidity {
-    color: rgba(255, 255, 255, 0.82);
-  }
 
   .glass {
     backdrop-filter: blur(20px) saturate(130%);
