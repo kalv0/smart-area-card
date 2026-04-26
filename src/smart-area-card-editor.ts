@@ -1,4 +1,5 @@
 import { LitElement, html, nothing } from "lit";
+import { repeat } from "lit/directives/repeat.js";
 import { property, state } from "lit/decorators.js";
 import { fireEvent, type HomeAssistant } from "custom-card-helpers";
 import { parse } from "yaml";
@@ -449,14 +450,14 @@ export class SmartAreaCardEditor extends LitElement {
         <div class="panel-title">Sensors</div>
 
         <div class="sensor-ordered-list">
-          ${visibleKeys.map((k, vi) => renderSensorRow(k, sensorOrder.indexOf(k), vi === 0))}
+          ${repeat(visibleKeys, k => k, (k, vi) => renderSensorRow(k, sensorOrder.indexOf(k), vi === 0))}
         </div>
         ${!this._showMoreSensors ? html`
           <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = true; }}>More sensors ▾</button>
         ` : html`
           ${hiddenKeys.length ? html`
             <div class="sensor-ordered-list">
-              ${hiddenKeys.map(k => renderSensorRow(k, sensorOrder.indexOf(k), false))}
+              ${repeat(hiddenKeys, k => k, k => renderSensorRow(k, sensorOrder.indexOf(k), false))}
             </div>
           ` : nothing}
           <button type="button" class="sensor-add-row" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
@@ -541,7 +542,7 @@ export class SmartAreaCardEditor extends LitElement {
           <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(sAlertKey, "enabled", v))}<span>Alert</span></label>
         </div>
         <div class="sensor-row-body">
-          ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(sFilterKey, "restrict_to_room_area", !showAll), false, entityId ? () => this._setSensor(key, "") : undefined)}
+          ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(sFilterKey, "restrict_to_room_area", !showAll), false, () => this._setSensor(key, ""))}
         </div>
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
@@ -573,7 +574,7 @@ export class SmartAreaCardEditor extends LitElement {
           <button type="button" class="sensor-remove-btn" @click=${() => this._removeCustomSensor(i)}>✕</button>
         </div>
         <div class="sensor-row-body">
-          ${this._renderSmartEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }), false, sensor.entity ? () => this._setCustomSensorEntity(i, "") : undefined)}
+          ${this._renderSmartEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }), false, () => this._setCustomSensorEntity(i, ""))}
           ${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}
         </div>
         ${alertEnabled ? html`
@@ -860,13 +861,22 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     onClear?: () => void,
   ) {
     const hasRoom = Boolean(areaId?.trim());
-    const selector = this._entitySelectorFiltered(domains, restrictToArea, areaId, deviceClasses);
+    const areaLabel = areaId ? (this._areaName(areaId) || areaId) : "";
+    const selectorRestricted = this._entitySelectorFiltered(domains, true, areaId, deviceClasses);
+    const selectorAll = this._entitySelectorFiltered(domains, false, areaId, deviceClasses);
+    const clearBtn = onClear
+      ? html`<button type="button" class="entity-clear-x" aria-label="Clear entity" @click=${(e: Event) => { e.stopPropagation(); onClear(); }}><ha-icon icon="mdi:close"></ha-icon></button>`
+      : nothing;
     return html`
-      <div class="entity-field-wrap">
-        ${this._renderEntityPicker(value, onChange, disabled, selector)}
-        ${value && onClear ? html`<button type="button" class="entity-clear-x" aria-label="Clear entity" @click=${(e: Event) => { e.stopPropagation(); onClear(); }}><ha-icon icon="mdi:close"></ha-icon></button>` : nothing}
+      <div class="entity-field-wrap" style=${restrictToArea ? "" : "display:none"}>
+        ${this._renderEntityPicker(value, onChange, disabled, selectorRestricted)}
+        ${clearBtn}
       </div>
-      ${hasRoom && !disabled ? html`<label class="show-all-check"><input type="checkbox" .checked=${!restrictToArea} @change=${(e: Event) => onToggleShowAll((e.target as HTMLInputElement).checked)} /><span>Show all entities</span></label>` : nothing}
+      <div class="entity-field-wrap" style=${!restrictToArea ? "" : "display:none"}>
+        ${this._renderEntityPicker(value, onChange, disabled, selectorAll)}
+        ${clearBtn}
+      </div>
+      ${hasRoom && !disabled ? html`<label class="show-all-check"><input type="checkbox" .checked=${restrictToArea} @change=${(e: Event) => onToggleShowAll(!(e.target as HTMLInputElement).checked)} /><span>Show entities from ${areaLabel}</span></label>` : nothing}
     `;
   }
 
@@ -1522,11 +1532,11 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     this._patch({ sensors: newSensors });
   }
   private _setSensorIcon(key: string, value: string) { this._patch({ sensors: patchSensorIcon(this._config?.sensors, key, value) }); }
-  private _setSensorFilter(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", field: "restrict_to_room_area", value: boolean) {
-    this._patch({ sensors: patchSensorFilter(this._config?.sensors, key, field, value) });
+  private _setSensorFilter(key: string, field: "restrict_to_room_area", value: boolean) {
+    this._patch({ sensors: patchSensorFilter(this._config?.sensors, key as "temperature", field, value) });
   }
-  private _setSensorAlert(key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", field: "enabled" | "min" | "max" | "eq", value: boolean | number | string | undefined) {
-    this._patch({ sensors: patchSensorAlert(this._config?.sensors, key, field, value) });
+  private _setSensorAlert(key: string, field: "enabled" | "min" | "max" | "eq", value: boolean | number | string | undefined) {
+    this._patch({ sensors: patchSensorAlert(this._config?.sensors, key as "temperature", field, value) });
   }
   private _addCustomSensor() { this._patch({ sensors: addCustomSensor(this._config?.sensors) }); }
   private _removeCustomSensor(i: number) { this._patch({ sensors: removeCustomSensor(this._config?.sensors, i) }); }
