@@ -398,8 +398,9 @@ export class SmartAreaCardEditor extends LitElement {
     const hiddenKeys = sensorOrder.filter(k => !alwaysVisible(k));
 
     const renderSensorRow = (key: string, idx: number, isFirstVisible: boolean) => {
-      const isFirst = idx === 0;
-      const isLast = idx === sensorOrder.length - 1;
+      const filledIdx = visibleKeys.indexOf(key);
+      const isFirstFilled = filledIdx === 0;
+      const isLastFilled = filledIdx === visibleKeys.length - 1;
       const isDragging = this._sensorDragIndex === idx;
       const isDropTarget = this._sensorDropIndex === idx && this._sensorDragIndex !== idx;
       const canReorder = hasEntityForKey(key);
@@ -408,8 +409,8 @@ export class SmartAreaCardEditor extends LitElement {
         : (SENSOR_ACCENT[key] ?? "#9aa7b6");
       const orderControls = html`
         <div class="sensor-row-order">
-          ${isFirst && canReorder ? html`<span class="sensor-primary-badge" title="Primary sensor — displayed largest in the card">★</span>` : nothing}
-          <button class="secondary icon-button" type="button" ?disabled=${isFirst || !canReorder} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
+          ${isFirstFilled && canReorder ? html`<span class="sensor-primary-badge" title="Primary sensor — displayed largest in the card">★</span>` : nothing}
+          <button class="secondary icon-button" type="button" ?disabled=${isFirstFilled || !canReorder} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
           <button class="drag-handle" type="button" .draggable=${canReorder} title="Drag to reorder" aria-label="Drag to reorder"
             ?disabled=${!canReorder}
             @dragstart=${canReorder ? () => this._sensorDragStart(idx) : nothing}
@@ -418,7 +419,7 @@ export class SmartAreaCardEditor extends LitElement {
             @pointermove=${canReorder ? this._handleSensorTouchDragMove : nothing}
             @pointerup=${canReorder ? this._handleSensorTouchDragEnd : nothing}
             @pointercancel=${canReorder ? this._handleSensorTouchDragCancel : nothing}>⋮⋮</button>
-          <button class="secondary icon-button" type="button" ?disabled=${isLast || !canReorder} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
+          <button class="secondary icon-button" type="button" ?disabled=${isLastFilled || !canReorder} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
         </div>
       `;
       const tip = isFirstVisible ? html`<div class="sensor-primary-tip">★ The top sensor is displayed largest in the card.</div>` : nothing;
