@@ -420,14 +420,21 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const close = (e: Event): void => { e.stopPropagation(); this._showClimateHistory = false; };
 
     const POPUP_META: Record<string, { label: string; color: string }> = {
-      temperature: { label: "Temperature", color: "#f59e0b" },
-      humidity:    { label: "Humidity",    color: "#3b82f6" },
-      co2:         { label: "CO₂",         color: "#10b981" },
-      voc:         { label: "VOC",          color: "#8b5cf6" },
-      pm25:        { label: "PM2.5",        color: "#eab308" },
-      aqi:         { label: "Air Quality",  color: "#f97316" },
-      presence:    { label: "Presence",     color: "#14b8a6" },
-      noise:       { label: "Noise",        color: "#ec4899" },
+      temperature:    { label: "Temperature",  color: "#f59e0b" },
+      humidity:       { label: "Humidity",     color: "#3b82f6" },
+      co2:            { label: "CO₂",          color: "#10b981" },
+      voc:            { label: "VOC",           color: "#8b5cf6" },
+      pm25:           { label: "PM2.5",        color: "#ec4899" },
+      pm10:           { label: "PM10",         color: "#db2777" },
+      aqi:            { label: "Air Quality",  color: "#14b8a6" },
+      presence:       { label: "Presence",     color: "#f97316" },
+      noise:          { label: "Noise",        color: "#64748b" },
+      illuminance:    { label: "Illuminance",  color: "#eab308" },
+      power:          { label: "Power",        color: "#fb923c" },
+      energy:         { label: "Energy",       color: "#16a34a" },
+      carbon_monoxide:{ label: "CO",           color: "#dc2626" },
+      radon:          { label: "Radon",        color: "#7c3aed" },
+      moisture:       { label: "Moisture",     color: "#0ea5e9" },
     };
 
     return html`

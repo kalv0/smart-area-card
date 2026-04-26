@@ -1651,6 +1651,53 @@ export const calvoRoomCardEditorStyles = css`
     color: var(--editor-text);
   }
 
+  /* ─── Sensor chip — popup-style colored pill with icon + label ─── */
+  .sensor-chip {
+    --chip-color: #9aa7b6;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 12px 5px 8px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--chip-color) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--chip-color) 32%, transparent);
+    color: var(--chip-color);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    --mdc-icon-size: 18px;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .sensor-chip-input {
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    width: 110px;
+    min-width: 60px;
+  }
+
+  .sensor-chip-input:focus {
+    outline: none;
+    box-shadow: none;
+    background: none;
+    border: none;
+  }
+
+  /* ─── Yellow tip above first sensor ─────────────────────── */
+  .sensor-primary-tip {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #f59e0b;
+    padding: 4px 0 2px 2px;
+    letter-spacing: 0.01em;
+  }
+
   /* full-width entity picker block below the header row */
   .sensor-row-body {
     display: grid;
@@ -1800,23 +1847,25 @@ export const calvoRoomCardEditorStyles = css`
     top: 50%;
     transform: translateY(-50%);
     z-index: 5;
-    width: 20px;
-    height: 20px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
-    background: rgba(60, 60, 60, 0.85);
-    color: rgba(255, 255, 255, 0.75);
-    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    --mdc-icon-size: 13px;
+    --mdc-icon-size: 16px;
+    transition: background 0.12s, color 0.12s;
   }
 
   .entity-clear-x:hover {
-    background: rgba(185, 28, 28, 0.85);
+    background: rgba(185, 28, 28, 0.8);
     color: #fff;
+    border-color: transparent;
   }
 
   .sensor-more-btn {

@@ -34,10 +34,37 @@ const SENSOR_DEVICE_CLASSES: Partial<Record<string, string[]>> = {
   co2: ["carbon_dioxide"],
   voc: ["volatile_organic_compounds"],
   pm25: ["pm25"],
+  pm10: ["pm10"],
   aqi: ["aqi"],
   noise: ["sound_pressure"],
   presence: ["presence", "motion", "occupancy", "moving"],
+  illuminance: ["illuminance"],
+  power: ["power"],
+  energy: ["energy"],
+  carbon_monoxide: ["carbon_monoxide"],
+  radon: ["radon"],
+  moisture: ["moisture"],
 };
+
+const SENSOR_ACCENT: Record<string, string> = {
+  temperature: "#f59e0b",
+  humidity: "#3b82f6",
+  presence: "#f97316",
+  co2: "#10b981",
+  illuminance: "#eab308",
+  voc: "#8b5cf6",
+  pm25: "#ec4899",
+  pm10: "#db2777",
+  aqi: "#14b8a6",
+  noise: "#64748b",
+  power: "#fb923c",
+  energy: "#16a34a",
+  carbon_monoxide: "#dc2626",
+  radon: "#7c3aed",
+  moisture: "#0ea5e9",
+};
+
+const CUSTOM_SENSOR_COLORS = ["#6366f1", "#22d3ee", "#f43f5e", "#84cc16", "#d946ef", "#fb923c", "#2dd4bf", "#a78bfa"];
 
 export class SmartAreaCardEditor extends LitElement {
   static styles = calvoRoomCardEditorStyles;
@@ -344,32 +371,40 @@ export class SmartAreaCardEditor extends LitElement {
     const sensorOrder = getNormalizedSensorOrder(config.sensors, customCount);
 
     const PRESET_META: Record<string, { label: string; icon: string; domains: string[] }> = {
-      temperature: { label: "Temperature", icon: "mdi:thermometer", domains: ["sensor"] },
-      humidity: { label: "Humidity", icon: "mdi:water-percent", domains: ["sensor"] },
-      co2: { label: "CO₂", icon: "mdi:molecule-co2", domains: ["sensor"] },
-      voc: { label: "VOC", icon: "mdi:flask-outline", domains: ["sensor"] },
-      pm25: { label: "PM2.5", icon: "mdi:blur", domains: ["sensor"] },
-      aqi: { label: "AQI", icon: "mdi:gauge", domains: ["sensor"] },
-      presence: { label: "Presence", icon: "mdi:motion-sensor", domains: ["binary_sensor", "sensor"] },
-      noise: { label: "Noise", icon: "mdi:volume-high", domains: ["sensor"] },
+      temperature:    { label: "Temperature", icon: "mdi:thermometer",    domains: ["sensor"] },
+      humidity:       { label: "Humidity",    icon: "mdi:water-percent",  domains: ["sensor"] },
+      presence:       { label: "Presence",    icon: "mdi:motion-sensor",  domains: ["binary_sensor", "sensor"] },
+      co2:            { label: "CO₂",         icon: "mdi:molecule-co2",   domains: ["sensor"] },
+      illuminance:    { label: "Illuminance", icon: "mdi:brightness-5",   domains: ["sensor"] },
+      voc:            { label: "VOC",         icon: "mdi:flask-outline",  domains: ["sensor"] },
+      pm25:           { label: "PM2.5",       icon: "mdi:blur",           domains: ["sensor"] },
+      pm10:           { label: "PM10",        icon: "mdi:blur-linear",    domains: ["sensor"] },
+      aqi:            { label: "AQI",         icon: "mdi:gauge",          domains: ["sensor"] },
+      noise:          { label: "Noise",       icon: "mdi:volume-high",    domains: ["sensor"] },
+      power:          { label: "Power",       icon: "mdi:lightning-bolt", domains: ["sensor"] },
+      energy:         { label: "Energy",      icon: "mdi:flash",          domains: ["sensor"] },
+      carbon_monoxide:{ label: "CO",          icon: "mdi:molecule-co",    domains: ["sensor"] },
+      radon:          { label: "Radon",       icon: "mdi:radioactive",    domains: ["sensor"] },
+      moisture:       { label: "Moisture",    icon: "mdi:water-alert",    domains: ["binary_sensor", "sensor"] },
     };
 
     const hasEntityForKey = (k: string) => k.startsWith("custom_")
       ? Boolean(customSensors[Number(k.slice(7))]?.entity)
       : Boolean((config.sensors as Record<string, unknown>)?.[k]);
     const anyHasEntity = sensorOrder.some(k => hasEntityForKey(k));
-    const alwaysVisible = (k: string) => anyHasEntity
-      ? hasEntityForKey(k)
-      : k === "temperature" || k === "humidity";
+    const alwaysVisible = (k: string) => anyHasEntity ? hasEntityForKey(k) : k === "temperature";
     const visibleKeys = sensorOrder.filter(alwaysVisible);
     const hiddenKeys = sensorOrder.filter(k => !alwaysVisible(k));
 
-    const renderSensorRow = (key: string, idx: number) => {
+    const renderSensorRow = (key: string, idx: number, isFirstVisible: boolean) => {
       const isFirst = idx === 0;
       const isLast = idx === sensorOrder.length - 1;
       const isDragging = this._sensorDragIndex === idx;
       const isDropTarget = this._sensorDropIndex === idx && this._sensorDragIndex !== idx;
       const canReorder = hasEntityForKey(key);
+      const accent = key.startsWith("custom_")
+        ? CUSTOM_SENSOR_COLORS[Number(key.slice(7)) % CUSTOM_SENSOR_COLORS.length]
+        : (SENSOR_ACCENT[key] ?? "#9aa7b6");
       const orderControls = html`
         <div class="sensor-row-order">
           ${isFirst && canReorder ? html`<span class="sensor-primary-badge" title="Primary sensor — displayed largest in the card">★</span>` : nothing}
@@ -385,41 +420,43 @@ export class SmartAreaCardEditor extends LitElement {
           <button class="secondary icon-button" type="button" ?disabled=${isLast || !canReorder} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
         </div>
       `;
+      const tip = isFirstVisible ? html`<div class="sensor-primary-tip">★ The top sensor is displayed largest in the card.</div>` : nothing;
       if (key.startsWith("custom_")) {
         const i = Number(key.slice(7));
         const sensor = customSensors[i];
         if (!sensor) return nothing;
         return html`
+          ${tip}
           <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
-               data-sensor-index=${String(idx)}
+               data-sensor-index=${String(idx)} data-sensor-key=${key}
                @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
-            ${orderControls}${this._renderCustomSensor(sensor, i, config)}
+            ${orderControls}${this._renderCustomSensor(sensor, i, config, accent)}
           </div>`;
       }
       const meta = PRESET_META[key];
       if (!meta) return nothing;
       return html`
+        ${tip}
         <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
-             data-sensor-index=${String(idx)}
+             data-sensor-index=${String(idx)} data-sensor-key=${key}
              @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
-          ${orderControls}${this._renderPresetSensor(key as "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", meta.label, meta.icon, config, meta.domains)}
+          ${orderControls}${this._renderPresetSensor(key as string & keyof typeof SENSOR_ACCENT, meta.label, meta.icon, config, meta.domains, accent)}
         </div>`;
     };
 
     return html`
       <div class="panel">
         <div class="panel-title">Sensors</div>
-        <div class="panel-subtitle">Drag or use arrows to reorder. The top sensor is displayed largest in the card.</div>
 
         <div class="sensor-ordered-list">
-          ${visibleKeys.map(k => renderSensorRow(k, sensorOrder.indexOf(k)))}
+          ${visibleKeys.map((k, vi) => renderSensorRow(k, sensorOrder.indexOf(k), vi === 0))}
         </div>
         ${!this._showMoreSensors ? html`
           <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = true; }}>More sensors ▾</button>
         ` : html`
           ${hiddenKeys.length ? html`
             <div class="sensor-ordered-list">
-              ${hiddenKeys.map(k => renderSensorRow(k, sensorOrder.indexOf(k)))}
+              ${hiddenKeys.map(k => renderSensorRow(k, sensorOrder.indexOf(k), false))}
             </div>
           ` : nothing}
           <button type="button" class="sensor-add-row" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
@@ -476,39 +513,44 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderPresetSensor(
-    key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise",
+    key: string,
     label: string,
     icon: string,
     config: SmartRoomCardConfig,
     domains: string[] = ["sensor"],
+    accent = "#9aa7b6",
   ) {
-    const alertConfig = config.sensors?.alerts?.[key];
+    const alertConfig = config.sensors?.alerts?.[key as keyof typeof config.sensors.alerts];
     const alertEnabled = alertConfig?.enabled === true;
-    const entityId = config.sensors?.[key] ?? "";
+    const entityId = (config.sensors as Record<string, string | undefined>)?.[key] ?? "";
     const hasRoomId = Boolean(this._config?.room_id?.trim());
-    const restrictToRoom = hasRoomId && config.sensors?.filters?.[key]?.restrict_to_room_area !== false;
-    const showAll = !restrictToRoom;
+    const filtersKey = key as keyof NonNullable<typeof config.sensors>["filters"] & string;
+    const restrictToRoom = hasRoomId && config.sensors?.filters?.[filtersKey]?.restrict_to_room_area !== false;
     const isPresence = key === "presence";
     const numericAlertConfig = !isPresence ? (alertConfig as SmartRoomNumericSensorAlert | undefined) : undefined;
     const deviceClasses = SENSOR_DEVICE_CLASSES[key];
+    const sAlertKey = key as "temperature";
+    const sFilterKey = key as "temperature";
     return html`
       <div class="sensor-row">
         <div class="sensor-row-header">
-          <span class="sensor-row-icon"><ha-icon icon=${icon}></ha-icon></span>
-          <span class="sensor-row-label">${label}</span>
-          <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(key, "enabled", v))}<span>Alert</span></label>
+          <div class="sensor-chip" style="--chip-color:${accent}">
+            <ha-icon icon=${icon}></ha-icon>
+            <span>${label}</span>
+          </div>
+          <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(sAlertKey, "enabled", v))}<span>Alert</span></label>
         </div>
         <div class="sensor-row-body">
-          ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(key, "restrict_to_room_area", !showAll), false, entityId ? () => this._setSensor(key, "") : undefined)}
+          ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(sFilterKey, "restrict_to_room_area", !showAll), false, entityId ? () => this._setSensor(key, "") : undefined)}
         </div>
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
             ${isPresence ? html`
-              <label class="sensor-alert-full">When equal to<input type="text" .value=${typeof alertConfig?.eq === "string" ? alertConfig.eq : ""} placeholder="e.g. on" @input=${(e: InputEvent) => this._setSensorAlert(key, "eq", (e.target as HTMLInputElement).value || undefined)} /></label>
+              <label class="sensor-alert-full">When equal to<input type="text" .value=${typeof alertConfig?.eq === "string" ? alertConfig.eq : ""} placeholder="e.g. on" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "eq", (e.target as HTMLInputElement).value || undefined)} /></label>
             ` : html`
-              <label>Min<input type="number" .value=${typeof numericAlertConfig?.min === "number" ? String(numericAlertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-              <label>Max<input type="number" .value=${typeof numericAlertConfig?.max === "number" ? String(numericAlertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-              <label>Eq<input type="number" .value=${typeof numericAlertConfig?.eq === "number" ? String(numericAlertConfig.eq) : ""} @input=${(e: InputEvent) => this._setSensorAlert(key, "eq", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              <label>Min<input type="number" .value=${typeof numericAlertConfig?.min === "number" ? String(numericAlertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              <label>Max<input type="number" .value=${typeof numericAlertConfig?.max === "number" ? String(numericAlertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              <label>Eq<input type="number" .value=${typeof numericAlertConfig?.eq === "number" ? String(numericAlertConfig.eq) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "eq", toNumberOrUndefined(valueFromEvent(e)))} /></label>
             `}
           </div>
         ` : nothing}
@@ -516,15 +558,17 @@ export class SmartAreaCardEditor extends LitElement {
     `;
   }
 
-  private _renderCustomSensor(sensor: import("./helpers").SmartRoomCustomSensor, i: number, _config: SmartRoomCardConfig) {
+  private _renderCustomSensor(sensor: import("./helpers").SmartRoomCustomSensor, i: number, _config: SmartRoomCardConfig, accent = "#9aa7b6") {
     const alertEnabled = sensor.alert?.enabled === true;
     const hasRoomId = Boolean(this._config?.room_id?.trim());
     const restrictToRoom = hasRoomId && sensor.restrict_to_room_area === true;
     return html`
       <div class="sensor-row sensor-row-custom">
         <div class="sensor-row-header">
-          <span class="sensor-row-icon"><ha-icon icon=${sensor.icon || "mdi:gauge"}></ha-icon></span>
-          <input class="sensor-name-input sensor-row-label" .value=${sensor.name} placeholder="Sensor name" @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
+          <div class="sensor-chip" style="--chip-color:${accent}">
+            <ha-icon icon=${sensor.icon || "mdi:gauge"}></ha-icon>
+            <input class="sensor-name-input sensor-chip-input" .value=${sensor.name} placeholder="Sensor name" @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
+          </div>
           <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._updateCustomSensorAlert(i, "enabled", v))}<span>Alert</span></label>
           <button type="button" class="sensor-remove-btn" @click=${() => this._removeCustomSensor(i)}>✕</button>
         </div>
@@ -1468,7 +1512,12 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   private _setSensor(key: string, value: string) {
     const hadEntity = Boolean((this._config?.sensors as Record<string, unknown>)?.[key]);
     let newSensors = patchSensor(this._config?.sensors, key, value);
-    if (value && !hadEntity) newSensors = bubbleSensorAboveEmpty(newSensors, key);
+    if (value && !hadEntity) {
+      newSensors = bubbleSensorAboveEmpty(newSensors, key);
+      this._patch({ sensors: newSensors });
+      requestAnimationFrame(() => { this.shadowRoot?.querySelector<HTMLElement>(`[data-sensor-key="${key}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }); });
+      return;
+    }
     else if (!value && hadEntity) newSensors = sinkSensorBelowFilled(newSensors, key);
     this._patch({ sensors: newSensors });
   }
@@ -1490,7 +1539,12 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   private _setCustomSensorEntity(i: number, value: string) {
     const hadEntity = Boolean(this._config?.sensors?.custom?.[i]?.entity);
     let newSensors = updateCustomSensor(this._config?.sensors, i, { entity: value });
-    if (value && !hadEntity) newSensors = bubbleSensorAboveEmpty(newSensors, `custom_${i}`);
+    if (value && !hadEntity) {
+      newSensors = bubbleSensorAboveEmpty(newSensors, `custom_${i}`);
+      this._patch({ sensors: newSensors });
+      requestAnimationFrame(() => { this.shadowRoot?.querySelector<HTMLElement>(`[data-sensor-key="custom_${i}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }); });
+      return;
+    }
     else if (!value && hadEntity) newSensors = sinkSensorBelowFilled(newSensors, `custom_${i}`);
     this._patch({ sensors: newSensors });
   }

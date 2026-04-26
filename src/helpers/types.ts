@@ -181,9 +181,16 @@ export interface SmartRoomCardConfig {
     co2?: string;
     voc?: string;
     pm25?: string;
+    pm10?: string;
     aqi?: string;
     presence?: string;
     noise?: string;
+    illuminance?: string;
+    power?: string;
+    energy?: string;
+    carbon_monoxide?: string;
+    radon?: string;
+    moisture?: string;
     sensor_order?: string[];
     filters?: {
       temperature?: { restrict_to_room_area?: boolean };
@@ -191,9 +198,16 @@ export interface SmartRoomCardConfig {
       co2?: { restrict_to_room_area?: boolean };
       voc?: { restrict_to_room_area?: boolean };
       pm25?: { restrict_to_room_area?: boolean };
+      pm10?: { restrict_to_room_area?: boolean };
       aqi?: { restrict_to_room_area?: boolean };
       presence?: { restrict_to_room_area?: boolean };
       noise?: { restrict_to_room_area?: boolean };
+      illuminance?: { restrict_to_room_area?: boolean };
+      power?: { restrict_to_room_area?: boolean };
+      energy?: { restrict_to_room_area?: boolean };
+      carbon_monoxide?: { restrict_to_room_area?: boolean };
+      radon?: { restrict_to_room_area?: boolean };
+      moisture?: { restrict_to_room_area?: boolean };
     };
     alerts?: {
       temperature?: SmartRoomNumericSensorAlert;
@@ -201,8 +215,15 @@ export interface SmartRoomCardConfig {
       co2?: SmartRoomNumericSensorAlert;
       voc?: SmartRoomNumericSensorAlert;
       pm25?: SmartRoomNumericSensorAlert;
+      pm10?: SmartRoomNumericSensorAlert;
       aqi?: SmartRoomNumericSensorAlert;
       noise?: SmartRoomNumericSensorAlert;
+      illuminance?: SmartRoomNumericSensorAlert;
+      power?: SmartRoomNumericSensorAlert;
+      energy?: SmartRoomNumericSensorAlert;
+      carbon_monoxide?: SmartRoomNumericSensorAlert;
+      radon?: SmartRoomNumericSensorAlert;
+      moisture?: SmartRoomNumericSensorAlert;
       presence?: SmartRoomPresenceSensorAlert;
     };
     icons?: {
@@ -211,9 +232,16 @@ export interface SmartRoomCardConfig {
       co2?: string;
       voc?: string;
       pm25?: string;
+      pm10?: string;
       aqi?: string;
       presence?: string;
       noise?: string;
+      illuminance?: string;
+      power?: string;
+      energy?: string;
+      carbon_monoxide?: string;
+      radon?: string;
+      moisture?: string;
     };
     custom?: SmartRoomCustomSensor[];
   };

@@ -38,9 +38,16 @@ export function computeRenderModel(
   const co2 = getEntity(states, config.sensors?.co2);
   const voc = getEntity(states, config.sensors?.voc);
   const pm25 = getEntity(states, config.sensors?.pm25);
+  const pm10 = getEntity(states, config.sensors?.pm10);
   const aqi = getEntity(states, config.sensors?.aqi);
   const presence = getEntity(states, config.sensors?.presence);
   const noise = getEntity(states, config.sensors?.noise);
+  const illuminance = getEntity(states, config.sensors?.illuminance);
+  const power = getEntity(states, config.sensors?.power);
+  const energy = getEntity(states, config.sensors?.energy);
+  const carbon_monoxide = getEntity(states, config.sensors?.carbon_monoxide);
+  const radon = getEntity(states, config.sensors?.radon);
+  const moisture = getEntity(states, config.sensors?.moisture);
   const sun = getEntity(states, "sun.sun");
 
   const devicesActive = devices.some((device) => device.countsAsRoomActive);
@@ -72,12 +79,19 @@ export function computeRenderModel(
   const climateAlerts = [
     evaluateClimateAlert("temperature", temp, alertsConfig?.temperature, "Temperature", resolveIcon("temperature"), roomName),
     evaluateClimateAlert("humidity", humidity, alertsConfig?.humidity, "Humidity", resolveIcon("humidity"), roomName),
-    evaluateClimateAlert("co2", co2, alertsConfig?.co2, "CO2", resolveIcon("co2"), roomName),
+    evaluateClimateAlert("co2", co2, alertsConfig?.co2, "CO₂", resolveIcon("co2"), roomName),
     evaluateClimateAlert("voc", voc, alertsConfig?.voc, "VOC", resolveIcon("voc"), roomName),
     evaluateClimateAlert("pm25", pm25, alertsConfig?.pm25, "PM2.5", resolveIcon("pm25"), roomName),
+    evaluateClimateAlert("pm10", pm10, alertsConfig?.pm10, "PM10", resolveIcon("pm10"), roomName),
     evaluateClimateAlert("aqi", aqi, alertsConfig?.aqi, "AQI", resolveIcon("aqi"), roomName),
     evaluateClimateAlert("presence", presence, alertsConfig?.presence, "Presence", resolveIcon("presence"), roomName),
     evaluateClimateAlert("noise", noise, alertsConfig?.noise, "Noise", resolveIcon("noise"), roomName),
+    evaluateClimateAlert("illuminance", illuminance, alertsConfig?.illuminance, "Illuminance", resolveIcon("illuminance"), roomName),
+    evaluateClimateAlert("power", power, alertsConfig?.power, "Power", resolveIcon("power"), roomName),
+    evaluateClimateAlert("energy", energy, alertsConfig?.energy, "Energy", resolveIcon("energy"), roomName),
+    evaluateClimateAlert("carbon_monoxide", carbon_monoxide, alertsConfig?.carbon_monoxide, "CO", resolveIcon("carbon_monoxide"), roomName),
+    evaluateClimateAlert("radon", radon, alertsConfig?.radon, "Radon", resolveIcon("radon"), roomName),
+    evaluateClimateAlert("moisture", moisture, alertsConfig?.moisture, "Moisture", resolveIcon("moisture"), roomName),
   ].filter((item): item is ClimateAlert => Boolean(item));
 
   const climateAlertBadges = climateAlerts.map((alert) => ({
@@ -144,7 +158,7 @@ export function computeRenderModel(
       ...climateAlerts.map((item) => item.reason),
     ],
     climateItems: buildClimateItems(
-      { temp, humidity, co2, voc, pm25, aqi, presence, noise },
+      { temp, humidity, co2, voc, pm25, pm10, aqi, presence, noise, illuminance, power, energy, carbon_monoxide, radon, moisture },
       customIcons,
       customSensorEntries.map(({ config: sc, entity }) => ({ name: sc.name, icon: sc.icon, entity })),
       config.sensors?.sensor_order,

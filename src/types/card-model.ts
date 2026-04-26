@@ -26,7 +26,7 @@ export interface RenderModel {
 }
 
 export interface ClimateAlert {
-  key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise";
+  key: string;
   label: string;
   reason: string;
   icon: string;

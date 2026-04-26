@@ -1,11 +1,11 @@
 import type { SmartRoomCardConfig, SmartRoomCustomSensor } from "../helpers/types";
 
 type Sensors = SmartRoomCardConfig["sensors"];
-type SensorAlertKey = "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise";
+type SensorAlertKey = "temperature" | "humidity" | "co2" | "voc" | "pm25" | "pm10" | "aqi" | "presence" | "noise" | "illuminance" | "power" | "energy" | "carbon_monoxide" | "radon" | "moisture";
 type SensorFilterKey = SensorAlertKey;
 type AlertField = "enabled" | "min" | "max" | "eq";
 
-export const DEFAULT_SENSOR_ORDER: string[] = ["temperature", "humidity", "presence", "co2", "voc", "pm25", "aqi", "noise"];
+export const DEFAULT_SENSOR_ORDER: string[] = ["temperature", "humidity", "presence", "co2", "illuminance", "voc", "pm25", "pm10", "aqi", "noise", "power", "energy", "carbon_monoxide", "radon", "moisture"];
 
 export function getNormalizedSensorOrder(sensors: Sensors, customCount = 0): string[] {
   const stored = sensors?.sensor_order ?? [];

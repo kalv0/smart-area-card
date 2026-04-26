@@ -91,14 +91,16 @@ export function getClimateEntities(sensors: SmartRoomCardConfig["sensors"]): str
   if (!sensors) return [];
   const presets = [
     sensors.temperature, sensors.humidity, sensors.co2, sensors.voc,
-    sensors.pm25, sensors.aqi, sensors.presence, sensors.noise,
+    sensors.pm25, sensors.pm10, sensors.aqi, sensors.presence, sensors.noise,
+    sensors.illuminance, sensors.power, sensors.energy,
+    sensors.carbon_monoxide, sensors.radon, sensors.moisture,
   ].filter((value): value is string => Boolean(value));
   const custom = (sensors.custom ?? []).map((s) => s.entity).filter(Boolean);
   return [...presets, ...custom];
 }
 
 export function evaluateClimateAlert(
-  key: "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise",
+  key: string,
   entity: HassEntity | undefined,
   alertConfig: { enabled?: boolean; min?: number; max?: number; eq?: number | string } | undefined,
   label: string,
@@ -152,9 +154,16 @@ export const CLIMATE_DEFAULT_ICONS: Record<string, string> = {
   co2: "mdi:molecule-co2",
   voc: "mdi:flask-outline",
   pm25: "mdi:blur",
+  pm10: "mdi:blur-linear",
   aqi: "mdi:gauge",
   presence: "mdi:motion-sensor",
   noise: "mdi:volume-high",
+  illuminance: "mdi:brightness-5",
+  power: "mdi:lightning-bolt",
+  energy: "mdi:flash",
+  carbon_monoxide: "mdi:molecule-co",
+  radon: "mdi:radioactive",
+  moisture: "mdi:water-alert",
 };
 
 export function buildClimateItems(
@@ -164,9 +173,16 @@ export function buildClimateItems(
     co2?: HassEntity;
     voc?: HassEntity;
     pm25?: HassEntity;
+    pm10?: HassEntity;
     aqi?: HassEntity;
     presence?: HassEntity;
     noise?: HassEntity;
+    illuminance?: HassEntity;
+    power?: HassEntity;
+    energy?: HassEntity;
+    carbon_monoxide?: HassEntity;
+    radon?: HassEntity;
+    moisture?: HassEntity;
   },
   customIcons?: Record<string, string | undefined>,
   customSensors?: Array<{ name: string; icon?: string; entity?: HassEntity }>,
@@ -181,12 +197,19 @@ export function buildClimateItems(
     co2: { entity: entities.co2 },
     voc: { entity: entities.voc },
     pm25: { entity: entities.pm25 },
+    pm10: { entity: entities.pm10 },
     aqi: { entity: entities.aqi },
     presence: { entity: entities.presence },
     noise: { entity: entities.noise },
+    illuminance: { entity: entities.illuminance },
+    power: { entity: entities.power },
+    energy: { entity: entities.energy },
+    carbon_monoxide: { entity: entities.carbon_monoxide },
+    radon: { entity: entities.radon },
+    moisture: { entity: entities.moisture },
   };
 
-  const DEFAULT_ORDER = ["temperature", "humidity", "presence", "co2", "voc", "pm25", "aqi", "noise"];
+  const DEFAULT_ORDER = ["temperature", "humidity", "presence", "co2", "illuminance", "voc", "pm25", "pm10", "aqi", "noise", "power", "energy", "carbon_monoxide", "radon", "moisture"];
   const customCount = customSensors?.length ?? 0;
   const order: string[] = [...(sensorOrder ?? DEFAULT_ORDER)];
   for (const key of DEFAULT_ORDER) {
