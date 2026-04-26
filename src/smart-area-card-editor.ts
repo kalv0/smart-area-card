@@ -137,7 +137,7 @@ export class SmartAreaCardEditor extends LitElement {
   private _renderGeneral(config: SmartRoomCardConfig, hasArea: boolean, roomNameEmpty: boolean) {
     const areaName = this._areaName(config.room_id);
     const images = config.ui?.images ?? {};
-    const darkEnabled = images.dark_mode_enabled === true;
+    const darkEnabled = images.dark_mode_enabled !== false;
     const darkCond = images.dark_mode_condition ?? "always";
     const bgOn = images.background_on ?? "";
 
@@ -198,33 +198,38 @@ export class SmartAreaCardEditor extends LitElement {
 
         ${!hasArea ? nothing : html`
 
-        <!-- ① b Room name -->
+        <!-- ① b Area name -->
         <div class="row single">
           <label class="${roomNameEmpty ? "req-input-wrap" : ""}">
-            Room name
+            Area name
             <span class="hint">Header label displayed on the card.</span>
             <input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} />
           </label>
-          ${roomNameEmpty ? this._reqError("Room name is required.", "Use area name", () => { this._patch({ room: areaName }); }) : nothing}
+          ${roomNameEmpty ? this._reqError("Area name is required.", "Use area name", () => { this._patch({ room: areaName }); }) : nothing}
         </div>
 
         ${roomNameEmpty ? nothing : html`
 
-        <!-- ② Room background -->
+        <!-- ② Card background -->
         <div class="panel">
-          <div class="panel-title">Room background</div>
+          <div class="panel-title">Card background</div>
 
           <div class="row single">
             <label>
-              Room image
+              Area image
+              <span class="hint">We recommend a horizontal photo of the nicest corner of ${areaName || "your area"}.</span>
               <input
                 type="text"
                 .value=${bgOn}
                 placeholder="/local/img/areas/bedroom.png"
                 @input=${(e: InputEvent) => {
+                  const val = valueFromEvent(e);
                   this._bgPreviewValid = false;
                   this._bgPreviewError = false;
-                  this._setRoomImage("background_on", valueFromEvent(e));
+                  if (val && !bgOn && images.dark_mode_enabled === undefined) {
+                    this._setImageKey("dark_mode_enabled", true);
+                  }
+                  this._setRoomImage("background_on", val);
                 }}
               />
             </label>
@@ -259,6 +264,7 @@ export class SmartAreaCardEditor extends LitElement {
             ` : nothing}
           ` : nothing}
 
+          ${this._bgPreviewValid ? html`
           <div class="row single">
             ${this._renderToggleField(
               "Dark version when lights are off",
@@ -299,6 +305,7 @@ export class SmartAreaCardEditor extends LitElement {
                 </label>
               </div>
             ` : nothing}
+          ` : nothing}
           ` : nothing}
         </div>
 
