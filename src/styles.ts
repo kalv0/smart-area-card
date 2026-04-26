@@ -728,6 +728,12 @@ export const smartRoomCardStyles = css`
     line-height: 1.1;
   }
 
+  .sensor-popup-item-updated {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.3);
+    margin-top: 2px;
+  }
+
   .sensor-popup-info-btn {
     width: 34px;
     height: 34px;

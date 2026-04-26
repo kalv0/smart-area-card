@@ -195,6 +195,15 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     return (sensors as Record<string, string | undefined>)[key];
   }
 
+  private _relativeTime(iso: string | null | undefined): string {
+    if (!iso) return "";
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return "just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} h ago`;
+    return `${Math.floor(diff / 86400)} d ago`;
+  }
+
   protected willUpdate(changedProps: Map<string, unknown>): void {
     if (changedProps.has("hass") || changedProps.has("_config")) {
       if (this._config && this.hass) {
@@ -446,6 +455,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                     <div class="sensor-popup-item-meta">
                       <div class="sensor-popup-item-label">${meta.label}</div>
                       <div class="sensor-popup-item-value">${item.value}</div>
+                      ${entityId ? html`<div class="sensor-popup-item-updated">${this._relativeTime(this.hass.states[entityId]?.last_updated)}</div>` : nothing}
                     </div>
                     ${entityId ? html`
                       <button class="sensor-popup-info-btn" aria-label="More info"
