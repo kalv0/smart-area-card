@@ -174,7 +174,7 @@ export const smartRoomCardStyles = css`
 
   .header-top {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--sr-space-3);
   }
@@ -189,6 +189,7 @@ export const smartRoomCardStyles = css`
     line-height: 1.05;
     flex: 1;
     min-width: 0;
+    padding-top: 4px;
   }
 
   .header-alerts {
@@ -312,7 +313,6 @@ export const smartRoomCardStyles = css`
     text-align: right;
     line-height: 1;
     flex-shrink: 0;
-    align-self: flex-start;
   }
 
   .climate-item {
