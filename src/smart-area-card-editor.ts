@@ -464,7 +464,7 @@ export class SmartAreaCardEditor extends LitElement {
           <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(key, "enabled", v))}<span>Alert</span></label>
         </div>
         <div class="sensor-row-body">
-          ${this._renderSensorEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(key, "restrict_to_room_area", !showAll))}
+          ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(key, "restrict_to_room_area", !showAll), false, entityId ? () => this._setSensor(key, "") : undefined)}
         </div>
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
@@ -494,7 +494,7 @@ export class SmartAreaCardEditor extends LitElement {
           <button type="button" class="sensor-remove-btn" @click=${() => this._removeCustomSensor(i)}>✕</button>
         </div>
         <div class="sensor-row-body">
-          ${this._renderSensorEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }))}
+          ${this._renderSmartEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }), false, sensor.entity ? () => this._setCustomSensorEntity(i, "") : undefined)}
           ${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}
         </div>
         ${alertEnabled ? html`
@@ -778,40 +778,16 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     areaId: string | undefined,
     onToggleShowAll: (showAll: boolean) => void,
     disabled = false,
+    onClear?: () => void,
   ) {
     const hasRoom = Boolean(areaId?.trim());
     const selector = this._entitySelectorFiltered(domains, restrictToArea, areaId, deviceClasses);
     return html`
-      ${this._renderEntityPicker(value, onChange, disabled, selector)}
+      <div class="entity-field-wrap">
+        ${this._renderEntityPicker(value, onChange, disabled, selector)}
+        ${value && onClear ? html`<button type="button" class="entity-clear-x" aria-label="Clear entity" @click=${(e: Event) => { e.stopPropagation(); onClear(); }}><ha-icon icon="mdi:close"></ha-icon></button>` : nothing}
+      </div>
       ${hasRoom && !disabled ? html`<label class="show-all-check"><input type="checkbox" .checked=${!restrictToArea} @change=${(e: Event) => onToggleShowAll((e.target as HTMLInputElement).checked)} /><span>Show all entities</span></label>` : nothing}
-    `;
-  }
-
-  private _renderSensorEntityPicker(
-    value: string,
-    onChange: (value: string) => void,
-    domains: string[],
-    deviceClasses: string[] | undefined,
-    restrictToArea: boolean,
-    areaId: string | undefined,
-    onToggleShowAll: (showAll: boolean) => void,
-  ) {
-    const hasRoom = Boolean(areaId?.trim());
-    const includeEntities = restrictToArea ? this._areaEntityIdsFiltered(areaId, domains, deviceClasses) : undefined;
-    if (!this.hass) {
-      return html`<input .value=${value} @input=${(e: InputEvent) => onChange(valueFromEvent(e))} />`;
-    }
-    return html`
-      <ha-entity-picker
-        .hass=${this.hass}
-        .value=${value || ""}
-        .includeDomains=${domains}
-        .includeDeviceClasses=${deviceClasses}
-        .includeEntities=${includeEntities}
-        .clearable=${true}
-        @value-changed=${(e: CustomEvent) => onChange(String(e.detail?.value ?? ""))}
-      ></ha-entity-picker>
-      ${hasRoom ? html`<label class="show-all-check"><input type="checkbox" .checked=${!restrictToArea} @change=${(e: Event) => onToggleShowAll((e.target as HTMLInputElement).checked)} /><span>Show all entities</span></label>` : nothing}
     `;
   }
 
