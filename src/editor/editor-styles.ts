@@ -175,23 +175,41 @@ export const calvoRoomCardEditorStyles = css`
     z-index: 2;
   }
 
-  .bg-preview-primary-sensor {
+  .bg-preview-sensor-strip {
     position: absolute;
     top: 50%;
     right: 10px;
     transform: translateY(-50%);
     display: flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: white;
-    text-shadow: 0 1px 5px rgba(0,0,0,0.65);
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
     pointer-events: none;
     z-index: 2;
   }
 
-  .bg-preview-primary-sensor ha-icon {
+  .bg-preview-sensor-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.88);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  }
+
+  .bg-preview-sensor-item ha-icon {
+    --mdc-icon-size: 14px;
+  }
+
+  .bg-preview-sensor-item--primary {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.65);
+  }
+
+  .bg-preview-sensor-item--primary ha-icon {
     --mdc-icon-size: 22px;
   }
 

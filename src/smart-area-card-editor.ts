@@ -119,38 +119,36 @@ export class SmartAreaCardEditor extends LitElement {
     const darkCond = images.dark_mode_condition ?? "always";
     const bgOn = images.background_on ?? "";
 
-    // Primary sensor for preview
+    // All sensors with entities for preview strip
     const _previewSensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
-    const _primaryKey = _previewSensorOrder[0];
-    let _primarySensorIcon = "";
-    let _primarySensorValue = "";
     const _SENSOR_ICONS: Record<string, string> = {
       temperature: "mdi:thermometer", humidity: "mdi:water-percent", co2: "mdi:molecule-co2",
       voc: "mdi:flask-outline", pm25: "mdi:blur", aqi: "mdi:gauge", presence: "mdi:motion-sensor", noise: "mdi:volume-high",
     };
-    if (_primaryKey) {
-      if (_primaryKey.startsWith("custom_")) {
-        const _ci = Number(_primaryKey.slice(7));
+    const _previewSensors: Array<{ icon: string; value: string; primary: boolean }> = [];
+    for (const _key of _previewSensorOrder) {
+      if (_key.startsWith("custom_")) {
+        const _ci = Number(_key.slice(7));
         const _sc = config.sensors?.custom?.[_ci];
         if (_sc?.entity) {
           const _e = this.hass?.states[_sc.entity];
-          if (_e) {
+          if (_e && _e.state !== "unavailable" && _e.state !== "unknown") {
             const _u = _e.attributes["unit_of_measurement"] as string | undefined ?? "";
-            _primarySensorValue = `${_e.state}${_u ? ` ${_u}` : ""}`;
-            _primarySensorIcon = _sc.icon || "mdi:gauge";
+            _previewSensors.push({ icon: _sc.icon || "mdi:gauge", value: `${_e.state}${_u ? ` ${_u}` : ""}`, primary: _previewSensors.length === 0 });
           }
         }
       } else {
-        const _eid = (config.sensors as Record<string, unknown> | undefined)?.[_primaryKey] as string | undefined;
+        const _eid = (config.sensors as Record<string, unknown> | undefined)?.[_key] as string | undefined;
         if (_eid) {
           const _e = this.hass?.states[_eid];
-          if (_e) {
+          if (_e && _e.state !== "unavailable" && _e.state !== "unknown") {
             const _u = _e.attributes["unit_of_measurement"] as string | undefined ?? "";
             const _raw = _e.state;
-            _primarySensorValue = _primaryKey === "temperature" && Number.isFinite(Number(_raw))
+            const _val = _key === "temperature" && Number.isFinite(Number(_raw))
               ? `${Number(_raw).toFixed(1)}${_u || "°"}`
               : `${_raw}${_u ? ` ${_u}` : ""}`;
-            _primarySensorIcon = (config.sensors?.icons as Record<string, string> | undefined)?.[_primaryKey] || _SENSOR_ICONS[_primaryKey] || "mdi:gauge";
+            const _icon = (config.sensors?.icons as Record<string, string> | undefined)?.[_key] || _SENSOR_ICONS[_key] || "mdi:gauge";
+            _previewSensors.push({ icon: _icon, value: _val, primary: _previewSensors.length === 0 });
           }
         }
       }
@@ -213,10 +211,14 @@ export class SmartAreaCardEditor extends LitElement {
                 <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
               ` : nothing}
               ${config.room ? html`<span class="bg-preview-room-name">${config.room}</span>` : nothing}
-              ${_primarySensorValue ? html`
-                <div class="bg-preview-primary-sensor">
-                  <ha-icon icon=${_primarySensorIcon}></ha-icon>
-                  <span>${_primarySensorValue}</span>
+              ${_previewSensors.length ? html`
+                <div class="bg-preview-sensor-strip">
+                  ${_previewSensors.map((s) => html`
+                    <div class="bg-preview-sensor-item ${s.primary ? "bg-preview-sensor-item--primary" : ""}">
+                      <ha-icon icon=${s.icon}></ha-icon>
+                      <span>${s.value}</span>
+                    </div>
+                  `)}
                 </div>
               ` : nothing}
             </div>
