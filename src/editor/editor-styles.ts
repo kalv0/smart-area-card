@@ -1617,7 +1617,8 @@ export const calvoRoomCardEditorStyles = css`
 
   /* entity picker inside sensor-row body */
   .sensor-row-body ha-entity-picker,
-  .sensor-row-body ha-selector {
+  .sensor-row-body ha-selector,
+  .sensor-row-body .entity-field-wrap {
     width: 100%;
   }
 
@@ -1718,22 +1719,39 @@ export const calvoRoomCardEditorStyles = css`
     background: rgba(220, 38, 38, 0.9);
   }
 
-  .sensor-clear-btn {
-    align-self: flex-start;
-    padding: 4px 10px;
-    border-radius: 8px;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.72rem;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    line-height: 1;
-    min-height: 28px;
+  .entity-field-wrap {
+    position: relative;
   }
 
-  .sensor-clear-btn:hover {
-    background: rgba(185, 28, 28, 0.5);
+  .entity-field-wrap ha-selector,
+  .entity-field-wrap ha-entity-picker {
+    display: block;
+    width: 100%;
+  }
+
+  .entity-clear-x {
+    position: absolute;
+    right: 44px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(60, 60, 60, 0.85);
+    color: rgba(255, 255, 255, 0.75);
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    --mdc-icon-size: 13px;
+  }
+
+  .entity-clear-x:hover {
+    background: rgba(185, 28, 28, 0.85);
     color: #fff;
-    border-color: rgba(255, 190, 190, 0.3);
   }
 
   .sensor-more-btn {

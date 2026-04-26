@@ -25,7 +25,7 @@ import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUnd
 import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
 import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
 import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered } from "./editor/registry-helpers";
-import { patchSensor, patchSensorIcon, patchSensorFilter, patchSensorAlert, addCustomSensor, removeCustomSensor, updateCustomSensor, updateCustomSensorAlert, getNormalizedSensorOrder, moveSensorInOrder, reorderSensorsInOrder, bubbleSensorAboveEmpty } from "./editor/sensor-config";
+import { patchSensor, patchSensorIcon, patchSensorFilter, patchSensorAlert, addCustomSensor, removeCustomSensor, updateCustomSensor, updateCustomSensorAlert, getNormalizedSensorOrder, moveSensorInOrder, reorderSensorsInOrder, bubbleSensorAboveEmpty, sinkSensorBelowFilled } from "./editor/sensor-config";
 import { addNamedState, removeNamedState, updateNamedState, resetPresetState, resetPresetAlert, resetPresetOffline, addNamedAlert, removeNamedAlert, updateNamedAlert } from "./editor/named-item-config";
 
 const SENSOR_DEVICE_CLASSES: Partial<Record<string, string[]>> = {
@@ -459,8 +459,7 @@ export class SmartAreaCardEditor extends LitElement {
           <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(key, "enabled", v))}<span>Alert</span></label>
         </div>
         <div class="sensor-row-body">
-          ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(key, "restrict_to_room_area", !showAll))}
-          ${entityId ? html`<button type="button" class="sensor-clear-btn" @click=${() => this._setSensor(key, "")}>Remove entity ✕</button>` : nothing}
+          ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(key, "restrict_to_room_area", !showAll), false, entityId ? () => this._setSensor(key, "") : undefined)}
         </div>
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
@@ -490,8 +489,7 @@ export class SmartAreaCardEditor extends LitElement {
           <button type="button" class="sensor-remove-btn" @click=${() => this._removeCustomSensor(i)}>✕</button>
         </div>
         <div class="sensor-row-body">
-          ${this._renderSmartEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }))}
-          ${sensor.entity ? html`<button type="button" class="sensor-clear-btn" @click=${() => this._setCustomSensorEntity(i, "")}>Remove entity ✕</button>` : nothing}
+          ${this._renderSmartEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }), false, sensor.entity ? () => this._setCustomSensorEntity(i, "") : undefined)}
           ${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}
         </div>
         ${alertEnabled ? html`
@@ -775,11 +773,15 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     areaId: string | undefined,
     onToggleShowAll: (showAll: boolean) => void,
     disabled = false,
+    onClear?: () => void,
   ) {
     const hasRoom = Boolean(areaId?.trim());
     const selector = this._entitySelectorFiltered(domains, restrictToArea, areaId, deviceClasses);
     return html`
-      ${this._renderEntityPicker(value, onChange, disabled, selector)}
+      <div class="entity-field-wrap">
+        ${this._renderEntityPicker(value, onChange, disabled, selector)}
+        ${value && onClear ? html`<button type="button" class="entity-clear-x" aria-label="Clear entity" @click=${(e: Event) => { e.stopPropagation(); onClear(); }}><ha-icon icon="mdi:close"></ha-icon></button>` : nothing}
+      </div>
       ${hasRoom && !disabled ? html`<label class="show-all-check"><input type="checkbox" .checked=${!restrictToArea} @change=${(e: Event) => onToggleShowAll((e.target as HTMLInputElement).checked)} /><span>Show all entities</span></label>` : nothing}
     `;
   }
@@ -1431,6 +1433,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     const hadEntity = Boolean((this._config?.sensors as Record<string, unknown>)?.[key]);
     let newSensors = patchSensor(this._config?.sensors, key, value);
     if (value && !hadEntity) newSensors = bubbleSensorAboveEmpty(newSensors, key);
+    else if (!value && hadEntity) newSensors = sinkSensorBelowFilled(newSensors, key);
     this._patch({ sensors: newSensors });
   }
   private _setSensorIcon(key: string, value: string) { this._patch({ sensors: patchSensorIcon(this._config?.sensors, key, value) }); }
@@ -1452,6 +1455,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     const hadEntity = Boolean(this._config?.sensors?.custom?.[i]?.entity);
     let newSensors = updateCustomSensor(this._config?.sensors, i, { entity: value });
     if (value && !hadEntity) newSensors = bubbleSensorAboveEmpty(newSensors, `custom_${i}`);
+    else if (!value && hadEntity) newSensors = sinkSensorBelowFilled(newSensors, `custom_${i}`);
     this._patch({ sensors: newSensors });
   }
 

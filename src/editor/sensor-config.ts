@@ -67,6 +67,36 @@ export function bubbleSensorAboveEmpty(sensors: Sensors, key: string): Sensors {
   return { ...(sensors ?? {}), sensor_order: next };
 }
 
+export function sinkSensorBelowFilled(sensors: Sensors, key: string): Sensors {
+  const hasEntity = (k: string): boolean => {
+    if (k === key) return false;
+    if (k.startsWith("custom_")) {
+      const i = Number(k.slice(7));
+      return Boolean(sensors?.custom?.[i]?.entity);
+    }
+    return Boolean((sensors as Record<string, unknown>)?.[k]);
+  };
+
+  const customCount = sensors?.custom?.length ?? 0;
+  const order = getNormalizedSensorOrder(sensors, customCount);
+  const currentIdx = order.indexOf(key);
+  if (currentIdx < 0) return sensors ?? {};
+
+  let lastFilledIdx = -1;
+  for (let i = 0; i < order.length; i++) {
+    if (i === currentIdx) continue;
+    if (hasEntity(order[i])) lastFilledIdx = i;
+  }
+
+  const insertAt = lastFilledIdx + 1;
+  if (currentIdx >= insertAt) return sensors ?? {};
+
+  const next = [...order];
+  next.splice(currentIdx, 1);
+  next.splice(insertAt - 1, 0, key);
+  return { ...(sensors ?? {}), sensor_order: next };
+}
+
 export function patchSensor(sensors: Sensors, key: string, value: string): Sensors {
   return { ...(sensors ?? {}), [key]: value || undefined };
 }
