@@ -95,12 +95,53 @@ export const calvoRoomCardEditorStyles = css`
     gap: 6px;
   }
 
+  .area-picker-block--required ha-area-picker {
+    outline: 2px solid rgba(220, 38, 38, 0.7);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
   .area-picker-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 0.78rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--editor-muted);
+  }
+
+  .area-picker-block--required .area-picker-label {
+    color: rgba(248, 113, 113, 0.9);
+  }
+
+  .field-required-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(248, 113, 113, 0.9);
+    background: rgba(220, 38, 38, 0.15);
+    border: 1px solid rgba(220, 38, 38, 0.35);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  .field-error {
+    border-color: rgba(220, 38, 38, 0.6) !important;
+    background: rgba(220, 38, 38, 0.05) !important;
+  }
+
+  .field-error input {
+    color: rgba(248, 180, 180, 0.95);
+  }
+
+  .field-error-msg {
+    font-size: 0.72rem;
+    color: rgba(248, 113, 113, 0.9);
+    margin-top: -4px;
+    display: block;
   }
 
   .area-picker-row {

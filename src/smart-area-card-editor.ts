@@ -155,6 +155,9 @@ export class SmartAreaCardEditor extends LitElement {
       }
     }
 
+    const hasArea = this._isRoomIdValid(config.room_id);
+    const roomNameEmpty = hasArea && !(config.room ?? areaName ?? "").trim();
+
     return html`
       <section class="section">
         <div class="section-header"><div>
@@ -163,8 +166,8 @@ export class SmartAreaCardEditor extends LitElement {
         </div></div>
 
         <!-- ① Area picker — most prominent element -->
-        <div class="area-picker-block">
-          <div class="area-picker-label">Area</div>
+        <div class="area-picker-block ${hasArea ? "" : "area-picker-block--required"}">
+          <div class="area-picker-label">Area${!hasArea ? html`<span class="field-required-badge">Required</span>` : nothing}</div>
           <ha-area-picker
             .hass=${this.hass}
             .value=${config.room_id ?? ""}
@@ -172,9 +175,12 @@ export class SmartAreaCardEditor extends LitElement {
           ></ha-area-picker>
         </div>
 
+        ${!hasArea ? nothing : html`
+
         <!-- ① b Room name -->
         <div class="row single">
-          <label>Room name<span class="hint">Header label displayed on the card.</span><input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} /></label>
+          <label class="${roomNameEmpty ? "field-error" : ""}">Room name<span class="hint">Header label displayed on the card.</span><input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} /></label>
+          ${roomNameEmpty ? html`<span class="field-error-msg">Room name is required</span>` : nothing}
         </div>
 
         <!-- ② Room image (before Autofill) -->
@@ -185,7 +191,6 @@ export class SmartAreaCardEditor extends LitElement {
           <div class="row single">
             <label>
               Room image
-              <span class="hint">e.g. /local/img/areas/bedroom.png</span>
               <input
                 type="text"
                 .value=${bgOn}
@@ -298,6 +303,8 @@ export class SmartAreaCardEditor extends LitElement {
           ${(config.expander?.initial_state ?? "closed") === "conditional" ? html`<div class="panel"><div class="panel-title">Open condition</div>${this._renderConditionEditor(config.expander?.condition, (next) => this._setExpander("condition", next))}</div>` : nothing}
           <div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = false; }}>← Back to basic settings</button></div>
         `}
+
+        `}<!-- end hasArea gate -->
       </section>
     `;
   }
