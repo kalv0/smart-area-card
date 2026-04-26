@@ -210,9 +210,9 @@ export class SmartAreaCardEditor extends LitElement {
 
         ${roomNameEmpty ? nothing : html`
 
-        <!-- ② Card background -->
+        <!-- ② Background -->
         <div class="panel">
-          <div class="panel-title">Card background</div>
+          <div class="panel-title">Background</div>
 
           <div class="row single">
             <label>
@@ -309,7 +309,10 @@ export class SmartAreaCardEditor extends LitElement {
           ` : nothing}
         </div>
 
-        <!-- ③ Autofill -->
+        <!-- ③ Sensors -->
+        ${this._renderSensors(config)}
+
+        <!-- ④ Autofill -->
         <div class="row single">
           <button type="button" class="autofill-button autofill-button--full" ?disabled=${!hasArea} @click=${this._handleRoomAutofill}>Autofill devices from area</button>
         </div>
@@ -335,13 +338,7 @@ export class SmartAreaCardEditor extends LitElement {
     `;
   }
 
-  private _renderHeaderData(config: SmartRoomCardConfig) {
-    const automationEnabled = config.ui?.automation_badge_enabled ?? false;
-    const batteryAlertsEnabled = config.ui?.battery_alerts_enabled ?? true;
-    const batteryOutlined = config.ui?.battery_alert_outlined !== false;
-    const batteryBorderColor = config.ui?.battery_alert_border_color ?? "red";
-    const batteryHeaderBadge = config.ui?.battery_alert_header_badge ?? "low_battery";
-    const batteryHeaderBorder = config.ui?.battery_alert_header_border !== false;
+  private _renderSensors(config: SmartRoomCardConfig) {
     const customSensors = config.sensors?.custom ?? [];
     const customCount = customSensors.length;
     const sensorOrder = getNormalizedSensorOrder(config.sensors, customCount);
@@ -356,6 +353,93 @@ export class SmartAreaCardEditor extends LitElement {
       presence: { label: "Presence", icon: "mdi:motion-sensor", domains: ["binary_sensor", "sensor"] },
       noise: { label: "Noise", icon: "mdi:volume-high", domains: ["sensor"] },
     };
+
+    const hasEntityForKey = (k: string) => k.startsWith("custom_")
+      ? Boolean(customSensors[Number(k.slice(7))]?.entity)
+      : Boolean((config.sensors as Record<string, unknown>)?.[k]);
+    const anyHasEntity = sensorOrder.some(k => hasEntityForKey(k));
+    const alwaysVisible = (k: string) => anyHasEntity
+      ? hasEntityForKey(k)
+      : k === "temperature" || k === "humidity";
+    const visibleKeys = sensorOrder.filter(alwaysVisible);
+    const hiddenKeys = sensorOrder.filter(k => !alwaysVisible(k));
+
+    const renderSensorRow = (key: string, idx: number) => {
+      const isFirst = idx === 0;
+      const isLast = idx === sensorOrder.length - 1;
+      const isDragging = this._sensorDragIndex === idx;
+      const isDropTarget = this._sensorDropIndex === idx && this._sensorDragIndex !== idx;
+      const canReorder = hasEntityForKey(key);
+      const orderControls = html`
+        <div class="sensor-row-order">
+          ${isFirst && canReorder ? html`<span class="sensor-primary-badge" title="Primary sensor — displayed largest in the card">★</span>` : nothing}
+          <button class="secondary icon-button" type="button" ?disabled=${isFirst || !canReorder} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
+          <button class="drag-handle" type="button" .draggable=${canReorder} title="Drag to reorder" aria-label="Drag to reorder"
+            ?disabled=${!canReorder}
+            @dragstart=${canReorder ? () => this._sensorDragStart(idx) : nothing}
+            @dragend=${canReorder ? this._handleSensorDragEnd : nothing}
+            @pointerdown=${canReorder ? (e: PointerEvent) => this._handleSensorTouchDragStart(e, idx) : nothing}
+            @pointermove=${canReorder ? this._handleSensorTouchDragMove : nothing}
+            @pointerup=${canReorder ? this._handleSensorTouchDragEnd : nothing}
+            @pointercancel=${canReorder ? this._handleSensorTouchDragCancel : nothing}>⋮⋮</button>
+          <button class="secondary icon-button" type="button" ?disabled=${isLast || !canReorder} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
+        </div>
+      `;
+      if (key.startsWith("custom_")) {
+        const i = Number(key.slice(7));
+        const sensor = customSensors[i];
+        if (!sensor) return nothing;
+        return html`
+          <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
+               data-sensor-index=${String(idx)}
+               @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
+            ${orderControls}${this._renderCustomSensor(sensor, i, config)}
+          </div>`;
+      }
+      const meta = PRESET_META[key];
+      if (!meta) return nothing;
+      return html`
+        <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
+             data-sensor-index=${String(idx)}
+             @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
+          ${orderControls}${this._renderPresetSensor(key as "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", meta.label, meta.icon, config, meta.domains)}
+        </div>`;
+    };
+
+    return html`
+      <div class="panel">
+        <div class="panel-title">Sensors</div>
+        <div class="panel-subtitle">Drag or use arrows to reorder. The top sensor is displayed largest in the card.</div>
+
+        <div class="sensor-ordered-list">
+          ${visibleKeys.map(k => renderSensorRow(k, sensorOrder.indexOf(k)))}
+        </div>
+        ${!this._showMoreSensors ? html`
+          <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = true; }}>More sensors ▾</button>
+        ` : html`
+          ${hiddenKeys.length ? html`
+            <div class="sensor-ordered-list">
+              ${hiddenKeys.map(k => renderSensorRow(k, sensorOrder.indexOf(k)))}
+            </div>
+          ` : nothing}
+          <button type="button" class="sensor-add-row" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
+          <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = false; }}>Hide sensors ▴</button>
+        `}
+
+        <div class="row single">
+          ${this._renderToggleField("Click opens details", "Tapping the climate strip opens a popup with sensor history.", config.ui?.header_climate_more_info ?? true, (checked) => this._setUi("header_climate_more_info", checked))}
+        </div>
+      </div>
+    `;
+  }
+
+  private _renderHeaderData(config: SmartRoomCardConfig) {
+    const automationEnabled = config.ui?.automation_badge_enabled ?? false;
+    const batteryAlertsEnabled = config.ui?.battery_alerts_enabled ?? true;
+    const batteryOutlined = config.ui?.battery_alert_outlined !== false;
+    const batteryBorderColor = config.ui?.battery_alert_border_color ?? "red";
+    const batteryHeaderBadge = config.ui?.battery_alert_header_badge ?? "low_battery";
+    const batteryHeaderBorder = config.ui?.battery_alert_header_border !== false;
 
     return html`
       <section class="section">
@@ -379,86 +463,6 @@ export class SmartAreaCardEditor extends LitElement {
               <div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedBattery = false; }}>← Back</button></div>
             ` : nothing}
           ` : nothing}
-        </div>
-
-        <div class="panel">
-          <div class="panel-title">Sensors</div>
-          <div class="panel-subtitle">Drag or use arrows to reorder. The top sensor is displayed largest in the card.</div>
-
-          ${(() => {
-            const hasEntityForKey = (k: string) => k.startsWith("custom_")
-              ? Boolean(customSensors[Number(k.slice(7))]?.entity)
-              : Boolean((config.sensors as Record<string, unknown>)?.[k]);
-            const anyHasEntity = sensorOrder.some(k => hasEntityForKey(k));
-            const alwaysVisible = (k: string) => anyHasEntity
-              ? hasEntityForKey(k)
-              : k === "temperature" || k === "humidity";
-            const visibleKeys = sensorOrder.filter(alwaysVisible);
-            const hiddenKeys = sensorOrder.filter(k => !alwaysVisible(k));
-
-            const renderSensorRow = (key: string, idx: number) => {
-              const isFirst = idx === 0;
-              const isLast = idx === sensorOrder.length - 1;
-              const isDragging = this._sensorDragIndex === idx;
-              const isDropTarget = this._sensorDropIndex === idx && this._sensorDragIndex !== idx;
-              const canReorder = hasEntityForKey(key);
-              const orderControls = html`
-                <div class="sensor-row-order">
-                  ${isFirst && canReorder ? html`<span class="sensor-primary-badge" title="Primary sensor — displayed largest in the card">★</span>` : nothing}
-                  <button class="secondary icon-button" type="button" ?disabled=${isFirst || !canReorder} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
-                  <button class="drag-handle" type="button" .draggable=${canReorder} title="Drag to reorder" aria-label="Drag to reorder"
-                    ?disabled=${!canReorder}
-                    @dragstart=${canReorder ? () => this._sensorDragStart(idx) : nothing}
-                    @dragend=${canReorder ? this._handleSensorDragEnd : nothing}
-                    @pointerdown=${canReorder ? (e: PointerEvent) => this._handleSensorTouchDragStart(e, idx) : nothing}
-                    @pointermove=${canReorder ? this._handleSensorTouchDragMove : nothing}
-                    @pointerup=${canReorder ? this._handleSensorTouchDragEnd : nothing}
-                    @pointercancel=${canReorder ? this._handleSensorTouchDragCancel : nothing}>⋮⋮</button>
-                  <button class="secondary icon-button" type="button" ?disabled=${isLast || !canReorder} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
-                </div>
-              `;
-              if (key.startsWith("custom_")) {
-                const i = Number(key.slice(7));
-                const sensor = customSensors[i];
-                if (!sensor) return nothing;
-                return html`
-                  <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
-                       data-sensor-index=${String(idx)}
-                       @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
-                    ${orderControls}${this._renderCustomSensor(sensor, i, config)}
-                  </div>`;
-              }
-              const meta = PRESET_META[key];
-              if (!meta) return nothing;
-              return html`
-                <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
-                     data-sensor-index=${String(idx)}
-                     @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
-                  ${orderControls}${this._renderPresetSensor(key as "temperature" | "humidity" | "co2" | "voc" | "pm25" | "aqi" | "presence" | "noise", meta.label, meta.icon, config, meta.domains)}
-                </div>`;
-            };
-
-            return html`
-              <div class="sensor-ordered-list">
-                ${visibleKeys.map(k => renderSensorRow(k, sensorOrder.indexOf(k)))}
-              </div>
-              ${!this._showMoreSensors ? html`
-                <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = true; }}>More sensors ▾</button>
-              ` : html`
-                ${hiddenKeys.length ? html`
-                  <div class="sensor-ordered-list">
-                    ${hiddenKeys.map(k => renderSensorRow(k, sensorOrder.indexOf(k)))}
-                  </div>
-                ` : nothing}
-                <button type="button" class="sensor-add-row" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
-                <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = false; }}>Hide sensors ▴</button>
-              `}
-            `;
-          })()}
-
-          <div class="row single">
-            ${this._renderToggleField("Click opens details", "Tapping the climate strip opens a popup with sensor history.", config.ui?.header_climate_more_info ?? true, (checked) => this._setUi("header_climate_more_info", checked))}
-          </div>
         </div>
 
         <div class="panel">
