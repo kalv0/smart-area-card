@@ -429,7 +429,7 @@ export class SmartAreaCardEditor extends LitElement {
         if (!sensor) return nothing;
         return html`
           ${tip}
-          <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
+          <div class="sensor-row-wrapper ${isFirstFilled ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
                data-sensor-index=${String(idx)} data-sensor-key=${key}
                @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
             ${orderControls}${this._renderCustomSensor(sensor, i, config, accent)}
@@ -439,7 +439,7 @@ export class SmartAreaCardEditor extends LitElement {
       if (!meta) return nothing;
       return html`
         ${tip}
-        <div class="sensor-row-wrapper ${isFirst ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
+        <div class="sensor-row-wrapper ${isFirstFilled ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
              data-sensor-index=${String(idx)} data-sensor-key=${key}
              @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
           ${orderControls}${this._renderPresetSensor(key as string & keyof typeof SENSOR_ACCENT, meta.label, meta.icon, config, meta.domains, accent)}
