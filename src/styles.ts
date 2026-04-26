@@ -573,25 +573,196 @@ export const smartRoomCardStyles = css`
     min-width: 0;
   }
 
-  .climate-history-panel {
+  /* ─── Sensor popup ──────────────────────────────────── */
+
+  .sensor-popup-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px) saturate(120%);
     display: flex;
-    flex-direction: column;
-    gap: var(--sr-space-2);
+    align-items: center;
+    justify-content: center;
+    animation: popup-fade-in 180ms ease both;
   }
 
-  .climate-charts {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sr-space-2);
+  @keyframes popup-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 
-  .climate-charts > * {
-    border-radius: var(--sr-radius-md);
+  .sensor-popup {
+    background: linear-gradient(160deg, rgba(14, 20, 38, 0.98), rgba(18, 26, 50, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 22px;
+    width: min(460px, calc(100vw - 28px));
+    max-height: calc(100dvh - 56px);
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    --ha-card-border-radius: var(--sr-radius-md);
-    --ha-card-background: rgba(10, 16, 28, 0.55);
+    box-shadow:
+      0 32px 80px rgba(0, 0, 0, 0.7),
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    animation: popup-scale-in 200ms cubic-bezier(0.34, 1.36, 0.64, 1) both;
+  }
+
+  @keyframes popup-scale-in {
+    from { transform: scale(0.92); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+
+  .sensor-popup-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 18px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    flex-shrink: 0;
+  }
+
+  .sensor-popup-header-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    --mdc-icon-size: 18px;
+    color: rgba(255, 255, 255, 0.65);
+    flex-shrink: 0;
+  }
+
+  .sensor-popup-title {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 0.01em;
+  }
+
+  .sensor-popup-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    --mdc-icon-size: 16px;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+  }
+
+  .sensor-popup-close:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: white;
+  }
+
+  .sensor-popup-body {
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overscroll-behavior: contain;
+  }
+
+  .sensor-popup-item {
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.075);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 140ms ease;
+  }
+
+  .sensor-popup-item:hover {
+    border-color: rgba(255, 255, 255, 0.13);
+  }
+
+  .sensor-popup-item-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 14px 10px;
+  }
+
+  .sensor-popup-item-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--sensor-accent, #94a3b8) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--sensor-accent, #94a3b8) 30%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    --mdc-icon-size: 22px;
+    color: var(--sensor-accent, #94a3b8);
+    flex-shrink: 0;
+  }
+
+  .sensor-popup-item-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sensor-popup-item-label {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .sensor-popup-item-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1.1;
+  }
+
+  .sensor-popup-info-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    --mdc-icon-size: 17px;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  }
+
+  .sensor-popup-info-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .sensor-popup-chart {
+    padding: 0 10px 10px;
+  }
+
+  .sensor-popup-chart > * {
+    border-radius: 10px;
+    overflow: hidden;
+    --ha-card-border-radius: 10px;
+    --ha-card-background: rgba(0, 0, 0, 0.25);
     --ha-card-border-width: 0;
   }
+
+  /* ─── Legacy climate history (keep for compat) ──────── */
 
   .climate-history-more {
     display: inline-flex;

@@ -159,27 +159,40 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   protected updated(changedProps: Map<string, unknown>): void {
     if (this._showClimateHistory) {
       if (changedProps.has("_showClimateHistory") || changedProps.has("_config")) {
-        this._buildHistoryCharts();
+        this._buildPopupCharts();
       } else if (changedProps.has("hass")) {
-        this.shadowRoot?.querySelectorAll(".climate-charts > *").forEach((el) => {
+        this.shadowRoot?.querySelectorAll(".sensor-popup-chart > *").forEach((el) => {
           (el as HTMLElement & { hass: HomeAssistant }).hass = this.hass;
         });
       }
     }
   }
 
-  private _buildHistoryCharts(): void {
-    const container = this.shadowRoot?.querySelector<HTMLElement>(".climate-charts");
-    if (!container) return;
-    container.innerHTML = "";
+  private _buildPopupCharts(): void {
+    const items = this._renderModel?.climateItems ?? [];
     const HistoryCard = customElements.get("hui-history-graph-card") as (new () => HTMLElement) | undefined;
     if (!HistoryCard) return;
-    for (const entityId of this._renderModel?.climateEntities ?? []) {
+    for (const item of items) {
+      const entityId = this._entityIdForKey(item.key);
+      if (!entityId) continue;
+      const container = this.shadowRoot?.querySelector<HTMLElement>(`.sensor-popup-chart[data-key="${item.key}"]`);
+      if (!container) continue;
+      container.innerHTML = "";
       const card = new HistoryCard() as HTMLElement & { hass: HomeAssistant; setConfig(c: unknown): void };
       card.hass = this.hass;
       card.setConfig({ type: "history-graph", entities: [{ entity: entityId }], hours_to_show: 24 });
       container.appendChild(card);
     }
+  }
+
+  private _entityIdForKey(key: string): string | undefined {
+    const sensors = this._config?.sensors;
+    if (!sensors) return undefined;
+    if (key.startsWith("custom_")) {
+      const i = Number(key.slice(7));
+      return sensors.custom?.[i]?.entity || undefined;
+    }
+    return (sensors as Record<string, string | undefined>)[key];
   }
 
   protected willUpdate(changedProps: Map<string, unknown>): void {
@@ -268,13 +281,13 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         <div class="shell">
           <section class="summary-zone">
             ${this._renderHeader()}
-            ${this._renderClimateHistoryPanel()}
             ${this._renderAlertPanels()}
             ${this._renderAutomationPanel()}
           </section>
           ${this._renderExpander()}
         </div>
       </ha-card>
+      ${this._showClimateHistory ? this._renderSensorPopup() : nothing}
     `;
   }
 
@@ -391,24 +404,62 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._persistAutomationPanel();
   };
 
-  private _renderClimateHistoryPanel(): TemplateResult | typeof nothing {
-    if (!this._showClimateHistory) return nothing;
-    const entities = this._renderModel?.climateEntities ?? [];
-    if (!entities.length) return nothing;
-    const historyPath = `/history?entity_id=${entities.join(",")}`;
-    const navigate = (e: Event): void => {
-      e.stopPropagation();
-      e.preventDefault();
-      window.history.pushState(null, "", historyPath);
-      window.dispatchEvent(new CustomEvent("location-changed", { bubbles: true }));
+  private _renderSensorPopup(): TemplateResult | typeof nothing {
+    const items = this._renderModel?.climateItems ?? [];
+    if (!items.length) return nothing;
+    const roomName = this._config?.room ?? "Sensors";
+    const close = (e: Event): void => { e.stopPropagation(); this._showClimateHistory = false; };
+
+    const POPUP_META: Record<string, { label: string; color: string }> = {
+      temperature: { label: "Temperature", color: "#f59e0b" },
+      humidity:    { label: "Humidity",    color: "#3b82f6" },
+      co2:         { label: "CO₂",         color: "#10b981" },
+      voc:         { label: "VOC",          color: "#8b5cf6" },
+      pm25:        { label: "PM2.5",        color: "#eab308" },
+      aqi:         { label: "Air Quality",  color: "#f97316" },
+      presence:    { label: "Presence",     color: "#14b8a6" },
+      noise:       { label: "Noise",        color: "#ec4899" },
     };
+
     return html`
-      <div class="climate-history-panel">
-        <div class="climate-charts"></div>
-        <a class="climate-history-more" href=${historyPath} @click=${navigate}>
-          <ha-icon icon="mdi:history"></ha-icon>
-          Mostrar historial completo
-        </a>
+      <div class="sensor-popup-overlay" @click=${close}>
+        <div class="sensor-popup" @click=${(e: Event) => e.stopPropagation()}>
+          <div class="sensor-popup-header">
+            <div class="sensor-popup-header-icon"><ha-icon icon="mdi:gauge"></ha-icon></div>
+            <span class="sensor-popup-title">${roomName}</span>
+            <button class="sensor-popup-close" @click=${close} aria-label="Close">
+              <ha-icon icon="mdi:close"></ha-icon>
+            </button>
+          </div>
+          <div class="sensor-popup-body">
+            ${items.map((item) => {
+              const entityId = this._entityIdForKey(item.key);
+              const meta = item.key.startsWith("custom_")
+                ? { label: this._config?.sensors?.custom?.[Number(item.key.slice(7))]?.name ?? item.key, color: "#94a3b8" }
+                : (POPUP_META[item.key] ?? { label: item.key, color: "#94a3b8" });
+              return html`
+                <div class="sensor-popup-item">
+                  <div class="sensor-popup-item-row">
+                    <div class="sensor-popup-item-icon" style="--sensor-accent:${meta.color}">
+                      <ha-icon icon=${item.icon}></ha-icon>
+                    </div>
+                    <div class="sensor-popup-item-meta">
+                      <div class="sensor-popup-item-label">${meta.label}</div>
+                      <div class="sensor-popup-item-value">${item.value}</div>
+                    </div>
+                    ${entityId ? html`
+                      <button class="sensor-popup-info-btn" aria-label="More info"
+                        @click=${(e: Event) => { e.stopPropagation(); fireEvent(this, "hass-more-info", { entityId }); }}>
+                        <ha-icon icon="mdi:information-outline"></ha-icon>
+                      </button>
+                    ` : nothing}
+                  </div>
+                  ${entityId ? html`<div class="sensor-popup-chart" data-key=${item.key}></div>` : nothing}
+                </div>
+              `;
+            })}
+          </div>
+        </div>
       </div>
     `;
   }
