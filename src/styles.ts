@@ -174,7 +174,7 @@ export const smartRoomCardStyles = css`
 
   .header-top {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--sr-space-3);
   }
@@ -189,7 +189,7 @@ export const smartRoomCardStyles = css`
     line-height: 1.05;
     flex: 1;
     min-width: 0;
-    padding-top: 4px;
+    padding-bottom: 20px;
   }
 
   .header-alerts {
