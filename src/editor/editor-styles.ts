@@ -657,9 +657,29 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .dc-name,
-  .dc-entity {
+  .dc-entity,
+  .dc-badge,
+  .section-title,
+  .section-subtitle,
+  .dg-tile-name,
+  .dg-tile-icon {
     user-select: none;
     -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Device cards not in edit mode: block all text selection in their header */
+  .device-card:not(.device-card--editing) .dc-header {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Preview grid: no selection anywhere */
+  .dg-preview {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   /* ─── Add Device Button & Type Picker ─────────────── */
@@ -900,12 +920,21 @@ export const calvoRoomCardEditorStyles = css`
     display: grid;
     grid-template-rows: 1fr;
     opacity: 1;
+    overflow: hidden;
     transition: grid-template-rows 0.25s ease, opacity 0.2s ease;
   }
 
   .section-collapsible--collapsed {
     grid-template-rows: 0fr;
     opacity: 0;
+    pointer-events: none;
+  }
+
+  .section-collapsible--collapsed .section-collapsible-inner,
+  .section-collapsible--collapsed .section-collapsible-inner * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    pointer-events: none !important;
   }
 
   .section-collapsible-inner {
