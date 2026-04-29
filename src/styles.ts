@@ -277,6 +277,9 @@ export const smartRoomCardStyles = css`
 
   /* Automation badge: HA primary color */
   .automation-badge {
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
     font: inherit;
     font-size: var(--sr-text-sm);
     border-color: color-mix(in srgb, var(--primary-color, #1565c0) 55%, transparent);
@@ -797,19 +800,19 @@ export const smartRoomCardStyles = css`
     gap: var(--sr-space-2);
     padding: 7px 10px;
     border-radius: var(--sr-radius-md);
-    background: rgba(10, 132, 255, 0.28);
+    background: color-mix(in srgb, var(--primary-color, #1565c0) 28%, transparent);
     backdrop-filter: blur(10px) saturate(120%);
     -webkit-backdrop-filter: blur(10px) saturate(120%);
-    border: 1px solid rgba(10, 132, 255, 0.5);
+    border: 1px solid color-mix(in srgb, var(--primary-color, #1565c0) 50%, transparent);
     color: #e8f4ff;
     font-size: 0.84rem;
     font-weight: 600;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-    box-shadow: 0 8px 20px rgba(10, 132, 255, 0.14);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--primary-color, #1565c0) 14%, transparent);
   }
 
   .automation-panel ha-icon {
-    color: #5fb3ff;
+    color: color-mix(in srgb, var(--primary-color, #1565c0) 80%, white);
     --mdc-icon-size: 18px;
     flex: 0 0 auto;
     align-self: center;
@@ -822,9 +825,27 @@ export const smartRoomCardStyles = css`
   }
 
   .automation-item {
+    appearance: none;
+    -webkit-appearance: none;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-shadow: inherit;
+    transition: opacity 120ms ease;
+  }
+
+  .automation-item:hover {
+    opacity: 0.75;
+    text-decoration: underline;
   }
 
   .automation-item-disabled {

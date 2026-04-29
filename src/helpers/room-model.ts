@@ -77,6 +77,7 @@ export function getAreaAutomations(
   });
 
   const toItem = (e: (typeof automations)[0]): AreaAutomation => ({
+    entityId: e.entity_id,
     name: String(e.attributes.friendly_name ?? e.entity_id),
     enabled: e.state === "on",
     lastTriggered: e.attributes.last_triggered as string | null | undefined,

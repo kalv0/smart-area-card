@@ -477,6 +477,14 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     `;
   }
 
+  private _navigateToAutomation(entityId: string): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const uniqueId = (this.hass as any)?.entities?.[entityId]?.unique_id;
+    if (!uniqueId) return;
+    history.pushState(null, "", `/config/automation/edit/${uniqueId}`);
+    window.dispatchEvent(new CustomEvent("location-changed", { bubbles: true, composed: true }));
+  }
+
   private _renderAutomationPanel(): TemplateResult | typeof nothing {
     if (!this._showAutomationPanel) return nothing;
     const automations = this._renderModel?.areaAutomations ?? [];
@@ -486,9 +494,9 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         <ha-icon icon="mdi:home-automation"></ha-icon>
         <div class="automation-list">
           ${automations.map((a) => html`
-            <div class=${a.enabled ? "automation-item" : "automation-item automation-item-disabled"}>
+            <button class="automation-item ${a.enabled ? "" : "automation-item-disabled"}" @click=${() => this._navigateToAutomation(a.entityId)}>
               ${a.name}<span class="automation-last-run"> - ${_formatLastTriggered(a.lastTriggered)}</span>
-            </div>
+            </button>
           `)}
         </div>
       </section>

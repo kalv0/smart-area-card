@@ -1,6 +1,7 @@
 import type { ComputedDeviceModel, SmartRoomHeaderBadge } from "../helpers";
 
 export interface AreaAutomation {
+  entityId: string;
   name: string;
   enabled: boolean;
   lastTriggered?: string | null;
