@@ -2451,17 +2451,36 @@ export const calvoRoomCardEditorStyles = css`
     font-weight: 700;
   }
 
+  /* Grid overlay trick: the sizer wrapper sizes to the hidden measure span,
+     the input overlays it and fills the container width */
+  .sr-chip-name-sizer {
+    display: grid;
+    min-width: 40px;
+  }
+
+  .sr-chip-name-sizer > * {
+    grid-area: 1 / 1;
+  }
+
+  .sr-chip-name-measure {
+    visibility: hidden;
+    white-space: pre;
+    font-size: 0.88rem;
+    font-weight: 700;
+    padding: 0;
+    pointer-events: none;
+  }
+
   .sr-chip-name {
     background: none;
     border: none;
     outline: none;
     color: inherit;
-    font: inherit;
     font-size: 0.88rem;
     font-weight: 700;
     padding: 0;
+    width: 100%;
     min-width: 0;
-    width: 110px;
   }
 
   .sr-chip-name::placeholder {
@@ -2533,6 +2552,23 @@ export const calvoRoomCardEditorStyles = css`
     padding: 0 10px 8px;
     display: grid;
     gap: 6px;
+  }
+
+  .sr-alert-group {
+    border: 1px solid rgba(251, 146, 60, 0.2);
+    border-radius: 8px;
+    background: rgba(251, 146, 60, 0.05);
+    padding: 6px 8px 8px;
+    display: grid;
+    gap: 6px;
+  }
+
+  .sr-alert-group-label {
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: rgba(251, 146, 60, 0.7);
   }
 
   /* ─── Responsive ─────────────────────────────────────── */

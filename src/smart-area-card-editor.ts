@@ -404,16 +404,19 @@ export class SmartAreaCardEditor extends LitElement {
                    @pointercancel=${this._handleSensorTouchDragCancel}>
                 <div class="sr-chip">
                   <ha-icon icon=${sensor.icon || "mdi:gauge"}></ha-icon>
-                  <input class="sr-chip-name" .value=${sensor.name} placeholder="Sensor name"
-                         @click=${(e: Event) => e.stopPropagation()}
-                         @pointerdown=${(e: Event) => e.stopPropagation()}
-                         @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
+                  <span class="sr-chip-name-sizer">
+                    <span class="sr-chip-name-measure">${sensor.name || "Sensor name"}</span>
+                    <input class="sr-chip-name" .value=${sensor.name} placeholder="Sensor name"
+                           @click=${(e: Event) => e.stopPropagation()}
+                           @pointerdown=${(e: Event) => e.stopPropagation()}
+                           @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
+                  </span>
                 </div>
               </div>
               <div class="sr-actions">
                 ${hasEntity ? html`
                   <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert">
-                    ${this._renderInlineToggle(alertEnabled, (v) => this._updateCustomSensorAlert(i, "enabled", v))}
+                    ${this._renderInlineToggle(alertEnabled, (v) => { this._updateCustomSensorAlert(i, "enabled", v); if (v) this._expandSensor(key); })}
                     <ha-icon icon="mdi:alert-outline"></ha-icon>
                   </label>
                 ` : nothing}
@@ -464,7 +467,7 @@ export class SmartAreaCardEditor extends LitElement {
             <div class="sr-actions">
               ${hasEntity ? html`
                 <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert">
-                  ${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(sAlertKey, "enabled", v))}
+                  ${this._renderInlineToggle(alertEnabled, (v) => { this._setSensorAlert(sAlertKey, "enabled", v); if (v) this._expandSensor(key); })}
                   <ha-icon icon="mdi:alert-outline"></ha-icon>
                 </label>
                 <button class="dc-btn" type="button" title=${isExpanded ? "Collapse" : "Edit"}
@@ -646,14 +649,17 @@ export class SmartAreaCardEditor extends LitElement {
           ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(sFilterKey, "restrict_to_room_area", !showAll), false, () => this._setSensor(key, ""))}
         </div>
         ${alertEnabled ? html`
-          <div class="sensor-alert-row">
-            ${isPresence ? html`
-              <label>Is<input type="text" .value=${presenceAlertConfig?.eq ?? ""} placeholder="e.g. on" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "eq", (e.target as HTMLInputElement).value || undefined)} /></label>
-              <label>Is not<input type="text" .value=${presenceAlertConfig?.neq ?? ""} placeholder="e.g. off" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "neq", (e.target as HTMLInputElement).value || undefined)} /></label>
-            ` : html`
-              <label>Min<input type="number" .value=${typeof numericAlertConfig?.min === "number" ? String(numericAlertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-              <label>Max<input type="number" .value=${typeof numericAlertConfig?.max === "number" ? String(numericAlertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-            `}
+          <div class="sr-alert-group">
+            <div class="sr-alert-group-label">Alert triggers</div>
+            <div class="sensor-alert-row">
+              ${isPresence ? html`
+                <label>Is<input type="text" .value=${presenceAlertConfig?.eq ?? ""} placeholder="e.g. on" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "eq", (e.target as HTMLInputElement).value || undefined)} /></label>
+                <label>Is not<input type="text" .value=${presenceAlertConfig?.neq ?? ""} placeholder="e.g. off" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "neq", (e.target as HTMLInputElement).value || undefined)} /></label>
+              ` : html`
+                <label>Min<input type="number" .value=${typeof numericAlertConfig?.min === "number" ? String(numericAlertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+                <label>Max<input type="number" .value=${typeof numericAlertConfig?.max === "number" ? String(numericAlertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              `}
+            </div>
           </div>
         ` : nothing}
       </div>
@@ -670,11 +676,14 @@ export class SmartAreaCardEditor extends LitElement {
           ${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}
         </div>
         ${alertEnabled ? html`
-          <div class="sensor-alert-row">
+          <div class="sr-alert-group">
+            <div class="sr-alert-group-label">Alert triggers</div>
+            <div class="sensor-alert-row">
             <label>Is<input type="text" .value=${sensor.alert?.text_eq ?? ""} placeholder="state text" @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "text_eq", valueFromEvent(e) || undefined)} /></label>
             <label>Is not<input type="text" .value=${sensor.alert?.text_neq ?? ""} placeholder="state text" @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "text_neq", valueFromEvent(e) || undefined)} /></label>
             <label>Min<input type="number" .value=${sensor.alert?.min !== undefined ? String(sensor.alert.min) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
             <label>Max<input type="number" .value=${sensor.alert?.max !== undefined ? String(sensor.alert.max) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+            </div>
           </div>
         ` : nothing}
       </div>
@@ -1392,6 +1401,10 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
   private _toggleSensorExpanded(key: string) {
     this._expandedSensors = this._expandedSensors.includes(key) ? this._expandedSensors.filter((k) => k !== key) : [...this._expandedSensors, key];
+  }
+
+  private _expandSensor(key: string) {
+    if (!this._expandedSensors.includes(key)) this._expandedSensors = [...this._expandedSensors, key];
   }
 
   private _moveDevice(index: number, direction: -1 | 1) {
