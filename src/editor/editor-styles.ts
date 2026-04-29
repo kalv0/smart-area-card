@@ -544,6 +544,16 @@ export const calvoRoomCardEditorStyles = css`
     justify-content: space-between;
   }
 
+  .section-header--collapsed {
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+
+  .section-header--collapsed:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
   .section-collapse-btn {
     background: none;
     border: none;
