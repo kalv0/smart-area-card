@@ -544,14 +544,10 @@ export const calvoRoomCardEditorStyles = css`
     justify-content: space-between;
   }
 
-  .section-header--collapsed {
+  .section-header {
     cursor: pointer;
-    border-radius: 6px;
-    transition: background 0.15s;
-  }
-
-  .section-header--collapsed:hover {
-    background: rgba(255, 255, 255, 0.05);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
   }
 
   .section-collapse-btn {
@@ -564,13 +560,15 @@ export const calvoRoomCardEditorStyles = css`
     align-items: center;
     justify-content: center;
     border-radius: 4px;
-    transition: color 0.15s, background 0.15s;
     flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+    pointer-events: none;
   }
 
-  .section-collapse-btn:hover {
-    color: rgba(255, 255, 255, 0.9);
-    background: rgba(255, 255, 255, 0.08);
+  .section-collapse-btn:focus,
+  .section-collapse-btn:focus-visible {
+    outline: none;
   }
 
   .section-collapsible {

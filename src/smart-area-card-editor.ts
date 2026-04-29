@@ -180,13 +180,12 @@ export class SmartAreaCardEditor extends LitElement {
 
     return html`
       <section class="section">
-        <div class="section-header ${this._cardSetupCollapsed ? "section-header--collapsed" : ""}"
-             @click=${() => { if (this._cardSetupCollapsed) this._cardSetupCollapsed = false; }}>
+        <div class="section-header" @click=${() => { this._cardSetupCollapsed = !this._cardSetupCollapsed; }}>
           <div>
             <div class="section-title">Card setup</div>
             <div class="section-subtitle">Area, background and card behaviour.</div>
           </div>
-          <button class="section-collapse-btn" @click=${(e: Event) => { e.stopPropagation(); this._cardSetupCollapsed = !this._cardSetupCollapsed; }}>
+          <button class="section-collapse-btn" @click=${(e: Event) => e.stopPropagation()}>
             <ha-icon icon=${this._cardSetupCollapsed ? "mdi:chevron-down" : "mdi:chevron-up"}></ha-icon>
           </button>
         </div>
@@ -475,13 +474,12 @@ export class SmartAreaCardEditor extends LitElement {
 
     return html`
       <section class="section">
-        <div class="section-header ${this._headerCollapsed ? "section-header--collapsed" : ""}"
-             @click=${() => { if (this._headerCollapsed) this._headerCollapsed = false; }}>
+        <div class="section-header" @click=${() => { this._headerCollapsed = !this._headerCollapsed; }}>
           <div>
             <div class="section-title">Header</div>
             <div class="section-subtitle">Name, icon and sensor strip.</div>
           </div>
-          <button class="section-collapse-btn" @click=${(e: Event) => { e.stopPropagation(); this._headerCollapsed = !this._headerCollapsed; }}>
+          <button class="section-collapse-btn" @click=${(e: Event) => e.stopPropagation()}>
             <ha-icon icon=${this._headerCollapsed ? "mdi:chevron-down" : "mdi:chevron-up"}></ha-icon>
           </button>
         </div>
