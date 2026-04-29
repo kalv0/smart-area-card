@@ -282,7 +282,6 @@ export const calvoRoomCardEditorStyles = css`
 
   .editor-header-preview {
     position: relative;
-    height: 130px;
     border-radius: var(--editor-radius-lg);
     overflow: hidden;
     background: rgba(10, 16, 28, 0.85);
@@ -305,8 +304,6 @@ export const calvoRoomCardEditorStyles = css`
     justify-content: space-between;
     gap: 12px;
     padding: 14px;
-    height: 100%;
-    box-sizing: border-box;
   }
 
   .ehp-title {
@@ -319,7 +316,6 @@ export const calvoRoomCardEditorStyles = css`
     line-height: 1.05;
     flex: 1;
     min-width: 0;
-    padding-top: 8px;
     text-shadow: 0 2px 8px rgba(0,0,0,0.55);
   }
 
