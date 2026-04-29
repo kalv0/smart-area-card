@@ -627,10 +627,14 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
         </div>
         ${this._renderDeviceGridPreview(config)}
-        ${this._showAddTypePicker ? this._renderAddTypePicker() : nothing}
         <div class="devices-list">
           ${(config.devices ?? []).map((device, index) => this._renderDevice(device, index))}
         </div>
+        <button class="dc-add-btn" type="button" @click=${() => { this._showAddTypePicker = !this._showAddTypePicker; }}>
+          <ha-icon icon="mdi:plus"></ha-icon>
+          Add device
+        </button>
+        ${this._showAddTypePicker ? this._renderAddTypePicker() : nothing}
       </section>
     `;
   }
@@ -671,10 +675,6 @@ export class SmartAreaCardEditor extends LitElement {
               </div>
             `;
           })}
-          <div class="dg-tile dg-tile--add" @click=${() => { this._showAddTypePicker = !this._showAddTypePicker; }}>
-            <ha-icon icon="mdi:plus"></ha-icon>
-            <span>Add</span>
-          </div>
         </div>
       </div>
     `;
@@ -682,17 +682,20 @@ export class SmartAreaCardEditor extends LitElement {
 
   private _renderAddTypePicker() {
     return html`
-      <div class="panel add-picker">
-        <div class="panel-title">Choose a device type</div>
-        <div class="panel-subtitle">Types are presets for default device values. They do not change the runtime logic of the card.</div>
-        <div class="type-picker-grid">
+      <div class="add-type-picker">
+        <div class="add-type-header">
+          <span class="add-type-title">Choose device type</span>
+          <button class="dc-btn" type="button" title="Cancel" @click=${() => { this._showAddTypePicker = false; }}>
+            <ha-icon icon="mdi:close"></ha-icon>
+          </button>
+        </div>
+        <div class="add-type-grid">
           ${this._typeDefinitions.map((type) => html`
-            <div class="panel type-card" style=${`border-color:${type.editor_color};background:${type.editor_color};color:${foregroundFor(type.editor_color)};`}>
-              <button type="button" class="type-select" style=${`color:${foregroundFor(type.editor_color)};`} @click=${() => this._addDevice(type.id)}>
-                <span class="type-select-icon"><ha-icon icon=${this._typeIcon(type.id)}></ha-icon></span>
-                <span class="type-select-label">${type.label}</span>
-              </button>
-            </div>
+            <button type="button" class="add-type-btn" style="--atp-color: ${type.editor_color};"
+                    @click=${() => this._addDevice(type.id)}>
+              <span class="add-type-btn-icon"><ha-icon icon=${this._typeIcon(type.id)}></ha-icon></span>
+              <span class="add-type-btn-label">${type.label}</span>
+            </button>
           `)}
         </div>
       </div>
@@ -711,12 +714,21 @@ export class SmartAreaCardEditor extends LitElement {
                data-type=${type} data-device-index=${String(index)}
                @dragover=${this._handleDragOver} @drop=${() => this._handleDrop(index)}>
         <div class="dc-header">
-          <div class="dc-badge">
-            <ha-icon icon=${this._typeIcon(type)}></ha-icon>
-          </div>
-          <div class="dc-info">
-            <span class="dc-name">${device.name || device.entity || `Device ${index + 1}`}</span>
-            ${device.entity ? html`<span class="dc-entity">${device.entity}</span>` : nothing}
+          <div class="dc-drag-zone"
+               draggable="true"
+               @dragstart=${() => this._handleDragStart(index)}
+               @dragend=${this._handleDragEnd}
+               @pointerdown=${(e: PointerEvent) => this._handleTouchDragStart(e, index)}
+               @pointermove=${this._handleTouchDragMove}
+               @pointerup=${this._handleTouchDragEnd}
+               @pointercancel=${this._handleTouchDragCancel}>
+            <div class="dc-badge">
+              <ha-icon icon=${this._typeIcon(type)}></ha-icon>
+            </div>
+            <div class="dc-info">
+              <span class="dc-name">${device.name || device.entity || `Device ${index + 1}`}</span>
+              ${device.entity ? html`<span class="dc-entity">${device.entity}</span>` : nothing}
+            </div>
           </div>
           <div class="dc-actions">
             <button class="dc-btn dc-btn--edit" type="button" title=${expanded ? "Close" : "Edit"} @click=${() => this._toggleDeviceExpanded(index)}>

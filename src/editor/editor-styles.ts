@@ -638,6 +638,118 @@ export const calvoRoomCardEditorStyles = css`
     gap: 10px;
   }
 
+  .dc-drag-zone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    cursor: grab;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dc-drag-zone:active {
+    cursor: grabbing;
+  }
+
+  /* ─── Add Device Button & Type Picker ─────────────── */
+
+  .dc-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 11px 16px;
+    border-radius: 12px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    --mdc-icon-size: 17px;
+  }
+
+  .dc-add-btn:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255, 255, 255, 0.75);
+    border-color: rgba(255, 255, 255, 0.38);
+  }
+
+  .add-type-picker {
+    background: #0f1520;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+  }
+
+  .add-type-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .add-type-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .add-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+  }
+
+  .add-type-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 16px 8px 13px;
+    border-radius: 13px;
+    border: 1px solid color-mix(in srgb, var(--atp-color) 40%, transparent);
+    background: color-mix(in srgb, var(--atp-color) 13%, rgba(8, 12, 20, 0.85));
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .add-type-btn:hover {
+    background: color-mix(in srgb, var(--atp-color) 26%, rgba(8, 12, 20, 0.7));
+    border-color: color-mix(in srgb, var(--atp-color) 65%, transparent);
+    transform: scale(1.04);
+  }
+
+  .add-type-btn:active {
+    transform: scale(0.96);
+  }
+
+  .add-type-btn-icon {
+    color: var(--atp-color);
+    --mdc-icon-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .add-type-btn-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.82);
+    text-align: center;
+    line-height: 1.15;
+  }
+
   /* Left order column — same pattern as sensor-row-order */
   .device-order-col {
     display: flex;
