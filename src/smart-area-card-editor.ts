@@ -483,9 +483,6 @@ export class SmartAreaCardEditor extends LitElement {
             <ha-icon icon=${this._headerCollapsed ? "mdi:chevron-down" : "mdi:chevron-up"}></ha-icon>
           </button>
         </div>
-        <div class="section-collapsible ${this._headerCollapsed ? "section-collapsible--collapsed" : ""}">
-        <div class="section-collapsible-inner">
-
         <div class="editor-header-preview ${bgOn && this._bgPreviewValid ? "editor-header-preview--has-bg" : ""}"
              style=${bgOn && this._bgPreviewValid ? `background-image: url('${bgOn}')` : ""}>
           <div class="ehp-overlay"></div>
@@ -506,6 +503,9 @@ export class SmartAreaCardEditor extends LitElement {
             ` : nothing}
           </div>
         </div>
+
+        <div class="section-collapsible ${this._headerCollapsed ? "section-collapsible--collapsed" : ""}">
+        <div class="section-collapsible-inner">
 
         <div class="row single">
           <label class="${roomNameEmpty ? "req-input-wrap" : ""}">
