@@ -478,11 +478,15 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   private _navigateToAutomation(entityId: string): void {
+    // automation state attributes contain `id` for UI-created automations
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const uniqueId = (this.hass as any)?.entities?.[entityId]?.unique_id;
-    if (!uniqueId) return;
-    history.pushState(null, "", `/config/automation/edit/${uniqueId}`);
-    window.dispatchEvent(new CustomEvent("location-changed", { bubbles: true, composed: true }));
+    const automationId = (this.hass?.states?.[entityId]?.attributes as any)?.id;
+    if (automationId) {
+      history.pushState(null, "", `/config/automation/edit/${automationId}`);
+      window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false }, bubbles: true, composed: true }));
+    } else {
+      this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
+    }
   }
 
   private _renderAutomationPanel(): TemplateResult | typeof nothing {
