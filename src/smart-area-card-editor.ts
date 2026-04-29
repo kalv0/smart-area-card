@@ -91,6 +91,9 @@ export class SmartAreaCardEditor extends LitElement {
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
   private _touchDragPointerId?: number;
+  private _touchDragStartX = 0;
+  private _touchDragStartY = 0;
+  private _touchDragPendingIndex?: number;
   private _touchSensorDragPointerId?: number;
   private _sectionsInitialized = false;
 
@@ -1346,8 +1349,9 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
   private _handleTouchDragStart(event: PointerEvent, index: number) {
     if (event.pointerType === "mouse") return;
-    this._dragIndex = index;
-    this._dropIndex = index;
+    this._touchDragStartX = event.clientX;
+    this._touchDragStartY = event.clientY;
+    this._touchDragPendingIndex = index;
     this._touchDragPointerId = event.pointerId;
     (event.currentTarget as HTMLElement | null)?.setPointerCapture?.(event.pointerId);
     event.preventDefault();
@@ -1355,6 +1359,15 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
   private _handleTouchDragMove = (event: PointerEvent) => {
     if (this._touchDragPointerId !== event.pointerId) return;
+    if (this._touchDragPendingIndex !== undefined && this._dragIndex === undefined) {
+      const dx = event.clientX - this._touchDragStartX;
+      const dy = event.clientY - this._touchDragStartY;
+      if (dx * dx + dy * dy < 144) return; // 12px threshold
+      this._dragIndex = this._touchDragPendingIndex;
+      this._dropIndex = this._touchDragPendingIndex;
+      this._touchDragPendingIndex = undefined;
+    }
+    if (this._dragIndex === undefined) return;
     const targetIndex = this._indexFromPoint(event.clientX, event.clientY);
     if (targetIndex !== undefined) this._dropIndex = targetIndex;
     event.preventDefault();
@@ -1362,15 +1375,21 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
   private _handleTouchDragEnd = (event: PointerEvent) => {
     if (this._touchDragPointerId !== event.pointerId) return;
-    const targetIndex = this._dropIndex ?? this._indexFromPoint(event.clientX, event.clientY);
-    if (targetIndex !== undefined) this._reorderTo(targetIndex); else { this._dragIndex = undefined; this._dropIndex = undefined; }
+    if (this._dragIndex !== undefined) {
+      const targetIndex = this._dropIndex ?? this._indexFromPoint(event.clientX, event.clientY);
+      if (targetIndex !== undefined) this._reorderTo(targetIndex);
+    }
     this._touchDragPointerId = undefined;
+    this._touchDragPendingIndex = undefined;
+    this._dragIndex = undefined;
+    this._dropIndex = undefined;
     event.preventDefault();
   };
 
   private _handleTouchDragCancel = (event: PointerEvent) => {
     if (this._touchDragPointerId !== event.pointerId) return;
     this._touchDragPointerId = undefined;
+    this._touchDragPendingIndex = undefined;
     this._dragIndex = undefined;
     this._dropIndex = undefined;
   };

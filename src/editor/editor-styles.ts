@@ -647,10 +647,19 @@ export const calvoRoomCardEditorStyles = css`
     cursor: grab;
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   .dc-drag-zone:active {
     cursor: grabbing;
+  }
+
+  .dc-name,
+  .dc-entity {
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   /* ─── Add Device Button & Type Picker ─────────────── */
