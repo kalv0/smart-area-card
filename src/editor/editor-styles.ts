@@ -2415,7 +2415,7 @@ export const calvoRoomCardEditorStyles = css`
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 10px 9px 12px;
+    padding: 6px 8px 6px 10px;
     min-width: 0;
   }
 
@@ -2440,14 +2440,14 @@ export const calvoRoomCardEditorStyles = css`
   .sr-chip {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     background: color-mix(in srgb, var(--sr-accent, #9aa7b6) 18%, transparent);
     border-radius: 20px;
-    padding: 3px 9px 3px 6px;
+    padding: 4px 11px 4px 7px;
     flex-shrink: 0;
-    --mdc-icon-size: 14px;
+    --mdc-icon-size: 16px;
     color: var(--sr-accent, #9aa7b6);
-    font-size: 0.75rem;
+    font-size: 0.88rem;
     font-weight: 700;
   }
 
@@ -2457,11 +2457,11 @@ export const calvoRoomCardEditorStyles = css`
     outline: none;
     color: inherit;
     font: inherit;
-    font-size: 0.75rem;
+    font-size: 0.88rem;
     font-weight: 700;
     padding: 0;
     min-width: 0;
-    width: 100px;
+    width: 110px;
   }
 
   .sr-chip-name::placeholder {

@@ -406,7 +406,6 @@ export class SmartAreaCardEditor extends LitElement {
                          @pointerdown=${(e: Event) => e.stopPropagation()}
                          @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
                 </div>
-                ${sensor.entity ? html`<span class="sr-entity-id">${sensor.entity}</span>` : nothing}
               </div>
               <div class="sr-actions">
                 <label class="sr-alert-toggle" title="Alert">
@@ -447,10 +446,9 @@ export class SmartAreaCardEditor extends LitElement {
                 <ha-icon icon=${meta.icon}></ha-icon>
                 <span>${meta.label}</span>
               </div>
-              ${entityId ? html`<span class="sr-entity-id">${entityId}</span>` : nothing}
+              ${isFirstFilled ? html`<span class="sr-primary-star" title="Primary sensor">★</span>` : nothing}
             </div>
             <div class="sr-actions">
-              ${isFirstFilled ? html`<span class="sr-primary-star" title="Primary sensor">★</span>` : nothing}
               <label class="sr-alert-toggle" title="Alert">
                 ${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(sAlertKey, "enabled", v))}
                 <ha-icon icon="mdi:bell-outline"></ha-icon>
