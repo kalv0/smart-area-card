@@ -544,6 +544,44 @@ export const calvoRoomCardEditorStyles = css`
     justify-content: space-between;
   }
 
+  .section-collapse-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+
+  .section-collapse-btn:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .section-collapsible {
+    display: grid;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition: grid-template-rows 0.25s ease, opacity 0.2s ease;
+  }
+
+  .section-collapsible--collapsed {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+
+  .section-collapsible-inner {
+    min-height: 0;
+    overflow: hidden;
+    display: grid;
+    gap: 10px;
+  }
+
   .device-header {
     display: grid;
     grid-template-columns: 1fr;

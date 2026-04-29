@@ -86,10 +86,13 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _deviceRegistry: DeviceRegistryEntry[] = [];
   @state() private _bgPreviewValid = false;
   @state() private _bgPreviewError = false;
+  @state() private _cardSetupCollapsed = false;
+  @state() private _headerCollapsed = false;
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
   private _touchDragPointerId?: number;
   private _touchSensorDragPointerId?: number;
+  private _sectionsInitialized = false;
 
   protected firstUpdated(): void {
     this._refreshRegistries();
@@ -107,6 +110,12 @@ export class SmartAreaCardEditor extends LitElement {
     }
     const deviceCount = this._config?.devices?.length ?? 0;
     this._expandedDevices = this._expandedDevices.filter((index) => index < deviceCount);
+    if (!this._sectionsInitialized) {
+      this._sectionsInitialized = true;
+      const hasDevices = deviceCount > 0;
+      this._cardSetupCollapsed = hasDevices;
+      this._headerCollapsed = hasDevices;
+    }
     // Registry is loaded once in firstUpdated. Do not re-fetch on every config change.
   }
 
@@ -171,10 +180,17 @@ export class SmartAreaCardEditor extends LitElement {
 
     return html`
       <section class="section">
-        <div class="section-header"><div>
-          <div class="section-title">Card setup</div>
-          <div class="section-subtitle">Area, background and card behaviour.</div>
-        </div></div>
+        <div class="section-header">
+          <div>
+            <div class="section-title">Card setup</div>
+            <div class="section-subtitle">Area, background and card behaviour.</div>
+          </div>
+          <button class="section-collapse-btn" @click=${() => { this._cardSetupCollapsed = !this._cardSetupCollapsed; }}>
+            <ha-icon icon=${this._cardSetupCollapsed ? "mdi:chevron-down" : "mdi:chevron-up"}></ha-icon>
+          </button>
+        </div>
+        <div class="section-collapsible ${this._cardSetupCollapsed ? "section-collapsible--collapsed" : ""}">
+        <div class="section-collapsible-inner">
 
         <div class="area-picker-block">
           <div class="area-picker-label req-label ${hasArea ? "" : "req-label--invalid"}">
@@ -299,6 +315,7 @@ export class SmartAreaCardEditor extends LitElement {
         </div>
 
         `}
+        </div></div>
       </section>
     `;
   }
@@ -457,10 +474,17 @@ export class SmartAreaCardEditor extends LitElement {
 
     return html`
       <section class="section">
-        <div class="section-header"><div>
-          <div class="section-title">Header</div>
-          <div class="section-subtitle">Name, icon and sensor strip.</div>
-        </div></div>
+        <div class="section-header">
+          <div>
+            <div class="section-title">Header</div>
+            <div class="section-subtitle">Name, icon and sensor strip.</div>
+          </div>
+          <button class="section-collapse-btn" @click=${() => { this._headerCollapsed = !this._headerCollapsed; }}>
+            <ha-icon icon=${this._headerCollapsed ? "mdi:chevron-down" : "mdi:chevron-up"}></ha-icon>
+          </button>
+        </div>
+        <div class="section-collapsible ${this._headerCollapsed ? "section-collapsible--collapsed" : ""}">
+        <div class="section-collapsible-inner">
 
         <div class="editor-header-preview ${bgOn && this._bgPreviewValid ? "editor-header-preview--has-bg" : ""}"
              style=${bgOn && this._bgPreviewValid ? `background-image: url('${bgOn}')` : ""}>
@@ -506,6 +530,7 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
         </div>
         `}
+        </div></div>
       </section>
     `;
   }
