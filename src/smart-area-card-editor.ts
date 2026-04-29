@@ -115,10 +115,13 @@ export class SmartAreaCardEditor extends LitElement {
       const config = this._config;
       if (!config) return nothing;
       const hasArea = this._isRoomIdValid(config.room_id);
+      const areaName = this._areaName(config.room_id);
+      const roomNameEmpty = hasArea && !(config.room ?? areaName ?? "").trim();
+      const canShowAll = hasArea && !roomNameEmpty;
       return html`<div class="editor-shell"><div class="stack">
         ${this._renderGeneral(config, hasArea)}
-        ${hasArea ? this._renderHeaderSection(config) : nothing}
-        ${hasArea ? this._renderDevices(config) : nothing}
+        ${hasArea ? this._renderHeaderSection(config, roomNameEmpty) : nothing}
+        ${canShowAll ? this._renderDevices(config) : nothing}
       </div></div>`;
     } catch {
       return html`<div class="section"><div class="section-title">Editor fallback</div><div class="section-subtitle">The visual editor recovered from an invalid configuration state.</div></div>`;
@@ -402,10 +405,9 @@ export class SmartAreaCardEditor extends LitElement {
     `;
   }
 
-  private _renderHeaderSection(config: SmartRoomCardConfig) {
+  private _renderHeaderSection(config: SmartRoomCardConfig, roomNameEmpty: boolean) {
     const areaName = this._areaName(config.room_id);
     const roomName = config.room ?? areaName ?? "";
-    const roomNameEmpty = !roomName.trim();
     const showAreaIcon = config.ui?.show_area_icon ?? false;
     const areaIcon = (this.hass as import("./types/ha-extensions").HomeAssistantExtended)?.areas?.[config.room_id ?? ""]?.icon ?? "mdi:home-outline";
     const automationEnabled = config.ui?.automation_badge_enabled ?? false;
@@ -486,6 +488,7 @@ export class SmartAreaCardEditor extends LitElement {
           ${roomNameEmpty ? this._reqError("Area name is required.", "Use area name", () => { this._patch({ room: areaName }); }) : nothing}
         </div>
 
+        ${roomNameEmpty ? nothing : html`
         <div class="row single">
           ${this._renderCompactCheckField("Show area icon", "Shows the area icon next to the name in the header.", showAreaIcon, (checked) => this._setUi("show_area_icon", checked))}
         </div>
@@ -498,6 +501,7 @@ export class SmartAreaCardEditor extends LitElement {
             ${this._renderToggleField("Show automation count", "Shows a badge with the count of enabled automations in this area.", automationEnabled, (checked) => this._setUi("automation_badge_enabled", checked), !this._isRoomIdValid(config.room_id))}
           </div>
         </div>
+        `}
       </section>
     `;
   }
