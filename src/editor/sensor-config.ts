@@ -3,7 +3,7 @@ import type { SmartRoomCardConfig, SmartRoomCustomSensor } from "../helpers/type
 type Sensors = SmartRoomCardConfig["sensors"];
 type SensorAlertKey = "temperature" | "humidity" | "co2" | "voc" | "pm25" | "pm10" | "aqi" | "presence" | "noise" | "illuminance" | "power" | "energy" | "carbon_monoxide" | "radon" | "moisture";
 type SensorFilterKey = SensorAlertKey;
-type AlertField = "enabled" | "min" | "max" | "eq";
+type AlertField = "enabled" | "min" | "max" | "eq" | "neq" | "text_eq" | "text_neq";
 
 export const DEFAULT_SENSOR_ORDER: string[] = ["temperature", "humidity", "presence", "co2", "illuminance", "voc", "pm25", "pm10", "aqi", "noise", "power", "energy", "carbon_monoxide", "radon", "moisture"];
 
@@ -159,7 +159,7 @@ export function updateCustomSensorAlert(
   sensors: Sensors,
   i: number,
   field: AlertField,
-  value: boolean | number | undefined,
+  value: boolean | number | string | undefined,
 ): Sensors {
   const custom = [...(sensors?.custom ?? [])];
   custom[i] = { ...custom[i], alert: { ...(custom[i]?.alert ?? {}), [field]: value } };

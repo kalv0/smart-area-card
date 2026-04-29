@@ -156,11 +156,14 @@ export interface SmartRoomNumericSensorAlert {
   min?: number;
   max?: number;
   eq?: number;
+  text_eq?: string;
+  text_neq?: string;
 }
 
 export interface SmartRoomPresenceSensorAlert {
   enabled?: boolean;
   eq?: string;
+  neq?: string;
 }
 
 export interface SmartRoomCustomSensor {

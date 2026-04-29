@@ -2361,12 +2361,12 @@ export const calvoRoomCardEditorStyles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px;
-    border-radius: var(--editor-radius-md);
-    border: 1px dashed rgba(255, 255, 255, 0.2);
+    padding: 6px 10px;
+    border-radius: 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.15);
     background: rgba(255, 255, 255, 0.03);
     color: var(--editor-muted);
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
     box-sizing: border-box;
@@ -2515,6 +2515,14 @@ export const calvoRoomCardEditorStyles = css`
     background: rgba(255, 255, 255, 0.07);
   }
 
+  .sr-alert-toggle--active {
+    color: #fb923c;
+  }
+
+  .sr-alert-toggle--active:hover {
+    color: #fdba74;
+  }
+
   .sr-alert-toggle .ios-toggle {
     padding: 0;
     border: none;
@@ -2522,7 +2530,7 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .sr-body {
-    padding: 0 12px 10px;
+    padding: 0 10px 8px;
     display: grid;
     gap: 6px;
   }

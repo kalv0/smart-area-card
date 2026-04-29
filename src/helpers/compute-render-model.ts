@@ -106,16 +106,21 @@ export function computeRenderModel(
   }));
   customSensorEntries.forEach(({ config: sc, entity }, i) => {
     if (!sc.alert?.enabled || !entity || isUnavailable(entity)) return;
-    const value = Number(entity.state);
-    if (!Number.isFinite(value)) return;
-    const { min, max, eq } = sc.alert;
-    if (
-      (min !== undefined && value < min) ||
-      (max !== undefined && value > max) ||
-      (eq !== undefined && value === eq)
-    ) {
+    const { min, max, text_eq, text_neq } = sc.alert;
+    const state = entity.state;
+    let triggered = false;
+    if (text_eq !== undefined && state === text_eq) triggered = true;
+    if (!triggered && text_neq !== undefined && state !== text_neq) triggered = true;
+    if (!triggered && (min !== undefined || max !== undefined)) {
+      const value = Number(state);
+      if (Number.isFinite(value)) {
+        if (min !== undefined && value < min) triggered = true;
+        if (max !== undefined && value > max) triggered = true;
+      }
+    }
+    if (triggered) {
       const unit = entity.attributes.unit_of_measurement ? ` ${entity.attributes.unit_of_measurement}` : "";
-      const stateStr = `${entity.state}${unit}`;
+      const stateStr = `${state}${unit}`;
       climateAlertBadges.push({
         key: `custom_${i}`,
         icon: sc.icon || "mdi:gauge",

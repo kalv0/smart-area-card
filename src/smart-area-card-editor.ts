@@ -78,6 +78,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _dropIndex?: number;
   @state() private _sensorDragIndex?: number;
   @state() private _sensorDropIndex?: number;
+  @state() private _expandedSensors: string[] = [];
   @state() private _showAddTypePicker = false;
   @state() private _showAdvancedCardSetup = false;
   @state() private _showAdvancedBattery = false;
@@ -383,6 +384,8 @@ export class SmartAreaCardEditor extends LitElement {
         const i = Number(key.slice(7));
         const sensor = customSensors[i];
         if (!sensor) return nothing;
+        const hasEntity = Boolean(sensor.entity);
+        const isExpanded = !hasEntity || this._expandedSensors.includes(key);
         const alertEnabled = sensor.alert?.enabled === true;
         return html`
           ${tip}
@@ -408,16 +411,24 @@ export class SmartAreaCardEditor extends LitElement {
                 </div>
               </div>
               <div class="sr-actions">
-                <label class="sr-alert-toggle" title="Alert">
-                  ${this._renderInlineToggle(alertEnabled, (v) => this._updateCustomSensorAlert(i, "enabled", v))}
-                  <ha-icon icon="mdi:bell-outline"></ha-icon>
-                </label>
+                ${hasEntity ? html`
+                  <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert">
+                    ${this._renderInlineToggle(alertEnabled, (v) => this._updateCustomSensorAlert(i, "enabled", v))}
+                    <ha-icon icon="mdi:alert-outline"></ha-icon>
+                  </label>
+                ` : nothing}
                 <button class="dc-btn dc-btn--del" type="button" title="Remove" @click=${() => this._removeCustomSensor(i)}>
                   <ha-icon icon="mdi:delete-outline"></ha-icon>
                 </button>
+                ${hasEntity ? html`
+                  <button class="dc-btn" type="button" title=${isExpanded ? "Collapse" : "Edit"}
+                          @click=${() => this._toggleSensorExpanded(key)}>
+                    <ha-icon icon=${isExpanded ? "mdi:chevron-up" : "mdi:pencil-outline"}></ha-icon>
+                  </button>
+                ` : nothing}
               </div>
             </div>
-            ${this._renderCustomSensor(sensor, i, config, accent, alertEnabled)}
+            ${isExpanded ? this._renderCustomSensor(sensor, i, config, accent, alertEnabled) : nothing}
           </div>`;
       }
 
@@ -426,6 +437,8 @@ export class SmartAreaCardEditor extends LitElement {
       const alertConfig = config.sensors?.alerts?.[key as keyof typeof config.sensors.alerts];
       const alertEnabled = alertConfig?.enabled === true;
       const entityId = (config.sensors as Record<string, string | undefined>)?.[key] ?? "";
+      const hasEntity = Boolean(entityId);
+      const isExpanded = !hasEntity || this._expandedSensors.includes(key);
       const sAlertKey = key as "temperature";
       return html`
         ${tip}
@@ -449,13 +462,19 @@ export class SmartAreaCardEditor extends LitElement {
               ${isFirstFilled ? html`<span class="sr-primary-star" title="Primary sensor">★</span>` : nothing}
             </div>
             <div class="sr-actions">
-              <label class="sr-alert-toggle" title="Alert">
-                ${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(sAlertKey, "enabled", v))}
-                <ha-icon icon="mdi:bell-outline"></ha-icon>
-              </label>
+              ${hasEntity ? html`
+                <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert">
+                  ${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(sAlertKey, "enabled", v))}
+                  <ha-icon icon="mdi:alert-outline"></ha-icon>
+                </label>
+                <button class="dc-btn" type="button" title=${isExpanded ? "Collapse" : "Edit"}
+                        @click=${() => this._toggleSensorExpanded(key)}>
+                  <ha-icon icon=${isExpanded ? "mdi:chevron-up" : "mdi:pencil-outline"}></ha-icon>
+                </button>
+              ` : nothing}
             </div>
           </div>
-          ${this._renderPresetSensor(key as string & keyof typeof SENSOR_ACCENT, meta.label, meta.icon, config, meta.domains, accent, alertEnabled, alertConfig)}
+          ${isExpanded ? this._renderPresetSensor(key as string & keyof typeof SENSOR_ACCENT, meta.label, meta.icon, config, meta.domains, accent, alertEnabled, alertConfig) : nothing}
         </div>`;
     };
 
@@ -613,13 +632,14 @@ export class SmartAreaCardEditor extends LitElement {
   ) {
     const entityId = (config.sensors as Record<string, string | undefined>)?.[key] ?? "";
     const hasRoomId = Boolean(this._config?.room_id?.trim());
-    const filtersKey = key as keyof NonNullable<typeof config.sensors>["filters"] & string;
-    const restrictToRoom = hasRoomId && config.sensors?.filters?.[filtersKey]?.restrict_to_room_area !== false;
+    const filterEntry = (config.sensors?.filters as Record<string, { restrict_to_room_area?: boolean } | undefined> | undefined)?.[key];
+    const restrictToRoom = hasRoomId && filterEntry?.restrict_to_room_area !== false;
     const isPresence = key === "presence";
     const numericAlertConfig = !isPresence ? (alertConfig as SmartRoomNumericSensorAlert | undefined) : undefined;
     const deviceClasses = SENSOR_DEVICE_CLASSES[key];
     const sAlertKey = key as "temperature";
     const sFilterKey = key as "temperature";
+    const presenceAlertConfig = isPresence ? (alertConfig as import("./helpers").SmartRoomPresenceSensorAlert | undefined) : undefined;
     return html`
       <div class="sr-body">
         <div class="sensor-row-body">
@@ -628,11 +648,11 @@ export class SmartAreaCardEditor extends LitElement {
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
             ${isPresence ? html`
-              <label class="sensor-alert-full">When equal to<input type="text" .value=${typeof alertConfig?.eq === "string" ? alertConfig.eq : ""} placeholder="e.g. on" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "eq", (e.target as HTMLInputElement).value || undefined)} /></label>
+              <label>Is<input type="text" .value=${presenceAlertConfig?.eq ?? ""} placeholder="e.g. on" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "eq", (e.target as HTMLInputElement).value || undefined)} /></label>
+              <label>Is not<input type="text" .value=${presenceAlertConfig?.neq ?? ""} placeholder="e.g. off" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "neq", (e.target as HTMLInputElement).value || undefined)} /></label>
             ` : html`
               <label>Min<input type="number" .value=${typeof numericAlertConfig?.min === "number" ? String(numericAlertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
               <label>Max<input type="number" .value=${typeof numericAlertConfig?.max === "number" ? String(numericAlertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-              <label>Eq<input type="number" .value=${typeof numericAlertConfig?.eq === "number" ? String(numericAlertConfig.eq) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "eq", toNumberOrUndefined(valueFromEvent(e)))} /></label>
             `}
           </div>
         ` : nothing}
@@ -651,9 +671,10 @@ export class SmartAreaCardEditor extends LitElement {
         </div>
         ${alertEnabled ? html`
           <div class="sensor-alert-row">
+            <label>Is<input type="text" .value=${sensor.alert?.text_eq ?? ""} placeholder="state text" @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "text_eq", valueFromEvent(e) || undefined)} /></label>
+            <label>Is not<input type="text" .value=${sensor.alert?.text_neq ?? ""} placeholder="state text" @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "text_neq", valueFromEvent(e) || undefined)} /></label>
             <label>Min<input type="number" .value=${sensor.alert?.min !== undefined ? String(sensor.alert.min) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
             <label>Max<input type="number" .value=${sensor.alert?.max !== undefined ? String(sensor.alert.max) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-            <label>Eq<input type="number" .value=${sensor.alert?.eq !== undefined ? String(sensor.alert.eq) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "eq", toNumberOrUndefined(valueFromEvent(e)))} /></label>
           </div>
         ` : nothing}
       </div>
@@ -1369,6 +1390,10 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     this._expandedDevices = this._expandedDevices.includes(index) ? this._expandedDevices.filter((item) => item !== index) : [...this._expandedDevices, index];
   }
 
+  private _toggleSensorExpanded(key: string) {
+    this._expandedSensors = this._expandedSensors.includes(key) ? this._expandedSensors.filter((k) => k !== key) : [...this._expandedSensors, key];
+  }
+
   private _moveDevice(index: number, direction: -1 | 1) {
     const devices = [...(this._config?.devices ?? [])];
     const nextIndex = index + direction;
@@ -1715,7 +1740,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   private _setSensorFilter(key: string, field: "restrict_to_room_area", value: boolean) {
     this._patch({ sensors: patchSensorFilter(this._config?.sensors, key as "temperature", field, value) });
   }
-  private _setSensorAlert(key: string, field: "enabled" | "min" | "max" | "eq", value: boolean | number | string | undefined) {
+  private _setSensorAlert(key: string, field: "enabled" | "min" | "max" | "eq" | "neq" | "text_eq" | "text_neq", value: boolean | number | string | undefined) {
     this._patch({ sensors: patchSensorAlert(this._config?.sensors, key as "temperature", field, value) });
   }
   private _addCustomSensor() { this._patch({ sensors: addCustomSensor(this._config?.sensors) }); }
@@ -1723,7 +1748,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   private _updateCustomSensor(i: number, patch: Partial<import("./helpers").SmartRoomCustomSensor>) {
     this._patch({ sensors: updateCustomSensor(this._config?.sensors, i, patch) });
   }
-  private _updateCustomSensorAlert(i: number, field: "enabled" | "min" | "max" | "eq", value: boolean | number | undefined) {
+  private _updateCustomSensorAlert(i: number, field: "enabled" | "min" | "max" | "eq" | "neq" | "text_eq" | "text_neq", value: boolean | number | string | undefined) {
     this._patch({ sensors: updateCustomSensorAlert(this._config?.sensors, i, field, value) });
   }
   private _setCustomSensorEntity(i: number, value: string) {

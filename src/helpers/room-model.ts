@@ -103,7 +103,7 @@ export function getClimateEntities(sensors: SmartRoomCardConfig["sensors"]): str
 export function evaluateClimateAlert(
   key: string,
   entity: HassEntity | undefined,
-  alertConfig: { enabled?: boolean; min?: number; max?: number; eq?: number | string } | undefined,
+  alertConfig: { enabled?: boolean; min?: number; max?: number; eq?: number | string; neq?: string; text_eq?: string; text_neq?: string } | undefined,
   label: string,
   icon: string,
   roomName?: string,
@@ -118,18 +118,18 @@ export function evaluateClimateAlert(
     ? `${roomName} ${label.toLowerCase()}: ${stateStr}`
     : `${label}: ${stateStr}`;
 
-  if (alertConfig.eq !== undefined && typeof alertConfig.eq === "string") {
-    return entity.state === alertConfig.eq ? { key, label, reason: message, icon } : undefined;
-  }
+  const state = entity.state;
 
-  const value = Number(entity.state);
+  if (alertConfig.eq !== undefined && typeof alertConfig.eq === "string" && state === alertConfig.eq) return { key, label, reason: message, icon };
+  if (alertConfig.neq !== undefined && state !== alertConfig.neq) return { key, label, reason: message, icon };
+  if (alertConfig.text_eq !== undefined && state === alertConfig.text_eq) return { key, label, reason: message, icon };
+  if (alertConfig.text_neq !== undefined && state !== alertConfig.text_neq) return { key, label, reason: message, icon };
+
+  const value = Number(state);
   if (!Number.isFinite(value)) return undefined;
 
   if (alertConfig.min !== undefined && value < alertConfig.min) return { key, label, reason: message, icon };
   if (alertConfig.max !== undefined && value > alertConfig.max) return { key, label, reason: message, icon };
-  if (alertConfig.eq !== undefined && typeof alertConfig.eq === "number" && value === alertConfig.eq) {
-    return { key, label, reason: message, icon };
-  }
 
   return undefined;
 }
