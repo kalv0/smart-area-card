@@ -119,12 +119,10 @@ export function computeRenderModel(
       }
     }
     if (triggered) {
-      const unit = entity.attributes.unit_of_measurement ? ` ${entity.attributes.unit_of_measurement}` : "";
-      const stateStr = `${state}${unit}`;
       climateAlertBadges.push({
         key: `custom_${i}`,
         icon: sc.icon || "mdi:gauge",
-        messages: [roomName ? `${roomName} ${sc.name.toLowerCase()}: ${stateStr}` : `${sc.name}: ${stateStr}`],
+        messages: [sc.name],
       });
     }
   });

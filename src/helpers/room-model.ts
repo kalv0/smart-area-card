@@ -112,11 +112,7 @@ export function evaluateClimateAlert(
     return undefined;
   }
 
-  const unit = entity.attributes.unit_of_measurement ? ` ${entity.attributes.unit_of_measurement}` : "";
-  const stateStr = `${entity.state}${unit}`;
-  const message = roomName
-    ? `${roomName} ${label.toLowerCase()}: ${stateStr}`
-    : `${label}: ${stateStr}`;
+  const message = label;
 
   const state = entity.state;
 
