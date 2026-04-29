@@ -327,8 +327,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       <section class="header">
         <div class="header-top">
           <div class="title-line">
-            ${this._config?.ui?.show_area_icon && model.areaIcon ? html`<ha-icon icon=${model.areaIcon}></ha-icon>` : nothing}
             ${alertBadge}
+            ${this._config?.ui?.show_area_icon && model.areaIcon ? html`<ha-icon icon=${model.areaIcon}></ha-icon>` : nothing}
             <span>${room}</span>
             <div class="header-states">
               ${this._renderAutomationBadge()}
@@ -587,7 +587,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         </div>
 
         <div class="tile-label">
-          ${this._config?.ui?.show_entity_icons ? html`<ha-icon class="tile-entity-icon" icon=${device.icon}></ha-icon>` : nothing}
+          ${(device.config.show_entity_icons ?? this._config?.ui?.show_entity_icons) ? html`<ha-icon class="tile-entity-icon" icon=${device.icon}></ha-icon>` : nothing}
           <div class="tile-name">${device.label}</div>
           <div class="tile-state">${device.isOffline ? "Offline" : device.stateText}</div>
         </div>

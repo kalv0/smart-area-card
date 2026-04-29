@@ -191,7 +191,7 @@ export const calvoRoomCardEditorStyles = css`
 
   .bg-preview--banner,
   .bg-preview--split {
-    height: 110px;
+    height: 140px;
   }
 
   .bg-preview-img {
@@ -274,6 +274,91 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .bg-preview-sensor-item--primary {
+    font-size: 1.28rem;
+    font-weight: 700;
+  }
+
+  /* ─── Editor header preview ─────────────────────────── */
+
+  .editor-header-preview {
+    position: relative;
+    height: 130px;
+    border-radius: var(--editor-radius-lg);
+    overflow: hidden;
+    background: rgba(10, 16, 28, 0.85);
+    background-size: cover;
+    background-position: top center;
+    border: 1px solid var(--editor-border);
+  }
+
+  .ehp-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 100%);
+  }
+
+  .ehp-top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+    height: 100%;
+    box-sizing: border-box;
+  }
+
+  .ehp-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 2.3rem;
+    font-weight: 800;
+    color: white;
+    line-height: 1.05;
+    flex: 1;
+    min-width: 0;
+    padding-top: 8px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.55);
+  }
+
+  .ehp-title--empty span {
+    opacity: 0.35;
+    font-style: italic;
+  }
+
+  .ehp-title ha-icon {
+    --mdc-icon-size: 1em;
+    flex-shrink: 0;
+  }
+
+  .ehp-sensors {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    color: white;
+    text-align: right;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .ehp-sensor-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: flex-end;
+    white-space: nowrap;
+    font-size: 0.82rem;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+  }
+
+  .ehp-sensor-item ha-icon {
+    --mdc-icon-size: 16px;
+  }
+
+  .ehp-sensor-item--primary {
     font-size: 1.28rem;
     font-weight: 700;
   }

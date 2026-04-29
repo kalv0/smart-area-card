@@ -115,13 +115,10 @@ export class SmartAreaCardEditor extends LitElement {
       const config = this._config;
       if (!config) return nothing;
       const hasArea = this._isRoomIdValid(config.room_id);
-      const areaName = this._areaName(config.room_id);
-      const roomNameEmpty = hasArea && !(config.room ?? areaName ?? "").trim();
-      const canShowAll = hasArea && !roomNameEmpty;
       return html`<div class="editor-shell"><div class="stack">
-        ${this._renderGeneral(config, hasArea, roomNameEmpty)}
-        ${canShowAll ? this._renderHeaderData(config) : nothing}
-        ${canShowAll ? this._renderDevices(config) : nothing}
+        ${this._renderGeneral(config, hasArea)}
+        ${hasArea ? this._renderHeaderSection(config) : nothing}
+        ${hasArea ? this._renderDevices(config) : nothing}
       </div></div>`;
     } catch {
       return html`<div class="section"><div class="section-title">Editor fallback</div><div class="section-subtitle">The visual editor recovered from an invalid configuration state.</div></div>`;
@@ -162,56 +159,20 @@ export class SmartAreaCardEditor extends LitElement {
 
   /* ──────────────────────────────────────────────────────────────────── */
 
-  private _renderGeneral(config: SmartRoomCardConfig, hasArea: boolean, roomNameEmpty: boolean) {
+  private _renderGeneral(config: SmartRoomCardConfig, hasArea: boolean) {
     const areaName = this._areaName(config.room_id);
     const images = config.ui?.images ?? {};
     const darkEnabled = images.dark_mode_enabled !== false;
     const darkCond = images.dark_mode_condition ?? "always";
     const bgOn = images.background_on ?? "";
 
-    // Sensors for preview strip
-    const _previewSensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
-    const _SENSOR_ICONS: Record<string, string> = {
-      temperature: "mdi:thermometer", humidity: "mdi:water-percent", co2: "mdi:molecule-co2",
-      voc: "mdi:flask-outline", pm25: "mdi:blur", aqi: "mdi:gauge", presence: "mdi:motion-sensor", noise: "mdi:volume-high",
-    };
-    const _previewSensors: Array<{ icon: string; value: string; primary: boolean }> = [];
-    for (const _key of _previewSensorOrder) {
-      if (_key.startsWith("custom_")) {
-        const _ci = Number(_key.slice(7));
-        const _sc = config.sensors?.custom?.[_ci];
-        if (_sc?.entity) {
-          const _e = this.hass?.states[_sc.entity];
-          if (_e && _e.state !== "unavailable" && _e.state !== "unknown") {
-            const _u = _e.attributes["unit_of_measurement"] as string | undefined ?? "";
-            _previewSensors.push({ icon: _sc.icon || "mdi:gauge", value: `${_e.state}${_u ? ` ${_u}` : ""}`, primary: _previewSensors.length === 0 });
-          }
-        }
-      } else {
-        const _eid = (config.sensors as Record<string, unknown> | undefined)?.[_key] as string | undefined;
-        if (_eid) {
-          const _e = this.hass?.states[_eid];
-          if (_e && _e.state !== "unavailable" && _e.state !== "unknown") {
-            const _u = _e.attributes["unit_of_measurement"] as string | undefined ?? "";
-            const _raw = _e.state;
-            const _val = _key === "temperature" && Number.isFinite(Number(_raw))
-              ? `${Number(_raw).toFixed(1)}${_u || "°"}`
-              : `${_raw}${_u ? ` ${_u}` : ""}`;
-            const _icon = (config.sensors?.icons as Record<string, string> | undefined)?.[_key] || _SENSOR_ICONS[_key] || "mdi:gauge";
-            _previewSensors.push({ icon: _icon, value: _val, primary: _previewSensors.length === 0 });
-          }
-        }
-      }
-    }
-
     return html`
       <section class="section">
         <div class="section-header"><div>
           <div class="section-title">Card setup</div>
-          <div class="section-subtitle">Room identity and background.</div>
+          <div class="section-subtitle">Area, background and card behaviour.</div>
         </div></div>
 
-        <!-- ① Area picker -->
         <div class="area-picker-block">
           <div class="area-picker-label req-label ${hasArea ? "" : "req-label--invalid"}">
             Area${!hasArea ? this._reqBadge() : nothing}
@@ -226,30 +187,13 @@ export class SmartAreaCardEditor extends LitElement {
 
         ${!hasArea ? nothing : html`
 
-        <!-- ① b Area name -->
-        <div class="row single">
-          <label class="${roomNameEmpty ? "req-input-wrap" : ""}">
-            Area name
-            <span class="hint">Header label displayed on the card.</span>
-            <input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} />
-          </label>
-          ${roomNameEmpty ? this._reqError("Area name is required.", "Use area name", () => { this._patch({ room: areaName }); }) : nothing}
-        </div>
-
-        ${roomNameEmpty ? nothing : html`
-
-        <!-- ② Background -->
         <div class="panel">
           <div class="panel-title">Background</div>
-
           <div class="row single">
             <label>
               Area image
               <span class="hint">We recommend a horizontal photo of the nicest corner of ${areaName || "your area"}.</span>
-              <input
-                type="text"
-                .value=${bgOn}
-                placeholder="/local/img/areas/bedroom.png"
+              <input type="text" .value=${bgOn} placeholder="/local/img/areas/bedroom.png"
                 @input=${(e: InputEvent) => {
                   const val = valueFromEvent(e);
                   this._bgPreviewValid = false;
@@ -262,9 +206,7 @@ export class SmartAreaCardEditor extends LitElement {
               />
             </label>
           </div>
-
           ${bgOn && this._bgPreviewError ? this._reqError("Image not valid or not found.") : nothing}
-
           ${bgOn ? html`
             <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"
                  style=${this._bgPreviewValid ? "" : "display:none"}>
@@ -273,17 +215,6 @@ export class SmartAreaCardEditor extends LitElement {
                 @error=${() => { this._bgPreviewValid = false; this._bgPreviewError = true; }}
               />
               ${darkEnabled ? html`<img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt="" />` : nothing}
-              ${config.room ? html`<span class="bg-preview-room-name">${config.room}</span>` : nothing}
-              ${_previewSensors.length ? html`
-                <div class="bg-preview-sensor-strip">
-                  ${_previewSensors.map((s) => html`
-                    <div class="bg-preview-sensor-item ${s.primary ? "bg-preview-sensor-item--primary" : ""}">
-                      <ha-icon icon=${s.icon}></ha-icon>
-                      <span>${s.value}</span>
-                    </div>
-                  `)}
-                </div>
-              ` : nothing}
             </div>
             ${!this._bgPreviewValid ? html`
               <img style="display:none;position:absolute" src=${bgOn} alt=""
@@ -291,77 +222,76 @@ export class SmartAreaCardEditor extends LitElement {
               />
             ` : nothing}
           ` : nothing}
-
           ${this._bgPreviewValid ? html`
-          <div class="row single">
-            ${this._renderToggleField(
-              "Dark version when lights are off",
-              "Applies a dark filter to the same image when all devices are inactive.",
-              darkEnabled,
-              (checked) => this._setImageKey("dark_mode_enabled", checked || undefined),
-            )}
-          </div>
-
-          ${darkEnabled ? html`
             <div class="row single">
-              <label>
-                Switch to dark when
-                <select .value=${darkCond} @change=${(e: Event) => this._setImageKey("dark_mode_condition", valueFromEvent(e))}>
-                  <option value="always">Always (devices off)</option>
-                  <option value="daytime">Daytime (devices off + sun above horizon)</option>
-                  <option value="lux">Lux sensor below threshold</option>
-                </select>
-              </label>
+              ${this._renderToggleField("Dark version when lights are off", "Applies a dark filter to the same image when all devices are inactive.", darkEnabled, (checked) => this._setImageKey("dark_mode_enabled", checked || undefined))}
             </div>
-            ${darkCond === "lux" ? html`
+            ${darkEnabled ? html`
               <div class="row single">
-                <label>Lux sensor</label>
-                <ha-selector
-                  .hass=${this.hass}
-                  .selector=${{ entity: { domain: "sensor", device_class: "illuminance" } }}
-                  .value=${images.dark_mode_lux_entity ?? ""}
-                  @value-changed=${(e: CustomEvent) => this._setImageKey("dark_mode_lux_entity", e.detail?.value || undefined)}
-                ></ha-selector>
-              </div>
-              <div class="row single">
-                <label>
-                  Threshold (lux)
-                  <input type="number" min="0"
-                    .value=${String(images.dark_mode_lux_threshold ?? 50)}
-                    @input=${(e: InputEvent) => this._setImageKey("dark_mode_lux_threshold", Number(valueFromEvent(e)) || undefined)}
-                  />
+                <label>Switch to dark when
+                  <select .value=${darkCond} @change=${(e: Event) => this._setImageKey("dark_mode_condition", valueFromEvent(e))}>
+                    <option value="always">Always (devices off)</option>
+                    <option value="daytime">Daytime (devices off + sun above horizon)</option>
+                    <option value="lux">Lux sensor below threshold</option>
+                  </select>
                 </label>
               </div>
+              ${darkCond === "lux" ? html`
+                <div class="row single">
+                  <label>Lux sensor</label>
+                  <ha-selector .hass=${this.hass}
+                    .selector=${{ entity: { domain: "sensor", device_class: "illuminance" } }}
+                    .value=${images.dark_mode_lux_entity ?? ""}
+                    @value-changed=${(e: CustomEvent) => this._setImageKey("dark_mode_lux_entity", e.detail?.value || undefined)}
+                  ></ha-selector>
+                </div>
+                <div class="row single">
+                  <label>Threshold (lux)
+                    <input type="number" min="0"
+                      .value=${String(images.dark_mode_lux_threshold ?? 50)}
+                      @input=${(e: InputEvent) => this._setImageKey("dark_mode_lux_threshold", Number(valueFromEvent(e)) || undefined)}
+                    />
+                  </label>
+                </div>
+              ` : nothing}
             ` : nothing}
-          ` : nothing}
           ` : nothing}
         </div>
 
-        <!-- ③ Sensors -->
-        ${this._renderSensors(config)}
+        <div class="panel">
+          <div class="panel-title">Expanded state</div>
+          <div class="row single">
+            <label>Default state
+              <select .value=${config.expander?.initial_state === "open" ? "open" : "closed"}
+                      @change=${(e: Event) => this._setExpander("initial_state", valueFromEvent(e))}>
+                <option value="closed">Closed</option>
+                <option value="open">Open</option>
+              </select>
+            </label>
+          </div>
+          <div class="row single">
+            ${this._renderCompactCheckField("Remember state", "Restores the last open or closed state from the browser.", config.expander?.persist_state ?? true, (checked) => this._setExpander("persist_state", checked))}
+          </div>
+        </div>
 
-        <!-- ④ Autofill -->
+        <div class="panel">
+          <div class="panel-title">Battery alerts</div>
+          <div class="row single">
+            <label>Threshold %
+              <span class="hint">Alert fires when battery level falls below this value.</span>
+              <input type="number" min="0" max="100"
+                .value=${String(config.ui?.battery_threshold ?? 20)}
+                @input=${(e: InputEvent) => this._setUi("battery_threshold", Number(valueFromEvent(e)))}
+              />
+            </label>
+          </div>
+        </div>
+
         <div class="row single">
           <button type="button" class="autofill-button autofill-button--full" ?disabled=${!hasArea} @click=${this._handleRoomAutofill}>Autofill devices from area</button>
         </div>
 
-        <!-- ④ Advanced settings -->
-        ${!this._showAdvancedCardSetup ? html`
-          <div class="row single">
-            <button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = true; }}>Advanced settings</button>
-          </div>
-        ` : html`
-          <div class="row single">${this._renderToggleField("Show area icon", "Shows the area icon before the room name.", config.ui?.show_area_icon ?? false, (checked) => this._setUi("show_area_icon", checked))}</div>
-          <div class="row single"><label>Initial expanded state<span class="hint">Default open state for the device grid.</span><select .value=${config.expander?.initial_state ?? "closed"} @change=${(e: Event) => this._setExpander("initial_state", valueFromEvent(e))}>${INITIAL_STATES.map((v) => html`<option value=${v}>${v}</option>`)}</select></label></div>
-          <div class="row single">${this._renderToggleField("Remember expanded state", "Restores the last open or closed state from the browser.", config.expander?.persist_state ?? true, (checked) => this._setExpander("persist_state", checked))}</div>
-          <div class="row single">${this._renderToggleField("Show entity icons", "Shows each entity icon next to the device name.", config.ui?.show_entity_icons ?? false, (checked) => this._setUi("show_entity_icons", checked))}</div>
-          <div class="row single">${this._renderToggleField("Keep ON background until sunset", "Keeps the ON room background while sun.sun is above the horizon.", config.ui?.keep_background_on_until_sunset ?? false, (checked) => this._setUi("keep_background_on_until_sunset", checked))}</div>
-          ${(config.expander?.initial_state ?? "closed") === "conditional" ? html`<div class="panel"><div class="panel-title">Open condition</div>${this._renderConditionEditor(config.expander?.condition, (next) => this._setExpander("condition", next))}</div>` : nothing}
-          <div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedCardSetup = false; }}>← Back to basic settings</button></div>
         `}
-
-        `}<!-- end roomNameEmpty gate -->
-        `}<!-- end hasArea gate -->
       </section>
     `;
   }
@@ -472,37 +402,95 @@ export class SmartAreaCardEditor extends LitElement {
     `;
   }
 
-  private _renderHeaderData(config: SmartRoomCardConfig) {
+  private _renderHeaderSection(config: SmartRoomCardConfig) {
+    const areaName = this._areaName(config.room_id);
+    const roomName = config.room ?? areaName ?? "";
+    const roomNameEmpty = !roomName.trim();
+    const showAreaIcon = config.ui?.show_area_icon ?? false;
+    const areaIcon = (this.hass as import("./types/ha-extensions").HomeAssistantExtended)?.areas?.[config.room_id ?? ""]?.icon ?? "mdi:home-outline";
     const automationEnabled = config.ui?.automation_badge_enabled ?? false;
-    const batteryAlertsEnabled = config.ui?.battery_alerts_enabled ?? true;
-    const batteryOutlined = config.ui?.battery_alert_outlined !== false;
-    const batteryBorderColor = config.ui?.battery_alert_border_color ?? "red";
-    const batteryHeaderBadge = config.ui?.battery_alert_header_badge ?? "low_battery";
-    const batteryHeaderBorder = config.ui?.battery_alert_header_border !== false;
+    const images = config.ui?.images ?? {};
+    const bgOn = images.background_on ?? "";
+
+    const _SENSOR_ICONS: Record<string, string> = {
+      temperature: "mdi:thermometer", humidity: "mdi:water-percent", co2: "mdi:molecule-co2",
+      voc: "mdi:flask-outline", pm25: "mdi:blur", aqi: "mdi:gauge", presence: "mdi:motion-sensor",
+      noise: "mdi:volume-high", illuminance: "mdi:brightness-5", power: "mdi:lightning-bolt",
+      energy: "mdi:flash", carbon_monoxide: "mdi:molecule-co", radon: "mdi:radioactive", moisture: "mdi:water-alert",
+    };
+    const _previewSensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
+    const _previewSensors: Array<{ icon: string; value: string }> = [];
+    for (const _key of _previewSensorOrder) {
+      if (_previewSensors.length >= 6) break;
+      if (_key.startsWith("custom_")) {
+        const _ci = Number(_key.slice(7));
+        const _sc = config.sensors?.custom?.[_ci];
+        if (_sc?.entity) {
+          const _e = this.hass?.states[_sc.entity];
+          if (_e && _e.state !== "unavailable" && _e.state !== "unknown") {
+            const _u = _e.attributes["unit_of_measurement"] as string | undefined ?? "";
+            _previewSensors.push({ icon: _sc.icon || "mdi:gauge", value: `${_e.state}${_u ? ` ${_u}` : ""}` });
+          }
+        }
+      } else {
+        const _eid = (config.sensors as Record<string, unknown> | undefined)?.[_key] as string | undefined;
+        if (_eid) {
+          const _e = this.hass?.states[_eid];
+          if (_e && _e.state !== "unavailable" && _e.state !== "unknown") {
+            const _u = _e.attributes["unit_of_measurement"] as string | undefined ?? "";
+            const _raw = _e.state;
+            const _val = _key === "temperature" && Number.isFinite(Number(_raw))
+              ? `${Number(_raw).toFixed(1)}${_u || "°"}`
+              : `${_raw}${_u ? ` ${_u}` : ""}`;
+            const _icon = (config.sensors?.icons as Record<string, string> | undefined)?.[_key] || _SENSOR_ICONS[_key] || "mdi:gauge";
+            _previewSensors.push({ icon: _icon, value: _val });
+          }
+        }
+      }
+    }
 
     return html`
       <section class="section">
         <div class="section-header"><div>
-          <div class="section-title">Header data</div>
-          <div class="section-subtitle">Configure what appears in the room card header.</div>
+          <div class="section-title">Header</div>
+          <div class="section-subtitle">Name, icon and sensor strip.</div>
         </div></div>
 
-        <div class="panel">
-          <div class="panel-title">Battery alerts</div>
-          <div class="row single">
-            ${this._renderToggleField("Enable battery alerts", "Shows a low battery alert badge on device tiles when battery falls below the threshold.", batteryAlertsEnabled, (checked) => this._setUi("battery_alerts_enabled", checked))}
-          </div>
-          ${batteryAlertsEnabled ? html`
-            <div class="row single"><label>Threshold %<input type="number" min="0" max="100" .value=${String(config.ui?.battery_threshold ?? 20)} @input=${(e: InputEvent) => this._setUi("battery_threshold", Number(valueFromEvent(e)))} /></label></div>
-            ${!this._showAdvancedBattery ? html`<div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedBattery = true; }}>Advanced</button></div>` : nothing}
-            ${this._showAdvancedBattery ? html`
-              <div class="row single"><div class="inline-control"><div class="inline-control-header">${this._renderToggleField("Tile border", "Shows a border around the device tile when a battery alert fires.", batteryOutlined, (checked) => this._setUi("battery_alert_outlined", checked))}</div><div class="inline-color-block"><span class="inline-color-label">Color</span>${this._renderColorSelect(batteryBorderColor, false, (value) => this._setUi("battery_alert_border_color", value), true)}</div></div></div>
-              <div class="row single">${this._renderPickerField("Header badge", "Badge shown while the battery alert is active.", this._renderHeaderBadgeSelect(batteryHeaderBadge, false, (value) => this._setUi("battery_alert_header_badge", value)))}</div>
-              <div class="row single">${this._renderToggleField("Card border", "Shows a red border around the collapsed card when a battery alert fires.", batteryHeaderBorder, (checked) => this._setUi("battery_alert_header_border", checked))}</div>
-              <div class="row single"><button type="button" class="secondary" @click=${() => { this._showAdvancedBattery = false; }}>← Back</button></div>
+        <div class="editor-header-preview ${bgOn && this._bgPreviewValid ? "editor-header-preview--has-bg" : ""}"
+             style=${bgOn && this._bgPreviewValid ? `background-image: url('${bgOn}')` : ""}>
+          <div class="ehp-overlay"></div>
+          <div class="ehp-top">
+            <div class="ehp-title ${roomNameEmpty ? "ehp-title--empty" : ""}">
+              ${showAreaIcon ? html`<ha-icon icon=${areaIcon}></ha-icon>` : nothing}
+              <span>${roomNameEmpty ? "Area name" : roomName}</span>
+            </div>
+            ${_previewSensors.length ? html`
+              <div class="ehp-sensors">
+                ${_previewSensors.map((s, i) => html`
+                  <div class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
+                    <ha-icon icon=${s.icon}></ha-icon>
+                    <span>${s.value}</span>
+                  </div>
+                `)}
+              </div>
             ` : nothing}
-          ` : nothing}
+          </div>
         </div>
+
+        <div class="row single">
+          <label class="${roomNameEmpty ? "req-input-wrap" : ""}">
+            Area name
+            <span class="hint">Header label displayed on the card.</span>
+            <input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} />
+          </label>
+          ${roomNameEmpty ? this._reqError("Area name is required.", "Use area name", () => { this._patch({ room: areaName }); }) : nothing}
+        </div>
+
+        <div class="row single">
+          ${this._renderCompactCheckField("Show area icon", "Shows the area icon next to the name in the header.", showAreaIcon, (checked) => this._setUi("show_area_icon", checked))}
+        </div>
+
+        ${this._renderSensors(config)}
 
         <div class="panel">
           <div class="panel-title">Automations badge</div>
@@ -675,7 +663,10 @@ export class SmartAreaCardEditor extends LitElement {
     return html`<div class="panel ${this._toneClass(device.type)}">
       <div class="panel-title">Identity</div>
       <div class="row">
-        <label>Name<span class="hint">Tile label.</span><input .value=${device.name ?? ""} @input=${(e: InputEvent) => this._setDevice(index, "name", valueFromEvent(e))} /></label>
+        <div>
+          <label>Name<span class="hint">Tile label.</span><input .value=${device.name ?? ""} @input=${(e: InputEvent) => this._setDevice(index, "name", valueFromEvent(e))} /></label>
+          ${this._renderCompactCheckField("Show entity icon", "Shows the entity icon next to the device name on the tile.", device.show_entity_icons ?? false, (checked) => this._setDevice(index, "show_entity_icons", checked || undefined))}
+        </div>
         <div class="field-card">
           ${!hasRoom ? html`<div class="error-chip">Area ID required</div>` : nothing}
           <div class="field-title">Entity</div>

@@ -135,6 +135,7 @@ export interface SmartRoomDeviceConfig {
   entity_selectors?: Record<string, SmartRoomEntitySelectorOverride>;
   name?: string;
   icon?: string;
+  show_entity_icons?: boolean;
   image?: string;
   image_on?: string;
   image_off?: string;
