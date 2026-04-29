@@ -211,13 +211,12 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
           ${bgOn && this._bgPreviewError ? this._reqError("Image not valid or not found.") : nothing}
           ${bgOn ? html`
-            <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"
+            <div class="bg-preview bg-preview--banner"
                  style=${this._bgPreviewValid ? "" : "display:none"}>
               <img class="bg-preview-img" src=${bgOn} alt=""
                 @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
                 @error=${() => { this._bgPreviewValid = false; this._bgPreviewError = true; }}
               />
-              ${darkEnabled ? html`<img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt="" />` : nothing}
             </div>
             ${!this._bgPreviewValid ? html`
               <img style="display:none;position:absolute" src=${bgOn} alt=""
@@ -227,7 +226,7 @@ export class SmartAreaCardEditor extends LitElement {
           ` : nothing}
           ${this._bgPreviewValid ? html`
             <div class="row single">
-              ${this._renderToggleField("Dark version when lights are off", "Applies a dark filter to the same image when all devices are inactive.", darkEnabled, (checked) => this._setImageKey("dark_mode_enabled", checked || undefined))}
+              ${this._renderToggleField("Dark version when lights are off", "Applies a dark filter to the same image when all devices are inactive.", darkEnabled, (checked) => this._setImageKey("dark_mode_enabled", checked))}
             </div>
             ${darkEnabled ? html`
               <div class="row single">
