@@ -95,6 +95,9 @@ export class SmartAreaCardEditor extends LitElement {
   private _touchDragStartY = 0;
   private _touchDragPendingIndex?: number;
   private _touchSensorDragPointerId?: number;
+  private _sensorTouchDragStartX = 0;
+  private _sensorTouchDragStartY = 0;
+  private _sensorTouchDragPendingIndex?: number;
   private _sectionsInitialized = false;
 
   protected firstUpdated(): void {
@@ -357,49 +360,104 @@ export class SmartAreaCardEditor extends LitElement {
     const renderSensorRow = (key: string, idx: number, isFirstVisible: boolean) => {
       const filledIdx = visibleKeys.indexOf(key);
       const isFirstFilled = filledIdx === 0;
-      const isLastFilled = filledIdx === visibleKeys.length - 1;
       const isDragging = this._sensorDragIndex === idx;
       const isDropTarget = this._sensorDropIndex === idx && this._sensorDragIndex !== idx;
       const canReorder = hasEntityForKey(key);
       const accent = key.startsWith("custom_")
         ? CUSTOM_SENSOR_COLORS[Number(key.slice(7)) % CUSTOM_SENSOR_COLORS.length]
         : (SENSOR_ACCENT[key] ?? "#9aa7b6");
-      const orderControls = html`
-        <div class="sensor-row-order">
-          ${isFirstFilled && canReorder ? html`<span class="sensor-primary-badge" title="Primary sensor — displayed largest in the card">★</span>` : nothing}
-          <button class="secondary icon-button" type="button" ?disabled=${isFirstFilled || !canReorder} @click=${() => this._moveSensorKey(idx, -1)} aria-label="Move up">↑</button>
-          <button class="drag-handle" type="button" .draggable=${canReorder} title="Drag to reorder" aria-label="Drag to reorder"
-            ?disabled=${!canReorder}
-            @dragstart=${canReorder ? () => this._sensorDragStart(idx) : nothing}
-            @dragend=${canReorder ? this._handleSensorDragEnd : nothing}
-            @pointerdown=${canReorder ? (e: PointerEvent) => this._handleSensorTouchDragStart(e, idx) : nothing}
-            @pointermove=${canReorder ? this._handleSensorTouchDragMove : nothing}
-            @pointerup=${canReorder ? this._handleSensorTouchDragEnd : nothing}
-            @pointercancel=${canReorder ? this._handleSensorTouchDragCancel : nothing}>⋮⋮</button>
-          <button class="secondary icon-button" type="button" ?disabled=${isLastFilled || !canReorder} @click=${() => this._moveSensorKey(idx, 1)} aria-label="Move down">↓</button>
-        </div>
-      `;
-      const tip = isFirstVisible ? html`<div class="sensor-primary-tip">★ The top sensor is displayed largest in the card.</div>` : nothing;
+
+      const dragZoneAttrs = canReorder ? {
+        draggable: true,
+        dragstart: () => this._sensorDragStart(idx),
+        dragend: this._handleSensorDragEnd,
+        pointerdown: (e: PointerEvent) => this._handleSensorTouchDragStart(e, idx),
+        pointermove: this._handleSensorTouchDragMove,
+        pointerup: this._handleSensorTouchDragEnd,
+        pointercancel: this._handleSensorTouchDragCancel,
+      } : {};
+
+      const tip = isFirstVisible ? html`<div class="sensor-primary-tip">★ Primary — displayed largest in the card.</div>` : nothing;
+
       if (key.startsWith("custom_")) {
         const i = Number(key.slice(7));
         const sensor = customSensors[i];
         if (!sensor) return nothing;
+        const alertEnabled = sensor.alert?.enabled === true;
         return html`
           ${tip}
-          <div class="sensor-row-wrapper ${isFirstFilled ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
+          <div class="sr-card ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
                data-sensor-index=${String(idx)} data-sensor-key=${key}
+               style="--sr-accent: ${accent}"
                @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
-            ${orderControls}${this._renderCustomSensor(sensor, i, config, accent)}
+            <div class="sr-header">
+              <div class="sr-drag-zone"
+                   .draggable=${canReorder}
+                   @dragstart=${canReorder ? () => this._sensorDragStart(idx) : nothing}
+                   @dragend=${this._handleSensorDragEnd}
+                   @pointerdown=${canReorder ? (e: PointerEvent) => this._handleSensorTouchDragStart(e, idx) : nothing}
+                   @pointermove=${this._handleSensorTouchDragMove}
+                   @pointerup=${this._handleSensorTouchDragEnd}
+                   @pointercancel=${this._handleSensorTouchDragCancel}>
+                <div class="sr-chip">
+                  <ha-icon icon=${sensor.icon || "mdi:gauge"}></ha-icon>
+                  <input class="sr-chip-name" .value=${sensor.name} placeholder="Sensor name"
+                         @click=${(e: Event) => e.stopPropagation()}
+                         @pointerdown=${(e: Event) => e.stopPropagation()}
+                         @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
+                </div>
+                ${sensor.entity ? html`<span class="sr-entity-id">${sensor.entity}</span>` : nothing}
+              </div>
+              <div class="sr-actions">
+                <label class="sr-alert-toggle" title="Alert">
+                  ${this._renderInlineToggle(alertEnabled, (v) => this._updateCustomSensorAlert(i, "enabled", v))}
+                  <ha-icon icon="mdi:bell-outline"></ha-icon>
+                </label>
+                <button class="dc-btn dc-btn--del" type="button" title="Remove" @click=${() => this._removeCustomSensor(i)}>
+                  <ha-icon icon="mdi:delete-outline"></ha-icon>
+                </button>
+              </div>
+            </div>
+            ${this._renderCustomSensor(sensor, i, config, accent, alertEnabled)}
           </div>`;
       }
+
       const meta = PRESET_META[key];
       if (!meta) return nothing;
+      const alertConfig = config.sensors?.alerts?.[key as keyof typeof config.sensors.alerts];
+      const alertEnabled = alertConfig?.enabled === true;
+      const entityId = (config.sensors as Record<string, string | undefined>)?.[key] ?? "";
+      const sAlertKey = key as "temperature";
       return html`
         ${tip}
-        <div class="sensor-row-wrapper ${isFirstFilled ? "sensor-row-wrapper--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
+        <div class="sr-card ${isFirstFilled ? "sr-card--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
              data-sensor-index=${String(idx)} data-sensor-key=${key}
+             style="--sr-accent: ${accent}"
              @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
-          ${orderControls}${this._renderPresetSensor(key as string & keyof typeof SENSOR_ACCENT, meta.label, meta.icon, config, meta.domains, accent)}
+          <div class="sr-header">
+            <div class="sr-drag-zone"
+                 .draggable=${canReorder}
+                 @dragstart=${canReorder ? () => this._sensorDragStart(idx) : nothing}
+                 @dragend=${this._handleSensorDragEnd}
+                 @pointerdown=${canReorder ? (e: PointerEvent) => this._handleSensorTouchDragStart(e, idx) : nothing}
+                 @pointermove=${this._handleSensorTouchDragMove}
+                 @pointerup=${this._handleSensorTouchDragEnd}
+                 @pointercancel=${this._handleSensorTouchDragCancel}>
+              <div class="sr-chip">
+                <ha-icon icon=${meta.icon}></ha-icon>
+                <span>${meta.label}</span>
+              </div>
+              ${entityId ? html`<span class="sr-entity-id">${entityId}</span>` : nothing}
+            </div>
+            <div class="sr-actions">
+              ${isFirstFilled ? html`<span class="sr-primary-star" title="Primary sensor">★</span>` : nothing}
+              <label class="sr-alert-toggle" title="Alert">
+                ${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(sAlertKey, "enabled", v))}
+                <ha-icon icon="mdi:bell-outline"></ha-icon>
+              </label>
+            </div>
+          </div>
+          ${this._renderPresetSensor(key as string & keyof typeof SENSOR_ACCENT, meta.label, meta.icon, config, meta.domains, accent, alertEnabled, alertConfig)}
         </div>`;
     };
 
@@ -547,14 +605,14 @@ export class SmartAreaCardEditor extends LitElement {
 
   private _renderPresetSensor(
     key: string,
-    label: string,
-    icon: string,
+    _label: string,
+    _icon: string,
     config: SmartRoomCardConfig,
     domains: string[] = ["sensor"],
-    accent = "#9aa7b6",
+    _accent = "#9aa7b6",
+    alertEnabled = false,
+    alertConfig?: { enabled?: boolean; min?: number; max?: number; eq?: number | string },
   ) {
-    const alertConfig = config.sensors?.alerts?.[key as keyof typeof config.sensors.alerts];
-    const alertEnabled = alertConfig?.enabled === true;
     const entityId = (config.sensors as Record<string, string | undefined>)?.[key] ?? "";
     const hasRoomId = Boolean(this._config?.room_id?.trim());
     const filtersKey = key as keyof NonNullable<typeof config.sensors>["filters"] & string;
@@ -565,14 +623,7 @@ export class SmartAreaCardEditor extends LitElement {
     const sAlertKey = key as "temperature";
     const sFilterKey = key as "temperature";
     return html`
-      <div class="sensor-row">
-        <div class="sensor-row-header">
-          <div class="sensor-chip" style="--chip-color:${accent}">
-            <ha-icon icon=${icon}></ha-icon>
-            <span>${label}</span>
-          </div>
-          <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._setSensorAlert(sAlertKey, "enabled", v))}<span>Alert</span></label>
-        </div>
+      <div class="sr-body">
         <div class="sensor-row-body">
           ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(sFilterKey, "restrict_to_room_area", !showAll), false, () => this._setSensor(key, ""))}
         </div>
@@ -591,20 +642,11 @@ export class SmartAreaCardEditor extends LitElement {
     `;
   }
 
-  private _renderCustomSensor(sensor: import("./helpers").SmartRoomCustomSensor, i: number, _config: SmartRoomCardConfig, accent = "#9aa7b6") {
-    const alertEnabled = sensor.alert?.enabled === true;
+  private _renderCustomSensor(sensor: import("./helpers").SmartRoomCustomSensor, i: number, _config: SmartRoomCardConfig, _accent = "#9aa7b6", alertEnabled = false) {
     const hasRoomId = Boolean(this._config?.room_id?.trim());
     const restrictToRoom = hasRoomId && sensor.restrict_to_room_area === true;
     return html`
-      <div class="sensor-row sensor-row-custom">
-        <div class="sensor-row-header">
-          <div class="sensor-chip" style="--chip-color:${accent}">
-            <ha-icon icon=${sensor.icon || "mdi:gauge"}></ha-icon>
-            <input class="sensor-name-input sensor-chip-input" .value=${sensor.name} placeholder="Sensor name" @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
-          </div>
-          <label class="sensor-row-alert-toggle">${this._renderInlineToggle(alertEnabled, (v) => this._updateCustomSensorAlert(i, "enabled", v))}<span>Alert</span></label>
-          <button type="button" class="sensor-remove-btn" @click=${() => this._removeCustomSensor(i)}>✕</button>
-        </div>
+      <div class="sr-body">
         <div class="sensor-row-body">
           ${this._renderSmartEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }), false, () => this._setCustomSensorEntity(i, ""))}
           ${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}
@@ -1419,28 +1461,44 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
   private _handleSensorTouchDragStart(event: PointerEvent, idx: number) {
     if (event.pointerType === "mouse") return;
-    this._sensorDragIndex = idx;
-    this._sensorDropIndex = idx;
+    this._sensorTouchDragStartX = event.clientX;
+    this._sensorTouchDragStartY = event.clientY;
+    this._sensorTouchDragPendingIndex = idx;
     this._touchSensorDragPointerId = event.pointerId;
     (event.currentTarget as HTMLElement | null)?.setPointerCapture?.(event.pointerId);
     event.preventDefault();
   }
   private _handleSensorTouchDragMove = (event: PointerEvent) => {
     if (this._touchSensorDragPointerId !== event.pointerId) return;
+    if (this._sensorTouchDragPendingIndex !== undefined && this._sensorDragIndex === undefined) {
+      const dx = event.clientX - this._sensorTouchDragStartX;
+      const dy = event.clientY - this._sensorTouchDragStartY;
+      if (dx * dx + dy * dy < 144) return; // 12px threshold
+      this._sensorDragIndex = this._sensorTouchDragPendingIndex;
+      this._sensorDropIndex = this._sensorTouchDragPendingIndex;
+      this._sensorTouchDragPendingIndex = undefined;
+    }
+    if (this._sensorDragIndex === undefined) return;
     const targetIndex = this._sensorIndexFromPoint(event.clientX, event.clientY);
     if (targetIndex !== undefined) this._sensorDropIndex = targetIndex;
     event.preventDefault();
   };
   private _handleSensorTouchDragEnd = (event: PointerEvent) => {
     if (this._touchSensorDragPointerId !== event.pointerId) return;
-    const targetIndex = this._sensorDropIndex ?? this._sensorIndexFromPoint(event.clientX, event.clientY);
-    if (targetIndex !== undefined) this._reorderSensorTo(targetIndex); else { this._sensorDragIndex = undefined; this._sensorDropIndex = undefined; }
+    if (this._sensorDragIndex !== undefined) {
+      const targetIndex = this._sensorDropIndex ?? this._sensorIndexFromPoint(event.clientX, event.clientY);
+      if (targetIndex !== undefined) this._reorderSensorTo(targetIndex);
+    }
     this._touchSensorDragPointerId = undefined;
+    this._sensorTouchDragPendingIndex = undefined;
+    this._sensorDragIndex = undefined;
+    this._sensorDropIndex = undefined;
     event.preventDefault();
   };
   private _handleSensorTouchDragCancel = (event: PointerEvent) => {
     if (this._touchSensorDragPointerId !== event.pointerId) return;
     this._touchSensorDragPointerId = undefined;
+    this._sensorTouchDragPendingIndex = undefined;
     this._sensorDragIndex = undefined;
     this._sensorDropIndex = undefined;
   };

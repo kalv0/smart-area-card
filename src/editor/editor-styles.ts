@@ -2383,6 +2383,150 @@ export const calvoRoomCardEditorStyles = css`
     padding-top: 2px;
   }
 
+  /* ─── Sensor Card Redesign (sr-*) ───────────────────── */
+
+  .sr-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 4px solid var(--sr-accent, #9aa7b6);
+    background: color-mix(in srgb, var(--sr-accent, #9aa7b6) 8%, #1a2028);
+    overflow: hidden;
+    transition: box-shadow 0.15s, opacity 0.15s;
+  }
+
+  .sr-card--primary {
+    border-color: rgba(255, 255, 255, 0.14);
+    border-left-color: var(--sr-accent, #9aa7b6);
+  }
+
+  .sr-card.dragging {
+    opacity: 0.45;
+  }
+
+  .sr-card.drop-target {
+    outline: 2px dashed var(--editor-accent);
+    outline-offset: 2px;
+  }
+
+  .sr-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px 9px 12px;
+    min-width: 0;
+  }
+
+  .sr-drag-zone {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    cursor: grab;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .sr-drag-zone:active {
+    cursor: grabbing;
+  }
+
+  .sr-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: color-mix(in srgb, var(--sr-accent, #9aa7b6) 18%, transparent);
+    border-radius: 20px;
+    padding: 3px 9px 3px 6px;
+    flex-shrink: 0;
+    --mdc-icon-size: 14px;
+    color: var(--sr-accent, #9aa7b6);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .sr-chip-name {
+    background: none;
+    border: none;
+    outline: none;
+    color: inherit;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0;
+    min-width: 0;
+    width: 100px;
+  }
+
+  .sr-chip-name::placeholder {
+    color: color-mix(in srgb, var(--sr-accent, #9aa7b6) 55%, transparent);
+  }
+
+  .sr-entity-id {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.38);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .sr-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .sr-primary-star {
+    font-size: 0.8rem;
+    color: #f59e0b;
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .sr-alert-toggle {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 4px 6px;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.45);
+    --mdc-icon-size: 14px;
+    transition: color 0.14s, background 0.14s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sr-alert-toggle:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .sr-alert-toggle .ios-toggle {
+    padding: 0;
+    border: none;
+    background: transparent;
+  }
+
+  .sr-body {
+    padding: 0 12px 10px;
+    display: grid;
+    gap: 6px;
+  }
+
   /* ─── Responsive ─────────────────────────────────────── */
 
   @media (max-width: 720px) {
