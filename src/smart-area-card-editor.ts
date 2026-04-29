@@ -189,9 +189,6 @@ export class SmartAreaCardEditor extends LitElement {
             <ha-icon icon=${this._cardSetupCollapsed ? "mdi:chevron-down" : "mdi:chevron-up"}></ha-icon>
           </button>
         </div>
-        <div class="section-collapsible ${this._cardSetupCollapsed ? "section-collapsible--collapsed" : ""}">
-        <div class="section-collapsible-inner">
-
         <div class="area-picker-block">
           <div class="area-picker-label req-label ${hasArea ? "" : "req-label--invalid"}">
             Area${!hasArea ? this._reqBadge() : nothing}
@@ -203,6 +200,9 @@ export class SmartAreaCardEditor extends LitElement {
             @value-changed=${(e: CustomEvent) => this._setAreaId(String(e.detail?.value ?? ""))}
           ></ha-area-picker>
         </div>
+
+        <div class="section-collapsible ${this._cardSetupCollapsed ? "section-collapsible--collapsed" : ""}">
+        <div class="section-collapsible-inner">
 
         ${!hasArea ? nothing : html`
 
