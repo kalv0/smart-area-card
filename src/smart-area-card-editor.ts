@@ -193,7 +193,7 @@ export class SmartAreaCardEditor extends LitElement {
             <div class="section-subtitle">Area, background and card behaviour.</div>
           </div>
           <button class="section-collapse-btn" @click=${(e: Event) => e.stopPropagation()}>
-            <ha-icon icon=${this._cardSetupCollapsed ? "mdi:chevron-down" : "mdi:chevron-up"}></ha-icon>
+            <ha-icon icon=${this._cardSetupCollapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
           </button>
         </div>
         <div class="area-picker-block">
@@ -405,8 +405,8 @@ export class SmartAreaCardEditor extends LitElement {
                 <div class="sr-chip">
                   <ha-icon icon=${sensor.icon || "mdi:gauge"}></ha-icon>
                   <span class="sr-chip-name-sizer">
-                    <span class="sr-chip-name-measure">${sensor.name || "Sensor name"}</span>
-                    <input class="sr-chip-name" .value=${sensor.name} placeholder="Sensor name"
+                    <span class="sr-chip-name-measure">${sensor.name || " "}</span>
+                    <input class="sr-chip-name" .value=${sensor.name} placeholder="Name"
                            @click=${(e: Event) => e.stopPropagation()}
                            @pointerdown=${(e: Event) => e.stopPropagation()}
                            @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
@@ -568,7 +568,7 @@ export class SmartAreaCardEditor extends LitElement {
             <div class="section-subtitle">Name, icon and sensor strip.</div>
           </div>
           <button class="section-collapse-btn" @click=${(e: Event) => e.stopPropagation()}>
-            <ha-icon icon=${this._headerCollapsed ? "mdi:chevron-down" : "mdi:chevron-up"}></ha-icon>
+            <ha-icon icon=${this._headerCollapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
           </button>
         </div>
         <div class="editor-header-preview ${bgOn && this._bgPreviewValid ? "editor-header-preview--has-bg" : ""}"

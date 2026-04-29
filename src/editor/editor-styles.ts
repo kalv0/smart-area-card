@@ -2455,7 +2455,7 @@ export const calvoRoomCardEditorStyles = css`
      the input overlays it and fills the container width */
   .sr-chip-name-sizer {
     display: grid;
-    min-width: 40px;
+    min-width: 8px;
   }
 
   .sr-chip-name-sizer > * {
