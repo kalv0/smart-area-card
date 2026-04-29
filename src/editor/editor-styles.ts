@@ -901,7 +901,7 @@ export const calvoRoomCardEditorStyles = css`
     padding: 4px;
     cursor: pointer;
     color: rgba(255, 255, 255, 0.5);
-    --mdc-icon-size: 18px;
+    --mdc-icon-size: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
