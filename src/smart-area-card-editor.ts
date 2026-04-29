@@ -81,7 +81,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _showAddTypePicker = false;
   @state() private _showAdvancedCardSetup = false;
   @state() private _showAdvancedBattery = false;
-  @state() private _showMoreSensors = false;
+  @state() private _showMoreSensors = true;
   @state() private _entityRegistry: EntityRegistryEntry[] = [];
   @state() private _deviceRegistry: DeviceRegistryEntry[] = [];
   @state() private _bgPreviewValid = false;
@@ -416,7 +416,7 @@ export class SmartAreaCardEditor extends LitElement {
             </div>
           ` : nothing}
           <button type="button" class="sensor-add-row" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
-          <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = false; }}>Hide sensors ▴</button>
+          <button type="button" class="secondary sensor-more-btn" @click=${async () => { this._showMoreSensors = false; await this.updateComplete; this.shadowRoot?.querySelector<HTMLElement>('.sensor-more-btn')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}>Less sensors ▴</button>
         `}
 
         <div class="row single">
