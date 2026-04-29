@@ -81,7 +81,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _showAddTypePicker = false;
   @state() private _showAdvancedCardSetup = false;
   @state() private _showAdvancedBattery = false;
-  @state() private _showMoreSensors = true;
+  @state() private _showMoreSensors = false;
   @state() private _entityRegistry: EntityRegistryEntry[] = [];
   @state() private _deviceRegistry: DeviceRegistryEntry[] = [];
   @state() private _bgPreviewValid = false;
@@ -400,9 +400,19 @@ export class SmartAreaCardEditor extends LitElement {
         </div>`;
     };
 
+    const collapseSensors = async () => {
+      this._showMoreSensors = false;
+      await this.updateComplete;
+      this.shadowRoot?.querySelector<HTMLElement>('.sensor-more-btn')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
     return html`
       <div class="panel">
         <div class="panel-title">Sensors</div>
+
+        <div class="row single">
+          ${this._renderToggleField("Click opens details", "Tapping the climate strip opens a popup with sensor history.", config.ui?.header_climate_more_info ?? true, (checked) => this._setUi("header_climate_more_info", checked))}
+        </div>
 
         <div class="sensor-ordered-list">
           ${repeat(visibleKeys, k => k, (k, vi) => renderSensorRow(k, sensorOrder.indexOf(k), vi === 0))}
@@ -410,18 +420,15 @@ export class SmartAreaCardEditor extends LitElement {
         ${!this._showMoreSensors ? html`
           <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = true; }}>More sensors ▾</button>
         ` : html`
+          <button type="button" class="secondary sensor-more-btn" @click=${collapseSensors}>Less sensors ▴</button>
           ${hiddenKeys.length ? html`
             <div class="sensor-ordered-list">
               ${repeat(hiddenKeys, k => k, k => renderSensorRow(k, sensorOrder.indexOf(k), false))}
             </div>
           ` : nothing}
           <button type="button" class="sensor-add-row" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
-          <button type="button" class="secondary sensor-more-btn" @click=${async () => { this._showMoreSensors = false; await this.updateComplete; this.shadowRoot?.querySelector<HTMLElement>('.sensor-more-btn')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}>Less sensors ▴</button>
+          <button type="button" class="secondary sensor-more-btn" @click=${collapseSensors}>Less sensors ▴</button>
         `}
-
-        <div class="row single">
-          ${this._renderToggleField("Click opens details", "Tapping the climate strip opens a popup with sensor history.", config.ui?.header_climate_more_info ?? true, (checked) => this._setUi("header_climate_more_info", checked))}
-        </div>
       </div>
     `;
   }
@@ -521,14 +528,14 @@ export class SmartAreaCardEditor extends LitElement {
           ${this._renderCompactCheckField("Show area icon", "Shows the area icon next to the name in the header.", showAreaIcon, (checked) => this._setUi("show_area_icon", checked))}
         </div>
 
-        ${this._renderSensors(config)}
-
         <div class="panel">
           <div class="panel-title">Automations badge</div>
           <div class="row single">
             ${this._renderToggleField("Show automation count", "Shows a badge with the count of enabled automations in this area.", automationEnabled, (checked) => this._setUi("automation_badge_enabled", checked), !this._isRoomIdValid(config.room_id))}
           </div>
         </div>
+
+        ${this._renderSensors(config)}
         `}
         </div></div>
       </section>
