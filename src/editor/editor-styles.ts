@@ -392,9 +392,10 @@ export const calvoRoomCardEditorStyles = css`
 
   .device-card {
     position: relative;
-    border-left: 6px solid var(--editor-custom);
+    display: flex;
+    flex-direction: column;
+    border-left: 4px solid var(--editor-custom);
     background: #1f4b58;
-    grid-template-columns: 36px 1fr;
     padding: 0;
     overflow: hidden;
     border-color: rgba(76, 201, 240, 0.42);
@@ -403,26 +404,26 @@ export const calvoRoomCardEditorStyles = css`
 
   .device-card[data-type="light"] {
     border-left-color: var(--editor-light);
-    background: #5d4812;
-    border-color: rgba(245, 200, 76, 0.48);
+    background: color-mix(in srgb, var(--editor-light) 10%, #1a2028);
+    border-color: color-mix(in srgb, var(--editor-light) 35%, transparent);
   }
 
   .device-card[data-type="camera"] {
     border-left-color: var(--editor-camera);
-    background: #5a2323;
-    border-color: rgba(255, 107, 107, 0.48);
+    background: color-mix(in srgb, var(--editor-camera) 10%, #1a2028);
+    border-color: color-mix(in srgb, var(--editor-camera) 35%, transparent);
   }
 
   .device-card[data-type="media_player"] {
     border-left-color: var(--editor-media);
-    background: #414c59;
-    border-color: rgba(215, 221, 230, 0.4);
+    background: color-mix(in srgb, var(--editor-media) 8%, #1a2028);
+    border-color: color-mix(in srgb, var(--editor-media) 28%, transparent);
   }
 
   .device-card[data-type="lock"] {
     border-left-color: var(--editor-lock);
-    background: #5c3816;
-    border-color: rgba(255, 159, 67, 0.5);
+    background: color-mix(in srgb, var(--editor-lock) 10%, #1a2028);
+    border-color: color-mix(in srgb, var(--editor-lock) 35%, transparent);
   }
 
   .device-card.dragging {
@@ -432,6 +433,209 @@ export const calvoRoomCardEditorStyles = css`
   .device-card.drop-target {
     outline: 2px dashed var(--editor-accent);
     outline-offset: 2px;
+  }
+
+  /* ─── Device Grid Preview ──────────────────────────── */
+
+  .dg-preview {
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 10px;
+  }
+
+  .dg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    gap: 8px;
+  }
+
+  .dg-tile {
+    --dg-color: var(--editor-custom);
+    position: relative;
+    height: 88px;
+    border-radius: 11px;
+    border: 1px solid color-mix(in srgb, var(--dg-color) 38%, transparent);
+    background: color-mix(in srgb, var(--dg-color) 10%, rgba(10, 14, 20, 0.7));
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 7px;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dg-tile:hover {
+    border-color: color-mix(in srgb, var(--dg-color) 65%, transparent);
+  }
+
+  .dg-tile--light        { --dg-color: var(--editor-light); }
+  .dg-tile--camera       { --dg-color: var(--editor-camera); }
+  .dg-tile--media_player { --dg-color: var(--editor-media); }
+  .dg-tile--lock         { --dg-color: var(--editor-lock); }
+  .dg-tile--custom       { --dg-color: var(--editor-custom); }
+
+  .dg-tile--active {
+    border-color: var(--dg-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--dg-color) 28%, transparent),
+                inset 0 0 0 1px color-mix(in srgb, var(--dg-color) 15%, transparent);
+  }
+
+  .dg-tile--dragging {
+    opacity: 0.35;
+    cursor: grabbing;
+  }
+
+  .dg-tile--drop {
+    border-color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+  }
+
+  .dg-tile--add {
+    border: 2px dashed rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.02);
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .dg-tile--add:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.55);
+    border-color: rgba(255, 255, 255, 0.38);
+  }
+
+  .dg-tile--add ha-icon {
+    --mdc-icon-size: 20px;
+  }
+
+  .dg-tile-icon {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    color: var(--dg-color);
+    --mdc-icon-size: 15px;
+    line-height: 1;
+    opacity: 0.85;
+  }
+
+  .dg-tile-name {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.88);
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  /* ─── Device Card Redesign (dc-*) ─────────────────── */
+
+  .dc-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    min-width: 0;
+  }
+
+  .dc-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    --mdc-icon-size: 19px;
+  }
+
+  .device-card[data-type="light"]        .dc-badge { background: rgba(245, 200, 76, 0.18); color: var(--editor-light); }
+  .device-card[data-type="camera"]       .dc-badge { background: rgba(255, 107, 107, 0.18); color: var(--editor-camera); }
+  .device-card[data-type="media_player"] .dc-badge { background: rgba(215, 221, 230, 0.14); color: var(--editor-media); }
+  .device-card[data-type="lock"]         .dc-badge { background: rgba(255, 159, 67, 0.18); color: var(--editor-lock); }
+  .device-card[data-type="custom"]       .dc-badge { background: rgba(76, 201, 240, 0.18); color: var(--editor-custom); }
+
+  .dc-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .dc-name {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dc-entity {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.48);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dc-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .dc-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.14s, color 0.14s, border-color 0.14s;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    --mdc-icon-size: 15px;
+  }
+
+  .dc-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .dc-btn--del {
+    color: rgba(255, 100, 100, 0.65);
+    border-color: rgba(255, 100, 100, 0.12);
+  }
+
+  .dc-btn--del:hover {
+    background: rgba(185, 28, 28, 0.45);
+    color: #ffa0a0;
+    border-color: rgba(255, 100, 100, 0.35);
+  }
+
+  .dc-panels {
+    padding: 0 12px 12px;
+    display: grid;
+    gap: 10px;
   }
 
   /* Left order column — same pattern as sensor-row-order */

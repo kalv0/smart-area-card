@@ -618,7 +618,66 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderDevices(config: SmartRoomCardConfig) {
-    return html`<section class="section"><div class="devices-header"><div><div class="section-title">Devices grid</div><div class="section-subtitle">Reorder, collapse and edit each tile.</div></div><button id="add-device-trigger" type="button" @click=${() => { this._showAddTypePicker = true; }}>Add device</button></div>${this._showAddTypePicker ? this._renderAddTypePicker() : nothing}<div class="devices-list">${(config.devices ?? []).map((device, index) => this._renderDevice(device, index))}</div></section>`;
+    return html`
+      <section class="section">
+        <div class="devices-header">
+          <div>
+            <div class="section-title">Devices grid</div>
+            <div class="section-subtitle">Drag to reorder · tap to edit.</div>
+          </div>
+        </div>
+        ${this._renderDeviceGridPreview(config)}
+        ${this._showAddTypePicker ? this._renderAddTypePicker() : nothing}
+        <div class="devices-list">
+          ${(config.devices ?? []).map((device, index) => this._renderDevice(device, index))}
+        </div>
+      </section>
+    `;
+  }
+
+  private _renderDeviceGridPreview(config: SmartRoomCardConfig) {
+    const devices = config.devices ?? [];
+    return html`
+      <div class="dg-preview">
+        <div class="dg-grid">
+          ${devices.map((device, index) => {
+            const type = device.type ?? "custom";
+            const isDragging = this._dragIndex === index;
+            const isDropTarget = this._dropIndex === index && this._dragIndex !== index;
+            const isActive = this._expandedDevices.includes(index);
+            const rawName = device.name || (device.entity ? device.entity.split(".").pop()?.replace(/_/g, " ") ?? "" : "") || `Device ${index + 1}`;
+            return html`
+              <div class="dg-tile dg-tile--${type} ${isDragging ? "dg-tile--dragging" : ""} ${isDropTarget ? "dg-tile--drop" : ""} ${isActive ? "dg-tile--active" : ""}"
+                   data-device-index=${String(index)}
+                   draggable="true"
+                   @dragstart=${() => this._handleDragStart(index)}
+                   @dragend=${this._handleDragEnd}
+                   @dragover=${this._handleDragOver}
+                   @drop=${() => this._handleDrop(index)}
+                   @pointerdown=${(e: PointerEvent) => this._handleTouchDragStart(e, index)}
+                   @pointermove=${this._handleTouchDragMove}
+                   @pointerup=${this._handleTouchDragEnd}
+                   @pointercancel=${this._handleTouchDragCancel}
+                   @click=${async () => {
+                     const wasExpanded = this._expandedDevices.includes(index);
+                     this._toggleDeviceExpanded(index);
+                     if (!wasExpanded) {
+                       await this.updateComplete;
+                       this.shadowRoot?.querySelector<HTMLElement>(`.device-card[data-device-index="${index}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                     }
+                   }}>
+                <div class="dg-tile-icon"><ha-icon icon=${this._typeIcon(type)}></ha-icon></div>
+                <div class="dg-tile-name">${rawName}</div>
+              </div>
+            `;
+          })}
+          <div class="dg-tile dg-tile--add" @click=${() => { this._showAddTypePicker = !this._showAddTypePicker; }}>
+            <ha-icon icon="mdi:plus"></ha-icon>
+            <span>Add</span>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   private _renderAddTypePicker() {
@@ -642,55 +701,57 @@ export class SmartAreaCardEditor extends LitElement {
 
   private _renderDevice(device: SmartRoomDeviceConfig, index: number) {
     const expanded = this._expandedDevices.includes(index);
-    const isFirst = index === 0;
-    const isLast = index === (this._config?.devices?.length ?? 1) - 1;
     const entityRequired = this._isEntityRequired(device);
     const roomReady = this._isRoomIdValid(this._config?.room_id);
     const entityValid = this._isEntityValid(device.entity) && this._isEntityAllowedForDevice(device, device.entity);
     const configBlocked = !roomReady || (entityRequired && !entityValid);
+    const type = device.type ?? "custom";
     return html`
-      <section class="device-card ${this._dragIndex === index ? "dragging" : ""} ${this._dropIndex === index && this._dragIndex !== index ? "drop-target" : ""}"
-               data-type=${device.type ?? "custom"} data-device-index=${String(index)}
+      <section class="device-card ${expanded ? "device-card--editing" : ""} ${this._dragIndex === index ? "dragging" : ""} ${this._dropIndex === index && this._dragIndex !== index ? "drop-target" : ""}"
+               data-type=${type} data-device-index=${String(index)}
                @dragover=${this._handleDragOver} @drop=${() => this._handleDrop(index)}>
-        <div class="device-order-col">
-          <button class="secondary icon-button" type="button" ?disabled=${isFirst} @click=${() => this._moveDevice(index, -1)} aria-label="Move up">↑</button>
-          <button class="drag-handle" type="button" draggable="true" title="Drag to reorder" aria-label="Drag to reorder"
-            @dragstart=${() => this._handleDragStart(index)} @dragend=${this._handleDragEnd}
-            @pointerdown=${(e: PointerEvent) => this._handleTouchDragStart(e, index)}
-            @pointermove=${this._handleTouchDragMove} @pointerup=${this._handleTouchDragEnd}
-            @pointercancel=${this._handleTouchDragCancel}>⋮⋮</button>
-          <button class="secondary icon-button" type="button" ?disabled=${isLast} @click=${() => this._moveDevice(index, 1)} aria-label="Move down">↓</button>
-        </div>
-        <div class="device-body">
-          <div class="device-header">
-            <div class="device-header-main">
-              <div class="device-header-copy">
-                <div class="device-title">${device.name || device.entity || `Device ${index + 1}`}</div>
-                <div class="device-subtitle">${device.entity || "Configure the entity and behavior for this tile."}</div>
-                <div class="pill device-type-pill">${this._renderTypePill(device.type ?? "custom")}</div>
-                <div class="device-header-actions">
-                  <button class="secondary icon-button" type="button" @click=${() => this._toggleDeviceExpanded(index)}>${expanded ? "Hide" : "Edit"}</button>
-                </div>
-              </div>
-              <div class="device-tools">
-                <button class="danger device-remove" type="button" @click=${() => this._confirmRemoveDevice(index)}>Remove</button>
-                <button class="secondary device-duplicate" type="button" @click=${() => this._duplicateDevice(index)}>Duplicate</button>
-              </div>
-            </div>
+        <div class="dc-header">
+          <div class="dc-badge">
+            <ha-icon icon=${this._typeIcon(type)}></ha-icon>
           </div>
-          ${expanded ? html`
+          <div class="dc-info">
+            <span class="dc-name">${device.name || device.entity || `Device ${index + 1}`}</span>
+            ${device.entity ? html`<span class="dc-entity">${device.entity}</span>` : nothing}
+          </div>
+          <div class="dc-actions">
+            <button class="dc-btn dc-btn--edit" type="button" title=${expanded ? "Close" : "Edit"} @click=${() => this._toggleDeviceExpanded(index)}>
+              <ha-icon icon=${expanded ? "mdi:chevron-up" : "mdi:pencil-outline"}></ha-icon>
+            </button>
+            <button class="dc-btn dc-btn--dup" type="button" title="Duplicate" @click=${() => this._duplicateDevice(index)}>
+              <ha-icon icon="mdi:content-copy"></ha-icon>
+            </button>
+            <button class="dc-btn dc-btn--del" type="button" title="Remove" @click=${() => this._confirmRemoveDevice(index)}>
+              <ha-icon icon="mdi:delete-outline"></ha-icon>
+            </button>
+          </div>
+        </div>
+        ${expanded ? html`
+          <div class="dc-panels">
             ${this._renderIdentityPanel(device, index, entityRequired, entityValid)}
-            ${configBlocked ? html`<div class="panel locked-panel"><div class="panel-title">${!roomReady ? "Area ID required" : "Entity required"}</div><div class="required-note">${!roomReady ? "Set a valid Area ID first. Then this type can limit the main entity selector to entities from that room." : "Enter a valid Home Assistant entity to unlock visuals, offline behavior, state rules and actions for this device type."}</div></div>` : html`
+            ${configBlocked ? html`
+              <div class="panel locked-panel">
+                <div class="panel-title">${!roomReady ? "Area ID required" : "Entity required"}</div>
+                <div class="required-note">${!roomReady ? "Set a valid Area ID first." : "Enter a valid entity to unlock visuals, states and actions."}</div>
+              </div>
+            ` : html`
               ${this._renderVisualsPanel(device, index)}
               ${this._renderActionsPanel(device, index)}
-              ${!this._isDeviceAdvanced(index) ? html`<div class="row single"><button type="button" class="secondary" @click=${() => this._setDeviceAdvanced(index, true)}>Advanced settings</button></div>` : html`
+              ${!this._isDeviceAdvanced(index) ? html`
+                <div class="row single"><button type="button" class="secondary" @click=${() => this._setDeviceAdvanced(index, true)}>Advanced settings</button></div>
+              ` : html`
                 ${this._renderStatesPanel(device, index)}
                 <div class="row single"><button type="button" class="secondary" @click=${() => this._setDeviceAdvanced(index, false)}>Back to simple device setup</button></div>
               `}
             `}
-          ` : nothing}
-        </div>
-      </section>`;
+          </div>
+        ` : nothing}
+      </section>
+    `;
   }
 
   private _renderIdentityPanel(device: SmartRoomDeviceConfig, index: number, entityRequired: boolean, entityValid: boolean) {
