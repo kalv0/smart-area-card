@@ -630,7 +630,7 @@ export class SmartAreaCardEditor extends LitElement {
         <div class="devices-list">
           ${(config.devices ?? []).map((device, index) => this._renderDevice(device, index))}
         </div>
-        <button class="dc-add-btn" type="button" @click=${() => { this._showAddTypePicker = !this._showAddTypePicker; }}>
+        <button class="dc-add-btn" type="button" @click=${() => { this._showAddTypePicker = true; }}>
           <ha-icon icon="mdi:plus"></ha-icon>
           Add device
         </button>
