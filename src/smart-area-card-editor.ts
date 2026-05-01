@@ -387,6 +387,7 @@ export class SmartAreaCardEditor extends LitElement {
         const hasEntity = Boolean(sensor.entity);
         const isExpanded = !hasEntity || this._expandedSensors.includes(key);
         const alertEnabled = sensor.alert?.enabled === true;
+        const entityLabel = sensor.entity ? (this.hass?.states[sensor.entity]?.attributes?.friendly_name as string | undefined ?? sensor.entity) : "";
         return html`
           ${tip}
           <div class="sr-card ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
@@ -394,14 +395,20 @@ export class SmartAreaCardEditor extends LitElement {
                style="--sr-accent: ${accent}"
                @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
             <div class="sr-header">
-              <div class="sr-drag-zone"
-                   .draggable=${canReorder}
-                   @dragstart=${canReorder ? () => this._sensorDragStart(idx) : nothing}
-                   @dragend=${this._handleSensorDragEnd}
-                   @pointerdown=${canReorder ? (e: PointerEvent) => this._handleSensorTouchDragStart(e, idx) : nothing}
-                   @pointermove=${this._handleSensorTouchDragMove}
-                   @pointerup=${this._handleSensorTouchDragEnd}
-                   @pointercancel=${this._handleSensorTouchDragCancel}>
+              ${canReorder ? html`
+                <div class="sr-drag-handle"
+                     draggable="true"
+                     @dragstart=${() => this._sensorDragStart(idx)}
+                     @dragend=${this._handleSensorDragEnd}
+                     @pointerdown=${(e: PointerEvent) => this._handleSensorTouchDragStart(e, idx)}
+                     @pointermove=${this._handleSensorTouchDragMove}
+                     @pointerup=${this._handleSensorTouchDragEnd}
+                     @pointercancel=${this._handleSensorTouchDragCancel}>
+                  <ha-icon icon="mdi:drag-vertical"></ha-icon>
+                </div>
+              ` : nothing}
+              <div class="sr-header-info ${hasEntity ? "sr-header-info--clickable" : ""}"
+                   @click=${hasEntity ? () => this._toggleSensorExpanded(key) : nothing}>
                 <div class="sr-chip">
                   <ha-icon icon=${sensor.icon || "mdi:gauge"}></ha-icon>
                   <span class="sr-chip-name-sizer">
@@ -412,23 +419,20 @@ export class SmartAreaCardEditor extends LitElement {
                            @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
                   </span>
                 </div>
+                ${hasEntity ? html`<span class="sr-entity-label">${entityLabel}</span>` : nothing}
               </div>
               <div class="sr-actions">
                 ${hasEntity ? html`
-                  <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert">
+                  <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert"
+                         @click=${(e: Event) => e.stopPropagation()}>
                     ${this._renderInlineToggle(alertEnabled, (v) => { this._updateCustomSensorAlert(i, "enabled", v); if (v) this._expandSensor(key); })}
                     <ha-icon icon="mdi:alert-outline"></ha-icon>
                   </label>
                 ` : nothing}
-                <button class="dc-btn dc-btn--del" type="button" title="Remove" @click=${() => this._removeCustomSensor(i)}>
+                <button class="dc-btn dc-btn--del" type="button" title="Remove"
+                        @click=${(e: Event) => { e.stopPropagation(); this._removeCustomSensor(i); }}>
                   <ha-icon icon="mdi:delete-outline"></ha-icon>
                 </button>
-                ${hasEntity ? html`
-                  <button class="dc-btn" type="button" title=${isExpanded ? "Collapse" : "Edit"}
-                          @click=${() => this._toggleSensorExpanded(key)}>
-                    <ha-icon icon=${isExpanded ? "mdi:chevron-up" : "mdi:pencil-outline"}></ha-icon>
-                  </button>
-                ` : nothing}
               </div>
             </div>
             ${isExpanded ? this._renderCustomSensor(sensor, i, config, accent, alertEnabled) : nothing}
@@ -450,30 +454,34 @@ export class SmartAreaCardEditor extends LitElement {
              style="--sr-accent: ${accent}"
              @dragover=${this._handleSensorDragOver} @drop=${() => this._handleSensorDropTarget(idx)}>
           <div class="sr-header">
-            <div class="sr-drag-zone"
-                 .draggable=${canReorder}
-                 @dragstart=${canReorder ? () => this._sensorDragStart(idx) : nothing}
-                 @dragend=${this._handleSensorDragEnd}
-                 @pointerdown=${canReorder ? (e: PointerEvent) => this._handleSensorTouchDragStart(e, idx) : nothing}
-                 @pointermove=${this._handleSensorTouchDragMove}
-                 @pointerup=${this._handleSensorTouchDragEnd}
-                 @pointercancel=${this._handleSensorTouchDragCancel}>
+            ${canReorder ? html`
+              <div class="sr-drag-handle"
+                   draggable="true"
+                   @dragstart=${() => this._sensorDragStart(idx)}
+                   @dragend=${this._handleSensorDragEnd}
+                   @pointerdown=${(e: PointerEvent) => this._handleSensorTouchDragStart(e, idx)}
+                   @pointermove=${this._handleSensorTouchDragMove}
+                   @pointerup=${this._handleSensorTouchDragEnd}
+                   @pointercancel=${this._handleSensorTouchDragCancel}>
+                <ha-icon icon="mdi:drag-vertical"></ha-icon>
+              </div>
+            ` : nothing}
+            <div class="sr-header-info ${hasEntity ? "sr-header-info--clickable" : ""}"
+                 @click=${hasEntity ? () => this._toggleSensorExpanded(key) : nothing}>
               <div class="sr-chip">
                 <ha-icon icon=${meta.icon}></ha-icon>
                 <span>${meta.label}</span>
               </div>
               ${isFirstFilled ? html`<span class="sr-primary-star" title="Primary sensor">★</span>` : nothing}
+              ${hasEntity ? html`<span class="sr-entity-label">${this.hass?.states[entityId]?.attributes?.friendly_name as string ?? entityId}</span>` : nothing}
             </div>
             <div class="sr-actions">
               ${hasEntity ? html`
-                <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert">
+                <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert"
+                       @click=${(e: Event) => e.stopPropagation()}>
                   ${this._renderInlineToggle(alertEnabled, (v) => { this._setSensorAlert(sAlertKey, "enabled", v); if (v) this._expandSensor(key); })}
                   <ha-icon icon="mdi:alert-outline"></ha-icon>
                 </label>
-                <button class="dc-btn" type="button" title=${isExpanded ? "Collapse" : "Edit"}
-                        @click=${() => this._toggleSensorExpanded(key)}>
-                  <ha-icon icon=${isExpanded ? "mdi:chevron-up" : "mdi:pencil-outline"}></ha-icon>
-                </button>
               ` : nothing}
             </div>
           </div>
@@ -787,7 +795,7 @@ export class SmartAreaCardEditor extends LitElement {
                data-type=${type} data-device-index=${String(index)}
                @dragover=${this._handleDragOver} @drop=${() => this._handleDrop(index)}>
         <div class="dc-header">
-          <div class="dc-drag-zone"
+          <div class="dc-drag-handle"
                draggable="true"
                @dragstart=${() => this._handleDragStart(index)}
                @dragend=${this._handleDragEnd}
@@ -795,6 +803,9 @@ export class SmartAreaCardEditor extends LitElement {
                @pointermove=${this._handleTouchDragMove}
                @pointerup=${this._handleTouchDragEnd}
                @pointercancel=${this._handleTouchDragCancel}>
+            <ha-icon icon="mdi:drag-vertical"></ha-icon>
+          </div>
+          <div class="dc-header-content" @click=${() => this._toggleDeviceExpanded(index)}>
             <div class="dc-badge">
               <ha-icon icon=${this._typeIcon(type)}></ha-icon>
             </div>
@@ -804,13 +815,10 @@ export class SmartAreaCardEditor extends LitElement {
             </div>
           </div>
           <div class="dc-actions">
-            <button class="dc-btn dc-btn--edit" type="button" title=${expanded ? "Close" : "Edit"} @click=${() => this._toggleDeviceExpanded(index)}>
-              <ha-icon icon=${expanded ? "mdi:chevron-up" : "mdi:pencil-outline"}></ha-icon>
-            </button>
-            <button class="dc-btn dc-btn--dup" type="button" title="Duplicate" @click=${() => this._duplicateDevice(index)}>
+            <button class="dc-btn dc-btn--dup" type="button" title="Duplicate" @click=${(e: Event) => { e.stopPropagation(); this._duplicateDevice(index); }}>
               <ha-icon icon="mdi:content-copy"></ha-icon>
             </button>
-            <button class="dc-btn dc-btn--del" type="button" title="Remove" @click=${() => this._confirmRemoveDevice(index)}>
+            <button class="dc-btn dc-btn--del" type="button" title="Remove" @click=${(e: Event) => { e.stopPropagation(); this._confirmRemoveDevice(index); }}>
               <ha-icon icon="mdi:delete-outline"></ha-icon>
             </button>
           </div>

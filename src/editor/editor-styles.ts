@@ -638,22 +638,34 @@ export const calvoRoomCardEditorStyles = css`
     gap: 10px;
   }
 
-  .dc-drag-zone {
+  .dc-drag-handle {
+    width: 24px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex: 1;
-    min-width: 0;
+    justify-content: center;
+    flex-shrink: 0;
     cursor: grab;
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+    color: rgba(255, 255, 255, 0.28);
+    --mdc-icon-size: 16px;
   }
 
-  .dc-drag-zone:active {
+  .dc-drag-handle:active {
     cursor: grabbing;
+  }
+
+  .dc-header-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .dc-name,
@@ -2420,22 +2432,47 @@ export const calvoRoomCardEditorStyles = css`
     min-width: 0;
   }
 
-  .sr-drag-zone {
+  .sr-drag-handle {
+    width: 24px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
+    justify-content: center;
+    flex-shrink: 0;
     cursor: grab;
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+    color: rgba(255, 255, 255, 0.28);
+    --mdc-icon-size: 16px;
   }
 
-  .sr-drag-zone:active {
+  .sr-drag-handle:active {
     cursor: grabbing;
+  }
+
+  .sr-header-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sr-header-info--clickable {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sr-entity-label {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.38);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .sr-chip {

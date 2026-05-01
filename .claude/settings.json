@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(git commit *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const t=fs.readFileSync\\('src/smart-area-card-editor.ts','utf8'\\); console.log\\(JSON.stringify\\(t.slice\\(t.indexOf\\('sr-header-info'\\), t.indexOf\\('sr-header-info'\\)+80\\)\\)\\)\")"
     ]
   }
 }
