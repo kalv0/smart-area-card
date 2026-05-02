@@ -89,8 +89,12 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _bgPreviewError = false;
   @state() private _cardSetupCollapsed = false;
   @state() private _headerCollapsed = false;
+  @state() private _imgPickerMode: "library" | "path" = "library";
+  @state() private _imgUploading = false;
+  @state() private _imgGallery: Array<{ url: string; name: string }> = [];
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
+  private static readonly _GALLERY_KEY = "smart-area-card-bg-images";
   private _touchDragPointerId?: number;
   private _touchDragStartX = 0;
   private _touchDragStartY = 0;
@@ -103,6 +107,67 @@ export class SmartAreaCardEditor extends LitElement {
 
   protected firstUpdated(): void {
     this._refreshRegistries();
+    this._imgGallery = this._loadGallery();
+  }
+
+  private _loadGallery(): Array<{ url: string; name: string }> {
+    try { return JSON.parse(localStorage.getItem(SmartAreaCardEditor._GALLERY_KEY) ?? "[]"); }
+    catch { return []; }
+  }
+
+  private _saveToGallery(url: string, name: string): void {
+    const next = [{ url, name }, ...this._imgGallery.filter((g) => g.url !== url)].slice(0, 16);
+    localStorage.setItem(SmartAreaCardEditor._GALLERY_KEY, JSON.stringify(next));
+    this._imgGallery = next;
+  }
+
+  private _removeFromGallery(url: string): void {
+    const next = this._imgGallery.filter((g) => g.url !== url);
+    localStorage.setItem(SmartAreaCardEditor._GALLERY_KEY, JSON.stringify(next));
+    this._imgGallery = next;
+  }
+
+  private _triggerImageUpload(): void {
+    this.shadowRoot?.querySelector<HTMLInputElement>(".img-file-input")?.click();
+  }
+
+  private async _handleImageFile(e: Event): Promise<void> {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    (e.target as HTMLInputElement).value = "";
+    this._imgUploading = true;
+    try {
+      const dataUrl = await this._resizeImage(file);
+      const name = file.name.replace(/\.[^.]+$/, "");
+      this._saveToGallery(dataUrl, name);
+      this._setRoomImage("background_on", dataUrl);
+      this._bgPreviewValid = false;
+      this._bgPreviewError = false;
+    } catch (err) {
+      console.error("[smart-area-card] Image resize failed:", err);
+    } finally {
+      this._imgUploading = false;
+    }
+  }
+
+  private _resizeImage(file: File, maxW = 1280, maxH = 800, quality = 0.82): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const scale = Math.min(1, maxW / img.width, maxH / img.height);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("load failed")); };
+      img.src = objectUrl;
+    });
   }
 
   public setConfig(config: SmartRoomCardConfig): void {
@@ -215,23 +280,59 @@ export class SmartAreaCardEditor extends LitElement {
 
         <div class="panel">
           <div class="panel-title">Background</div>
-          <div class="row single">
-            <label>
-              Area image
-              <span class="hint">We recommend a horizontal photo of the nicest corner of ${areaName || "your area"}.</span>
-              <input type="text" .value=${bgOn} placeholder="/local/img/areas/bedroom.png"
-                @input=${(e: InputEvent) => {
-                  const val = valueFromEvent(e);
-                  this._bgPreviewValid = false;
-                  this._bgPreviewError = false;
-                  if (val && !bgOn && images.dark_mode_enabled === undefined) {
-                    this._setImageKey("dark_mode_enabled", true);
-                  }
-                  this._setRoomImage("background_on", val);
-                }}
-              />
-            </label>
+          <div class="img-picker-tabs">
+            <button type="button" class="img-tab ${this._imgPickerMode === "library" ? "img-tab--active" : ""}"
+                    @click=${() => { this._imgPickerMode = "library"; }}>
+              <ha-icon icon="mdi:image-multiple-outline"></ha-icon>Library
+            </button>
+            <button type="button" class="img-tab ${this._imgPickerMode === "path" ? "img-tab--active" : ""}"
+                    @click=${() => { this._imgPickerMode = "path"; }}>
+              <ha-icon icon="mdi:link-variant"></ha-icon>Path
+            </button>
           </div>
+          ${this._imgPickerMode === "path" ? html`
+            <div class="row single">
+              <label>
+                <span class="hint">We recommend a horizontal photo of the nicest corner of ${areaName || "your area"}.</span>
+                <input type="text" .value=${bgOn.startsWith("data:") ? "" : bgOn} placeholder="/local/img/areas/bedroom.png"
+                  @input=${(e: InputEvent) => {
+                    const val = valueFromEvent(e);
+                    this._bgPreviewValid = false;
+                    this._bgPreviewError = false;
+                    if (val && !bgOn && images.dark_mode_enabled === undefined) {
+                      this._setImageKey("dark_mode_enabled", true);
+                    }
+                    this._setRoomImage("background_on", val);
+                  }}
+                />
+              </label>
+            </div>
+          ` : html`
+            <div class="img-gallery">
+              <button type="button" class="img-upload-btn" ?disabled=${this._imgUploading}
+                      @click=${this._triggerImageUpload}>
+                <ha-icon icon=${this._imgUploading ? "mdi:loading" : "mdi:plus"}></ha-icon>
+                ${this._imgUploading ? "Uploading…" : "Upload image"}
+              </button>
+              ${this._imgGallery.map((img) => html`
+                <div class="img-gallery-item ${bgOn === img.url ? "img-gallery-item--active" : ""}"
+                     @click=${() => {
+                       this._setRoomImage("background_on", img.url);
+                       this._bgPreviewValid = false;
+                       this._bgPreviewError = false;
+                       if (!bgOn && images.dark_mode_enabled === undefined) this._setImageKey("dark_mode_enabled", true);
+                     }}>
+                  <img src=${img.url} alt=${img.name} loading="lazy" />
+                  <button type="button" class="img-gallery-del"
+                          @click=${(e: Event) => { e.stopPropagation(); this._removeFromGallery(img.url); if (bgOn === img.url) this._setRoomImage("background_on", ""); }}>
+                    <ha-icon icon="mdi:close"></ha-icon>
+                  </button>
+                </div>
+              `)}
+              ${this._imgGallery.length === 0 ? html`<span class="img-gallery-empty">No images yet. Tap Upload to add one.</span>` : nothing}
+            </div>
+            <input type="file" accept="image/*" class="img-file-input" @change=${this._handleImageFile} />
+          `}
           ${bgOn && this._bgPreviewError ? this._reqError("Image not valid or not found.") : nothing}
           ${bgOn ? html`
             <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"

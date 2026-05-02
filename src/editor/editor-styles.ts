@@ -180,6 +180,135 @@ export const calvoRoomCardEditorStyles = css`
     background: rgba(220, 38, 38, 0.15);
   }
 
+  /* ─── Image Picker ──────────────────────────────────────────────── */
+
+  .img-picker-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .img-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: var(--editor-radius-sm);
+    border: 1px solid var(--editor-border);
+    background: transparent;
+    color: var(--editor-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    --mdc-icon-size: 16px;
+  }
+
+  .img-tab--active {
+    background: color-mix(in srgb, var(--editor-accent) 18%, transparent);
+    border-color: var(--editor-accent);
+    color: var(--editor-accent);
+  }
+
+  .img-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .img-upload-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 90px;
+    border-radius: var(--editor-radius-sm);
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--editor-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    --mdc-icon-size: 22px;
+    touch-action: manipulation;
+  }
+
+  .img-upload-btn:hover,
+  .img-upload-btn:focus {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: var(--editor-accent);
+    color: var(--editor-accent);
+  }
+
+  .img-upload-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .img-gallery-item {
+    position: relative;
+    height: 90px;
+    border-radius: var(--editor-radius-sm);
+    overflow: hidden;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .img-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .img-gallery-item--active {
+    border-color: var(--editor-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--editor-accent) 30%, transparent);
+  }
+
+  .img-gallery-del {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    --mdc-icon-size: 12px;
+    padding: 0;
+  }
+
+  .img-gallery-item:hover .img-gallery-del,
+  .img-gallery-item:focus-within .img-gallery-del {
+    opacity: 1;
+  }
+
+  .img-gallery-empty {
+    grid-column: 1 / -1;
+    font-size: 0.78rem;
+    color: var(--editor-muted);
+    text-align: center;
+    padding: 8px 0;
+  }
+
+  .img-file-input {
+    display: none;
+  }
+
   /* ─── Background preview ────────────────────────────────────────── */
   .bg-preview {
     position: relative;
