@@ -1080,7 +1080,6 @@ export class SmartAreaCardEditor extends LitElement {
             <div class="section-subtitle">Drag to reorder · tap to edit.</div>
           </div>
         </div>
-        ${this._renderDeviceGridPreview(config, cardCols)}
         <div class="tile-size-control">
           <div class="tile-size-range-wrap" style="--range-pct: ${pct}%">
             <input class="tile-size-range" type="range" min="70" max="160" step="5"
@@ -1092,6 +1091,7 @@ export class SmartAreaCardEditor extends LitElement {
             <span>${tileSize}px high</span>
           </div>
         </div>
+        ${this._renderDeviceGridPreview(config, cardCols)}
         <div class="panel">
           <div class="panel-title">Battery alerts</div>
           <div class="row single">
