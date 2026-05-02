@@ -304,19 +304,6 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-title">Battery alerts</div>
-          <div class="row single">
-            <label>Threshold %
-              <span class="hint">Alert fires when battery level falls below this value.</span>
-              <input type="number" min="0" max="100"
-                .value=${String(config.ui?.battery_threshold ?? 20)}
-                @input=${(e: InputEvent) => this._setUi("battery_threshold", Number(valueFromEvent(e)))}
-              />
-            </label>
-          </div>
-        </div>
-
         <div class="row single">
           <button type="button" class="autofill-button autofill-button--full" ?disabled=${!hasArea} @click=${this._handleRoomAutofill}>Autofill devices from area</button>
         </div>
@@ -723,6 +710,18 @@ export class SmartAreaCardEditor extends LitElement {
           <div class="tile-size-values">
             <span>${cardCols} per row</span>
             <span>${tileSize}px high</span>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Battery alerts</div>
+          <div class="row single">
+            <label>Threshold %
+              <span class="hint">Alert fires when battery level falls below this value.</span>
+              <input type="number" min="0" max="100"
+                .value=${String(config.ui?.battery_threshold ?? 20)}
+                @input=${(e: InputEvent) => this._setUi("battery_threshold", Number(valueFromEvent(e)))}
+              />
+            </label>
           </div>
         </div>
         <div class="devices-list">
