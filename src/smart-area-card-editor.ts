@@ -702,8 +702,9 @@ export class SmartAreaCardEditor extends LitElement {
     const tileSize = config.ui?.device_tile_size ?? 110;
     const pct = Math.round(((tileSize - 70) / (160 - 70)) * 100);
     const GAP = 10;
-    const cardGridEst = Math.max(200, window.innerWidth - 44);
-    const cardCols = Math.max(1, Math.floor((cardGridEst + GAP) / (tileSize + GAP)));
+    const editorW = this.offsetWidth > 0 ? this.offsetWidth : window.innerWidth;
+    const cardGridEst = Math.max(200, editorW - 44); // editor padding 16×2 + ha-card 14×2 ≈ 44px delta
+    const cardCols = Math.max(1, Math.min(8, Math.floor((cardGridEst + GAP) / (tileSize + GAP))));
     return html`
       <section class="section">
         <div class="devices-header">
