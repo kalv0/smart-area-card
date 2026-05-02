@@ -578,7 +578,9 @@ export class SmartAreaCardEditor extends LitElement {
         pointercancel: this._handleSensorTouchDragCancel,
       } : {};
 
-      const tip = isFirstVisible ? html`<div class="sensor-primary-tip">★ Primary — displayed largest in the card.</div>` : nothing;
+      const primaryTip = isFirstVisible
+        ? html`<span class="sensor-primary-tip"><span class="sr-primary-star" title="Primary sensor">&#9733;</span> Primary &mdash; displayed largest in the card.</span>`
+        : nothing;
 
       if (key.startsWith("custom_")) {
         const i = Number(key.slice(7));
@@ -589,7 +591,6 @@ export class SmartAreaCardEditor extends LitElement {
         const alertEnabled = sensor.alert?.enabled === true;
         const entityLabel = sensor.entity ? (this.hass?.states[sensor.entity]?.attributes?.friendly_name as string | undefined ?? sensor.entity) : "";
         return html`
-          ${tip}
           <div class="sr-card ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
                data-sensor-index=${String(idx)} data-sensor-key=${key}
                style="--sr-accent: ${accent}"
@@ -617,8 +618,9 @@ export class SmartAreaCardEditor extends LitElement {
                            @click=${(e: Event) => e.stopPropagation()}
                            @pointerdown=${(e: Event) => e.stopPropagation()}
                            @input=${(e: InputEvent) => this._updateCustomSensor(i, { name: valueFromEvent(e) })} />
-                  </span>
+                    </span>
                 </div>
+                ${primaryTip}
                 ${hasEntity ? html`<span class="sr-entity-label">${entityLabel}</span>` : nothing}
               </div>
               <div class="sr-actions">
@@ -648,7 +650,6 @@ export class SmartAreaCardEditor extends LitElement {
       const isExpanded = !hasEntity || this._expandedSensors.includes(key);
       const sAlertKey = key as "temperature";
       return html`
-        ${tip}
         <div class="sr-card ${isFirstFilled ? "sr-card--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
              data-sensor-index=${String(idx)} data-sensor-key=${key}
              style="--sr-accent: ${accent}"
@@ -672,7 +673,7 @@ export class SmartAreaCardEditor extends LitElement {
                 <ha-icon icon=${meta.icon}></ha-icon>
                 <span>${meta.label}</span>
               </div>
-              ${isFirstFilled ? html`<span class="sr-primary-star" title="Primary sensor">★</span>` : nothing}
+              ${primaryTip}
               ${hasEntity ? html`<span class="sr-entity-label">${this.hass?.states[entityId]?.attributes?.friendly_name as string ?? entityId}</span>` : nothing}
             </div>
             <div class="sr-actions">

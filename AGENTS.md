@@ -20,13 +20,13 @@ Rules:
 <claude-mem-context>
 # Memory Context
 
-# [smart-area] recent context, 2026-05-02 11:40pm GMT+2
+# [smart-area] recent context, 2026-05-02 11:43pm GMT+2
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 7 obs (3486t read) | 542.885t work | 99% savings
+Stats: 11 obs (4838t read) | 870.350t work | 99% savings
 
 ### May 2, 2026
 1 10:25p 🔵 smart-area-card: Project Structure and Toolchain
@@ -36,6 +36,10 @@ Stats: 7 obs (3486t read) | 542.885t work | 99% savings
 5 " 🔵 smart-area-card: SmartRoomCardConfig — Full Type System
 6 " 🔵 smart-area-card: Visual Editor Architecture
 7 " 🔵 smart-area-card: Fragile Zones and Technical Debt
+8 " 🟣 Sensors Section UI: Show Toggle + Open Details Checkbox
+9 11:24p 🟣 New `header_sensors_enabled` Config Flag with Sensors Panel in Editor
+10 " 🔄 Sensor Click Target Merged Into Sensor Strip Element
+11 " 🔵 Pre-existing Failing Test: evaluateClimateAlert Room Name
 
-Access 543k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 870k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

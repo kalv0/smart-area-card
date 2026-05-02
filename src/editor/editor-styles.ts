@@ -2773,13 +2773,18 @@ export const calvoRoomCardEditorStyles = css`
     border: none;
   }
 
-  /* ─── Yellow tip above first sensor ─────────────────────── */
   .sensor-primary-tip {
-    font-size: 0.72rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    font-size: 0.68rem;
     font-weight: 600;
     color: #f59e0b;
-    padding: 4px 0 2px 2px;
-    letter-spacing: 0.01em;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* full-width entity picker block below the header row */
