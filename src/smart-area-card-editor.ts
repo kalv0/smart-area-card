@@ -96,6 +96,9 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _imgUploading = false;
   @state() private _devImgPickerTabs: Record<string, "library" | "path"> = {};
   @state() private _devImgUploading = false;
+  @state() private _devGallery: Array<{ url: string; name: string; type?: string }> = [];
+
+  private static readonly _DEV_GALLERY_KEY = "smart-area:device-gallery";
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
   private _touchDragPointerId?: number;
@@ -112,6 +115,10 @@ export class SmartAreaCardEditor extends LitElement {
 
   protected firstUpdated(): void {
     this._refreshRegistries();
+    try {
+      const raw = localStorage.getItem(SmartAreaCardEditor._DEV_GALLERY_KEY);
+      if (raw) this._devGallery = JSON.parse(raw);
+    } catch { /* ignore */ }
   }
 
   private _getGallery(): Array<{ url: string; name: string }> {
@@ -132,18 +139,19 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _getDeviceGallery(): Array<{ url: string; name: string; type?: string }> {
-    return this._config?.ui?.device_image_gallery ?? [];
+    return this._devGallery;
   }
 
   private _saveToDeviceGallery(url: string, name: string, type?: string): void {
-    const current = this._getDeviceGallery();
-    const next = [{ url, name, type }, ...current.filter((g) => g.url !== url)].slice(0, 20);
-    this._patch({ ui: { ...(this._config?.ui ?? {}), device_image_gallery: next } });
+    const next = [{ url, name, type }, ...this._devGallery.filter((g) => g.url !== url)].slice(0, 30);
+    this._devGallery = next;
+    try { localStorage.setItem(SmartAreaCardEditor._DEV_GALLERY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   }
 
   private _removeFromDeviceGallery(url: string): void {
-    const next = this._getDeviceGallery().filter((g) => g.url !== url);
-    this._patch({ ui: { ...(this._config?.ui ?? {}), device_image_gallery: next } });
+    const next = this._devGallery.filter((g) => g.url !== url);
+    this._devGallery = next;
+    try { localStorage.setItem(SmartAreaCardEditor._DEV_GALLERY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   }
 
   private _triggerDeviceImageUpload(callback: (url: string) => void, type?: string): void {

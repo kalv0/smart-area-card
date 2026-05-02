@@ -284,7 +284,6 @@ export interface SmartRoomCardConfig {
       background_position_y?: number;
       gallery?: Array<{ url: string; name: string }>;
     };
-    device_image_gallery?: Array<{ url: string; name: string; type?: string }>;
   };
   expander?: {
     enabled?: boolean;
