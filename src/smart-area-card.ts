@@ -283,7 +283,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       >
         ${model.roomImageUrl ? html`
           <div class="room-frame">
-            <img class="room-image${model.roomImageDark ? " room-image--dark" : ""}" src=${model.roomImageUrl} alt="" aria-hidden="true" />
+            <img class="room-image${model.roomImageDark ? " room-image--dark" : ""}" src=${model.roomImageUrl} style="object-position: center ${model.roomBackgroundPositionY ?? 50}%" alt="" aria-hidden="true" />
             <div class="room-mask"></div>
           </div>
         ` : nothing}

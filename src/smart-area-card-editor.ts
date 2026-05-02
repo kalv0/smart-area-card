@@ -1339,8 +1339,6 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       selectorDefaults?: { domains?: string[]; restrict_to_room_area?: boolean };
       showPresetBanner?: boolean;
       allowPresetNameEdit?: boolean;
-      pickerId?: string;
-      deviceType?: string;
     },
   ) {
     const {
@@ -1352,8 +1350,6 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       selectorDefaults,
       showPresetBanner = true,
       allowPresetNameEdit = false,
-      pickerId = "state",
-      deviceType,
     } = options;
     return html`<div class="condition-card condition-card-state ${item.preset ? "preset-locked" : ""}">
       ${item.preset && showPresetBanner ? html`<div class="preset-banner"><div class="preset-copy"><div><strong>${item.name?.trim() || `Default ${this._presetLabel(item.preset_source)} state`}</strong></div><div>You can edit this default type configuration, but it cannot be removed.</div></div>${onReset ? html`<button type="button" class="secondary" @click=${onReset}>Reset</button>` : nothing}</div>` : nothing}
@@ -1373,16 +1369,6 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
           <div class="row single"><div class="inline-control"><div><div>Active icon</div><div class="hint">Top-right icon while active.</div></div><div class="icon-picker-row">${this._renderIconPicker(item.icon_active ?? "", false, (value) => onUpdate("icon_active", value || undefined))}</div><div class="inline-color-block"><span class="inline-color-label">Color</span>${this._renderColorSelect(item.icon_active_color ?? item.border_color ?? "white", false, (value) => onUpdate("icon_active_color", value), true)}</div></div></div>
           <div class="row single"><div class="inline-control"><div><div>Inactive icon</div><div class="hint">Top-right icon while inactive.</div></div><div class="icon-picker-row">${this._renderIconPicker(item.icon_inactive ?? "", false, (value) => onUpdate("icon_inactive", value || undefined))}</div><div class="inline-color-block"><span class="inline-color-label">Color</span>${this._renderColorSelect(item.icon_inactive_color ?? item.border_color ?? "white", false, (value) => onUpdate("icon_inactive_color", value), true)}</div></div></div>
         </div>
-        <div class="subsection">
-          <div class="subsection-title">Active image</div>
-          <div class="field-help">Image shown while this state is active. Transparent PNG recommended.</div>
-          ${this._renderDeviceImagePicker(`${pickerId}-active`, item.image_active ?? "", (v) => onUpdate("image_active", v || undefined), deviceType)}
-        </div>
-        <div class="subsection">
-          <div class="subsection-title">Inactive image</div>
-          <div class="field-help">Image shown while this state is inactive. Transparent PNG recommended.</div>
-          ${this._renderDeviceImagePicker(`${pickerId}-inactive`, item.image_inactive ?? "", (v) => onUpdate("image_inactive", v || undefined), deviceType)}
-        </div>
       </div>
       ${this._renderConditionsSection("Conditions", "All conditions must be true for this state to be active. If any condition is false, it becomes inactive.", this._renderConditionList(item.conditions, onConditions, lockMode, selectorDefaults))}
       ${onRemove ? html`<button type="button" class="secondary" @click=${onRemove}>Remove state</button>` : nothing}
@@ -1399,8 +1385,6 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       onReset: item.preset ? () => this._resetPresetState(index, itemIndex) : undefined,
       lockMode: item.preset ? "first" : "none",
       selectorDefaults: { restrict_to_room_area: device ? this._deviceRestrictsToRoomArea(device) : false, domains: ["*"] },
-      pickerId: `d${index}-s${itemIndex}`,
-      deviceType: device?.type,
     }))}<button type="button" class="secondary" @click=${() => this._addNamedState(index)}>Add state</button>`;
   }
 

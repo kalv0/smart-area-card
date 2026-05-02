@@ -76,7 +76,7 @@ export const smartRoomCardStyles = css`
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: top center;
+    object-position: center 50%;
     display: block;
     transition: filter 600ms ease;
   }
