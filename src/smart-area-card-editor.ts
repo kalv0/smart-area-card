@@ -347,6 +347,27 @@ export class SmartAreaCardEditor extends LitElement {
     const darkCond = images.dark_mode_condition ?? "always";
     const bgOn = images.background_on ?? "";
     const bgPosY = images.background_position_y ?? 50;
+    const backgroundPreview = bgOn ? html`
+      <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"
+           style=${this._bgPreviewValid ? "" : "display:none"}>
+        <img class="bg-preview-img" src=${bgOn} alt=""
+          style="object-position: center ${bgPosY}%"
+          @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
+          @error=${() => { this._bgPreviewValid = false; this._bgPreviewError = true; }}
+        />
+        ${darkEnabled ? html`
+          <img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt=""
+            style="object-position: center ${bgPosY}%" />
+          <span class="bg-preview-tag bg-preview-tag--left">ON</span>
+          <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
+        ` : nothing}
+      </div>
+      ${!this._bgPreviewValid ? html`
+        <img style="display:none;position:absolute" src=${bgOn} alt=""
+          @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
+        />
+      ` : nothing}
+    ` : nothing;
 
     return html`
       <section class="section">
@@ -370,6 +391,7 @@ export class SmartAreaCardEditor extends LitElement {
             @value-changed=${(e: CustomEvent) => this._setAreaId(String(e.detail?.value ?? ""))}
           ></ha-area-picker>
         </div>
+        ${backgroundPreview}
 
         <div class="section-collapsible ${this._cardSetupCollapsed ? "section-collapsible--collapsed" : ""}">
         <div class="section-collapsible-inner">
@@ -432,27 +454,6 @@ export class SmartAreaCardEditor extends LitElement {
             <input type="file" accept="image/*" class="img-file-input" @change=${this._handleImageFile} />
           `}
           ${bgOn && this._bgPreviewError ? this._reqError("Image not valid or not found.") : nothing}
-          ${bgOn ? html`
-            <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"
-                 style=${this._bgPreviewValid ? "" : "display:none"}>
-              <img class="bg-preview-img" src=${bgOn} alt=""
-                style="object-position: center ${bgPosY}%"
-                @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
-                @error=${() => { this._bgPreviewValid = false; this._bgPreviewError = true; }}
-              />
-              ${darkEnabled ? html`
-                <img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt=""
-                  style="object-position: center ${bgPosY}%" />
-                <span class="bg-preview-tag bg-preview-tag--left">ON</span>
-                <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
-              ` : nothing}
-            </div>
-            ${!this._bgPreviewValid ? html`
-              <img style="display:none;position:absolute" src=${bgOn} alt=""
-                @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
-              />
-            ` : nothing}
-          ` : nothing}
           ${this._bgPreviewValid ? html`
             <div class="bg-crop-control">
               <span class="bg-crop-label">Crop position</span>
@@ -725,8 +726,6 @@ export class SmartAreaCardEditor extends LitElement {
     const showAreaIcon = config.ui?.show_area_icon ?? false;
     const areaIcon = (this.hass as import("./types/ha-extensions").HomeAssistantExtended)?.areas?.[config.room_id ?? ""]?.icon ?? "mdi:home-outline";
     const automationEnabled = config.ui?.automation_badge_enabled ?? false;
-    const images = config.ui?.images ?? {};
-    const bgOn = images.background_on ?? "";
 
     const _SENSOR_ICONS: Record<string, string> = {
       temperature: "mdi:thermometer", humidity: "mdi:water-percent", co2: "mdi:molecule-co2",
@@ -776,8 +775,7 @@ export class SmartAreaCardEditor extends LitElement {
             <ha-icon icon=${this._headerCollapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
           </button>
         </div>
-        <div class="editor-header-preview ${bgOn && this._bgPreviewValid ? "editor-header-preview--has-bg" : ""}"
-             style=${bgOn && this._bgPreviewValid ? `background-image: url('${bgOn}')` : ""}>
+        <div class="editor-header-preview">
           <div class="ehp-overlay"></div>
           <div class="ehp-top">
             <div class="ehp-title ${roomNameEmpty ? "ehp-title--empty" : ""}">
@@ -950,11 +948,9 @@ export class SmartAreaCardEditor extends LitElement {
   private _renderDeviceGridPreview(config: SmartRoomCardConfig, cardCols: number) {
     const devices = config.devices ?? [];
     const tileSize = config.ui?.device_tile_size ?? 110;
-    const bgOn = config.ui?.images?.background_on ?? "";
     const gridStyle = `grid-template-columns: repeat(${cardCols}, 1fr); --sr-tile-size: ${tileSize}px`;
-    const previewStyle = bgOn ? `background-image: url('${bgOn}')` : "";
     return html`
-      <div class="dg-preview" style=${previewStyle}>
+      <div class="dg-preview">
         <div class="dg-preview-grid" style=${gridStyle}>
           ${devices.map((device, index) => {
             const type = device.type ?? "custom";
@@ -962,7 +958,7 @@ export class SmartAreaCardEditor extends LitElement {
             const isDropTarget = this._dropIndex === index && this._dragIndex !== index;
             const isActive = this._expandedDevices.includes(index);
             const rawName = device.name || (device.entity ? device.entity.split(".").pop()?.replace(/_/g, " ") ?? "" : "") || `Device ${index + 1}`;
-            const previewImg = normalizeAssetPath(device.image || (device as Record<string, string>).image_on || (device as Record<string, string>).image_off, "product");
+            const previewImg = normalizeAssetPath(device.image || device.image_on || device.image_off, "product");
             return html`
               <div class="dg-preview-tile dg-tile--${type} ${isDragging ? "dg-tile--dragging" : ""} ${isDropTarget ? "dg-tile--drop" : ""} ${isActive ? "dg-preview-tile--active" : ""}"
                    data-device-index=${String(index)}

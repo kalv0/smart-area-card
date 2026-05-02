@@ -457,7 +457,7 @@ export const calvoRoomCardEditorStyles = css`
     position: relative;
     border-radius: var(--editor-radius-lg);
     overflow: hidden;
-    background: rgba(10, 16, 28, 0.85);
+    background: linear-gradient(135deg, #05070b 0%, #111722 48%, #3a414c 100%);
     background-size: cover;
     background-position: top center;
     border: 1px solid var(--editor-border);
@@ -613,7 +613,7 @@ export const calvoRoomCardEditorStyles = css`
   .dg-preview {
     border-radius: 14px;
     overflow: hidden;
-    background: rgba(12, 18, 28, 0.95);
+    background: linear-gradient(135deg, #05070b 0%, #111722 52%, #3a414c 100%);
     background-size: cover;
     background-position: center;
     outline: 1px solid rgba(255, 255, 255, 0.07);
