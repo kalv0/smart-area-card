@@ -258,6 +258,18 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
     const model = this._renderModel;
     const colors = this._config.ui?.colors;
+    const hasRoomBackground = Boolean(model.roomBackground);
+    const roomBackgroundPosition = `center ${model.roomBackgroundPositionY ?? 50}%`;
+    const backgroundSize = hasRoomBackground
+      ? model.roomImageDark
+        ? "100% 100%, 100% 100%, cover"
+        : "100% 100%, cover"
+      : "100% 100%";
+    const backgroundPosition = hasRoomBackground
+      ? model.roomImageDark
+        ? `top left, top left, ${roomBackgroundPosition}`
+        : `top left, ${roomBackgroundPosition}`
+      : "top left";
     const cardStyles = {
       "--smart-room-active": colors?.active ?? "#ffd700",
       "--smart-room-alert": colors?.alert ?? "#ff3b30",
@@ -266,9 +278,11 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       "--smart-room-text": colors?.text ?? "white",
       "--smart-room-muted": colors?.muted ?? "rgba(255,255,255,0.76)",
       backgroundImage: buildRoomBackgroundImage(model.roomBackground, model.roomImageDark),
-      backgroundSize: model.roomBackground ? "cover" : "auto",
-      backgroundPosition: model.roomBackground ? `center ${model.roomBackgroundPositionY ?? 50}%` : "center",
+      backgroundSize,
+      backgroundPosition,
       backgroundRepeat: "no-repeat",
+      backgroundOrigin: "border-box",
+      backgroundClip: "border-box",
     };
 
     return html`
