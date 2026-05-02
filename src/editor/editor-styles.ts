@@ -634,13 +634,28 @@ export const calvoRoomCardEditorStyles = css`
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
     transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .dg-preview-tile-visual {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .dg-preview-tile-visual img {
+    width: 65%;
+    height: auto;
+    max-width: 65%;
+    max-height: 90%;
+    object-fit: contain;
+    pointer-events: none;
   }
 
   .dg-preview-tile--active {
@@ -660,10 +675,15 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .dg-preview-tile-label {
+    position: absolute;
+    left: 8px;
+    bottom: 7px;
+    right: 8px;
+    z-index: 1;
     display: flex;
     flex-direction: column;
-    padding: 7px 8px;
     gap: 2px;
+    pointer-events: none;
   }
 
   .dg-preview-tile-icon {

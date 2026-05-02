@@ -23,6 +23,7 @@ import { DEVICE_ENTITY_PLACEHOLDER, EXTRA_FIELD_PLACEHOLDERS } from "./editor/ed
 import { BUILTIN_TYPE_DEFINITIONS } from "./editor/builtin-types";
 import { INITIAL_STATES, OPERATORS, COLOR_OPTIONS, HEADER_BADGE_OPTIONS, ALERT_HEADER_BADGE_OPTIONS } from "./editor/editor-constants";
 import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUndefined, valueFromEvent } from "./editor/editor-utils";
+import { normalizeAssetPath } from "./helpers";
 import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
 import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
 import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered } from "./editor/registry-helpers";
@@ -961,6 +962,7 @@ export class SmartAreaCardEditor extends LitElement {
             const isDropTarget = this._dropIndex === index && this._dragIndex !== index;
             const isActive = this._expandedDevices.includes(index);
             const rawName = device.name || (device.entity ? device.entity.split(".").pop()?.replace(/_/g, " ") ?? "" : "") || `Device ${index + 1}`;
+            const previewImg = normalizeAssetPath(device.image || (device as Record<string, string>).image_on || (device as Record<string, string>).image_off, "product");
             return html`
               <div class="dg-preview-tile dg-tile--${type} ${isDragging ? "dg-tile--dragging" : ""} ${isDropTarget ? "dg-tile--drop" : ""} ${isActive ? "dg-preview-tile--active" : ""}"
                    data-device-index=${String(index)}
@@ -981,8 +983,13 @@ export class SmartAreaCardEditor extends LitElement {
                        this.shadowRoot?.querySelector<HTMLElement>(`.device-card[data-device-index="${index}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
                      }
                    }}>
+                ${previewImg ? html`
+                  <div class="dg-preview-tile-visual">
+                    <img src=${previewImg} alt="" />
+                  </div>
+                ` : nothing}
                 <div class="dg-preview-tile-label">
-                  <ha-icon class="dg-preview-tile-icon" icon=${this._typeIcon(type)}></ha-icon>
+                  ${!previewImg ? html`<ha-icon class="dg-preview-tile-icon" icon=${this._typeIcon(type)}></ha-icon>` : nothing}
                   <div class="dg-preview-tile-name">${rawName}</div>
                 </div>
               </div>
