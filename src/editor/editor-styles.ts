@@ -512,63 +512,92 @@ export const calvoRoomCardEditorStyles = css`
 
   .tile-size-control {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    gap: 6px;
     padding: 4px 0;
   }
 
-  .tile-size-label {
-    font-size: 0.8rem;
-    color: var(--editor-muted);
-    white-space: nowrap;
-    flex-shrink: 0;
+  .tile-size-range-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 20px;
   }
 
-  .tile-size-value {
-    font-size: 0.8rem;
-    color: var(--editor-muted);
-    white-space: nowrap;
-    flex-shrink: 0;
-    min-width: 34px;
-    text-align: right;
+  .tile-size-range-wrap::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: var(--range-pct, 50%);
+    height: 4px;
+    background: var(--editor-accent);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .tile-size-range-wrap::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: -1;
   }
 
   .tile-size-range {
-    flex: 1;
+    position: relative;
+    width: 100%;
     -webkit-appearance: none;
     appearance: none;
-    height: 4px;
-    border-radius: 2px;
+    background: transparent;
     outline: none;
     cursor: pointer;
-    background: linear-gradient(
-      to right,
-      var(--editor-accent) 0%,
-      var(--editor-accent) var(--range-pct, 50%),
-      rgba(255, 255, 255, 0.15) var(--range-pct, 50%),
-      rgba(255, 255, 255, 0.15) 100%
-    );
+    z-index: 1;
+    margin: 0;
+    padding: 0;
+  }
+
+  .tile-size-range::-webkit-slider-runnable-track {
+    height: 4px;
+    background: transparent;
   }
 
   .tile-size-range::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: var(--editor-accent);
     cursor: pointer;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.28);
+    margin-top: -7px;
+  }
+
+  .tile-size-range::-moz-range-track {
+    height: 4px;
+    background: transparent;
   }
 
   .tile-size-range::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: var(--editor-accent);
     border: none;
     cursor: pointer;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.28);
+  }
+
+  .tile-size-values {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--editor-muted);
   }
 
   .dg-grid {
