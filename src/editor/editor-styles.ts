@@ -601,7 +601,10 @@ export const calvoRoomCardEditorStyles = css`
 
   .ehp-sensor-click-target {
     position: absolute;
-    inset: 8px;
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: min(46%, 190px);
     z-index: 2;
     appearance: none;
     -webkit-appearance: none;
@@ -618,23 +621,23 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .ehp-sensor-popup-overlay {
-    position: fixed;
+    position: absolute;
     inset: 0;
-    z-index: 999;
+    z-index: 4;
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(6px) saturate(120%);
-    -webkit-backdrop-filter: blur(6px) saturate(120%);
+    justify-content: flex-end;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(3px) saturate(115%);
+    -webkit-backdrop-filter: blur(3px) saturate(115%);
   }
 
   .ehp-sensor-popup {
-    width: min(420px, 100%);
-    max-height: calc(100dvh - 48px);
+    width: min(310px, 72%);
+    max-height: calc(100% - 4px);
     overflow: hidden;
-    border-radius: 22px;
+    border-radius: 18px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: linear-gradient(160deg, rgba(14, 20, 38, 0.98), rgba(18, 26, 50, 0.98));
     color: white;
@@ -645,7 +648,7 @@ export const calvoRoomCardEditorStyles = css`
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 14px;
+    padding: 10px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     font-size: 1rem;
     font-weight: 800;
@@ -677,7 +680,7 @@ export const calvoRoomCardEditorStyles = css`
   .ehp-sensor-popup-body {
     display: grid;
     gap: 8px;
-    padding: 14px;
+    padding: 10px;
     overflow: auto;
   }
 
@@ -685,7 +688,7 @@ export const calvoRoomCardEditorStyles = css`
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 11px;
+    padding: 8px;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.045);
     border: 1px solid rgba(255, 255, 255, 0.08);

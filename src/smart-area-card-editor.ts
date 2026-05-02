@@ -901,8 +901,8 @@ export class SmartAreaCardEditor extends LitElement {
               </div>
             ` : nothing}
           ` : nothing}
+          ${this._showHeaderSensorPreviewPopup ? this._renderSensorPreviewPopup(roomNameEmpty ? "Area name" : roomName, _previewSensors) : nothing}
         </div>
-        ${this._showHeaderSensorPreviewPopup ? this._renderSensorPreviewPopup(roomNameEmpty ? "Area name" : roomName, _previewSensors) : nothing}
 
         <div class="section-collapsible ${this._headerCollapsed ? "section-collapsible--collapsed" : ""}">
         <div class="section-collapsible-inner">
