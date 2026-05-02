@@ -22,10 +22,17 @@ export const normalizeAssetPath = (
   return resolveBundledAsset(trimmed) ?? trimmed;
 };
 
-export const buildRoomBackgroundImage = (path?: string): string =>
-  path
-    ? `linear-gradient(to bottom, rgba(0, 0, 0, 0.72) 0px, rgba(0, 0, 0, 0.3) 40px, rgba(0, 0, 0, 0) 80px), url("${path}")`
-    : "linear-gradient(to bottom, rgba(0, 0, 0, 0.72) 0px, rgba(0, 0, 0, 0.3) 40px, rgba(0, 0, 0, 0) 80px)";
+export const buildRoomBackgroundImage = (path?: string, darken = false): string => {
+  const topShadow = "linear-gradient(to bottom, rgba(0, 0, 0, 0.72) 0px, rgba(0, 0, 0, 0.3) 40px, rgba(0, 0, 0, 0) 80px)";
+  if (!path) return topShadow;
+
+  const layers = [topShadow];
+  if (darken) {
+    layers.push("linear-gradient(rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.48))");
+  }
+  layers.push(`url("${path}")`);
+  return layers.join(", ");
+};
 
 export const shouldDimOffline = (config: SmartRoomDeviceConfig): boolean =>
   config.offline?.enabled === true;

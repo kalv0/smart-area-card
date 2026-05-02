@@ -8,7 +8,7 @@ After every file modification:
    git add -A
 
 3. Commit:
-   git commit -m "Codex: auto changes"
+   git commit -m "Codex: auto changes" (añade breve descripción del commit)
 
 4. Push:
    git push origin HEAD

@@ -169,13 +169,9 @@ export function computeRenderModel(
     climateEntities: getClimateEntities(config.sensors),
     areaAutomations,
     areaIcon: areaEntry?.icon || "mdi:home-outline",
-    roomBackground: darkModeEnabled
-      ? undefined
-      : normalizeAssetPath(config.ui?.images?.background_on, "room"),
+    roomBackground: normalizeAssetPath(config.ui?.images?.background_on, "room"),
     roomBackgroundPositionY: config.ui?.images?.background_position_y ?? 50,
-    roomImageUrl: darkModeEnabled
-      ? normalizeAssetPath(config.ui?.images?.background_on, "room")
-      : undefined,
+    roomImageUrl: undefined,
     roomImageDark,
   };
 }
