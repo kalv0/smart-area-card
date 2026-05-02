@@ -91,10 +91,8 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _headerCollapsed = false;
   @state() private _imgPickerMode: "library" | "path" = "library";
   @state() private _imgUploading = false;
-  @state() private _imgGallery: Array<{ url: string; name: string }> = [];
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
-  private static readonly _GALLERY_KEY = "smart-area-card-bg-images";
   private _touchDragPointerId?: number;
   private _touchDragStartX = 0;
   private _touchDragStartY = 0;
@@ -107,24 +105,23 @@ export class SmartAreaCardEditor extends LitElement {
 
   protected firstUpdated(): void {
     this._refreshRegistries();
-    this._imgGallery = this._loadGallery();
   }
 
-  private _loadGallery(): Array<{ url: string; name: string }> {
-    try { return JSON.parse(localStorage.getItem(SmartAreaCardEditor._GALLERY_KEY) ?? "[]"); }
-    catch { return []; }
+  private _getGallery(): Array<{ url: string; name: string }> {
+    return this._config?.ui?.images?.gallery ?? [];
   }
 
   private _saveToGallery(url: string, name: string): void {
-    const next = [{ url, name }, ...this._imgGallery.filter((g) => g.url !== url)].slice(0, 16);
-    localStorage.setItem(SmartAreaCardEditor._GALLERY_KEY, JSON.stringify(next));
-    this._imgGallery = next;
+    const images = this._config?.ui?.images ?? {};
+    const current = images.gallery ?? [];
+    const next = [{ url, name }, ...current.filter((g) => g.url !== url)].slice(0, 8);
+    this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...images, gallery: next } } });
   }
 
   private _removeFromGallery(url: string): void {
-    const next = this._imgGallery.filter((g) => g.url !== url);
-    localStorage.setItem(SmartAreaCardEditor._GALLERY_KEY, JSON.stringify(next));
-    this._imgGallery = next;
+    const images = this._config?.ui?.images ?? {};
+    const next = (images.gallery ?? []).filter((g) => g.url !== url);
+    this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...images, gallery: next } } });
   }
 
   private _triggerImageUpload(): void {
@@ -314,7 +311,7 @@ export class SmartAreaCardEditor extends LitElement {
                 <ha-icon icon=${this._imgUploading ? "mdi:loading" : "mdi:plus"}></ha-icon>
                 ${this._imgUploading ? "Uploading…" : "Upload image"}
               </button>
-              ${this._imgGallery.map((img) => html`
+              ${this._getGallery().map((img) => html`
                 <div class="img-gallery-item ${bgOn === img.url ? "img-gallery-item--active" : ""}"
                      @click=${() => {
                        this._setRoomImage("background_on", img.url);
@@ -329,7 +326,7 @@ export class SmartAreaCardEditor extends LitElement {
                   </button>
                 </div>
               `)}
-              ${this._imgGallery.length === 0 ? html`<span class="img-gallery-empty">No images yet. Tap Upload to add one.</span>` : nothing}
+              ${this._getGallery().length === 0 ? html`<span class="img-gallery-empty">No images yet. Tap Upload to add one.</span>` : nothing}
             </div>
             <input type="file" accept="image/*" class="img-file-input" @change=${this._handleImageFile} />
           `}
