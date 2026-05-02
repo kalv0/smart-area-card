@@ -305,8 +305,52 @@ export const calvoRoomCardEditorStyles = css`
     padding: 8px 0;
   }
 
-  .img-file-input {
+  .img-file-input,
+  .dev-img-file-input {
     display: none;
+  }
+
+  .img-gallery--square .img-gallery-item,
+  .img-gallery--square .img-upload-btn {
+    height: 72px;
+  }
+
+  .img-gallery--square .img-gallery-item img {
+    object-fit: contain;
+    background: repeating-conic-gradient(rgba(128, 128, 128, 0.15) 0% 25%, transparent 0% 50%) 0 0 / 12px 12px;
+  }
+
+  .img-gallery-separator {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: var(--editor-muted);
+    padding: 2px 0;
+  }
+
+  .img-gallery-separator::before,
+  .img-gallery-separator::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--editor-border);
+  }
+
+  .dev-img-preview {
+    display: flex;
+    justify-content: center;
+    height: 56px;
+    margin-top: 8px;
+    border-radius: var(--editor-radius-sm);
+    overflow: hidden;
+    background: repeating-conic-gradient(rgba(128, 128, 128, 0.1) 0% 25%, transparent 0% 50%) 0 0 / 12px 12px;
+  }
+
+  .dev-img-preview img {
+    height: 100%;
+    object-fit: contain;
   }
 
   /* ─── Background preview ────────────────────────────────────────── */

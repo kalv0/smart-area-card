@@ -281,6 +281,7 @@ export interface SmartRoomCardConfig {
       dark_mode_lux_threshold?: number;
       gallery?: Array<{ url: string; name: string }>;
     };
+    device_image_gallery?: Array<{ url: string; name: string; type?: string }>;
   };
   expander?: {
     enabled?: boolean;

@@ -91,6 +91,8 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _headerCollapsed = false;
   @state() private _imgPickerMode: "library" | "path" = "library";
   @state() private _imgUploading = false;
+  @state() private _devImgPickerTabs: Record<string, "library" | "path"> = {};
+  @state() private _devImgUploading = false;
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
   private _touchDragPointerId?: number;
@@ -102,6 +104,8 @@ export class SmartAreaCardEditor extends LitElement {
   private _sensorTouchDragStartY = 0;
   private _sensorTouchDragPendingIndex?: number;
   private _sectionsInitialized = false;
+  private _devImgUploadCallback?: (url: string) => void;
+  private _devImgUploadType?: string;
 
   protected firstUpdated(): void {
     this._refreshRegistries();
@@ -122,6 +126,100 @@ export class SmartAreaCardEditor extends LitElement {
     const images = this._config?.ui?.images ?? {};
     const next = (images.gallery ?? []).filter((g) => g.url !== url);
     this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...images, gallery: next } } });
+  }
+
+  private _getDeviceGallery(): Array<{ url: string; name: string; type?: string }> {
+    return this._config?.ui?.device_image_gallery ?? [];
+  }
+
+  private _saveToDeviceGallery(url: string, name: string, type?: string): void {
+    const current = this._getDeviceGallery();
+    const next = [{ url, name, type }, ...current.filter((g) => g.url !== url)].slice(0, 20);
+    this._patch({ ui: { ...(this._config?.ui ?? {}), device_image_gallery: next } });
+  }
+
+  private _removeFromDeviceGallery(url: string): void {
+    const next = this._getDeviceGallery().filter((g) => g.url !== url);
+    this._patch({ ui: { ...(this._config?.ui ?? {}), device_image_gallery: next } });
+  }
+
+  private _triggerDeviceImageUpload(callback: (url: string) => void, type?: string): void {
+    this._devImgUploadCallback = callback;
+    this._devImgUploadType = type;
+    this.shadowRoot?.querySelector<HTMLInputElement>(".dev-img-file-input")?.click();
+  }
+
+  private async _handleDeviceImageFile(e: Event): Promise<void> {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    (e.target as HTMLInputElement).value = "";
+    this._devImgUploading = true;
+    try {
+      const dataUrl = await this._resizeImage(file, 400, 400, 0.85);
+      const name = file.name.replace(/\.[^.]+$/, "");
+      this._saveToDeviceGallery(dataUrl, name, this._devImgUploadType);
+      this._devImgUploadCallback?.(dataUrl);
+    } catch (err) {
+      console.error("[smart-area-card] Device image resize failed:", err);
+    } finally {
+      this._devImgUploading = false;
+      this._devImgUploadCallback = undefined;
+      this._devImgUploadType = undefined;
+    }
+  }
+
+  private _renderDevImgItem(img: { url: string; name: string; type?: string }, currentUrl: string, onPick: (url: string) => void) {
+    return html`
+      <div class="img-gallery-item ${currentUrl === img.url ? "img-gallery-item--active" : ""}"
+           @click=${() => onPick(img.url)}>
+        <img src=${img.url} alt=${img.name} loading="lazy" />
+        <button type="button" class="img-gallery-del"
+                @click=${(e: Event) => { e.stopPropagation(); this._removeFromDeviceGallery(img.url); if (currentUrl === img.url) onPick(""); }}>
+          <ha-icon icon="mdi:close"></ha-icon>
+        </button>
+      </div>
+    `;
+  }
+
+  private _renderDeviceImagePicker(pickerId: string, currentUrl: string, onPick: (url: string) => void, deviceType?: string) {
+    const tab = this._devImgPickerTabs[pickerId] ?? "library";
+    const gallery = this._getDeviceGallery();
+    const sameType = deviceType ? gallery.filter((g) => g.type === deviceType) : gallery;
+    const others = deviceType ? gallery.filter((g) => g.type !== deviceType) : [];
+    return html`
+      <div class="img-picker-tabs">
+        <button type="button" class="img-tab ${tab === "library" ? "img-tab--active" : ""}"
+                @click=${() => { this._devImgPickerTabs = { ...this._devImgPickerTabs, [pickerId]: "library" }; }}>
+          <ha-icon icon="mdi:image-multiple-outline"></ha-icon>Library
+        </button>
+        <button type="button" class="img-tab ${tab === "path" ? "img-tab--active" : ""}"
+                @click=${() => { this._devImgPickerTabs = { ...this._devImgPickerTabs, [pickerId]: "path" }; }}>
+          <ha-icon icon="mdi:link-variant"></ha-icon>Path
+        </button>
+      </div>
+      ${tab === "path" ? html`
+        <div class="row single">
+          <label><input type="text" .value=${currentUrl.startsWith("data:") ? "" : currentUrl}
+            placeholder="/local/img/products/device.png"
+            @input=${(e: InputEvent) => onPick(valueFromEvent(e))} /></label>
+        </div>
+      ` : html`
+        <div class="img-gallery img-gallery--square">
+          <button type="button" class="img-upload-btn" ?disabled=${this._devImgUploading}
+                  @click=${() => this._triggerDeviceImageUpload((url) => onPick(url), deviceType)}>
+            <ha-icon icon=${this._devImgUploading ? "mdi:loading" : "mdi:plus"}></ha-icon>
+            ${this._devImgUploading ? "Uploading…" : "Upload"}
+          </button>
+          ${sameType.map((img) => this._renderDevImgItem(img, currentUrl, onPick))}
+          ${others.length > 0 ? html`<div class="img-gallery-separator"><span>Other types</span></div>` : nothing}
+          ${others.map((img) => this._renderDevImgItem(img, currentUrl, onPick))}
+          ${gallery.length === 0 ? html`<span class="img-gallery-empty">No images yet. Tap Upload to add one.</span>` : nothing}
+        </div>
+      `}
+      ${currentUrl && !currentUrl.startsWith("data:") ? html`
+        <div class="dev-img-preview"><img src=${currentUrl} alt="" loading="lazy" /></div>
+      ` : nothing}
+    `;
   }
 
   private _triggerImageUpload(): void {
@@ -830,6 +928,7 @@ export class SmartAreaCardEditor extends LitElement {
           Add device
         </button>
         ${this._showAddTypePicker ? this._renderAddTypePicker() : nothing}
+        <input type="file" accept="image/*" class="dev-img-file-input" @change=${this._handleDeviceImageFile} />
       </section>
     `;
   }
@@ -1017,8 +1116,15 @@ export class SmartAreaCardEditor extends LitElement {
     onImageChange: (value: string) => void,
     description: string,
     toneClass = "",
+    deviceType?: string,
+    pickerId = "default-image",
   ) {
-    return html`<div class="panel ${toneClass}"><div class="panel-title">Visuals</div>${description ? html`<div class="hint">${description}</div>` : nothing}<div class="row single"><label>Default image<span class="hint">Main tile image. State images override it. Transparent PNG recommended.</span><input .value=${imageValue} @input=${(e: InputEvent) => onImageChange(valueFromEvent(e))} /><span class="hint">Example: /local/img/products/camera.png</span></label></div></div>`;
+    return html`<div class="panel ${toneClass}">
+      <div class="panel-title">Visuals</div>
+      ${description ? html`<div class="hint">${description}</div>` : nothing}
+      <div class="field-help">Main tile image. State images override it. Transparent PNG recommended.</div>
+      ${this._renderDeviceImagePicker(pickerId, imageValue, onImageChange, deviceType)}
+    </div>`;
   }
 
   private _renderSharedStateRulesPanel(offlinePanel: unknown, statesPanel: unknown, alertsPanel: unknown, toneClass = "") {
@@ -1067,6 +1173,8 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       (value) => this._setDevice(index, "image", value),
       "",
       this._toneClass(device.type),
+      device.type,
+      `device-${index}-img`,
     );
   }
 
@@ -1218,6 +1326,8 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       selectorDefaults?: { domains?: string[]; restrict_to_room_area?: boolean };
       showPresetBanner?: boolean;
       allowPresetNameEdit?: boolean;
+      pickerId?: string;
+      deviceType?: string;
     },
   ) {
     const {
@@ -1229,6 +1339,8 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       selectorDefaults,
       showPresetBanner = true,
       allowPresetNameEdit = false,
+      pickerId = "state",
+      deviceType,
     } = options;
     return html`<div class="condition-card condition-card-state ${item.preset ? "preset-locked" : ""}">
       ${item.preset && showPresetBanner ? html`<div class="preset-banner"><div class="preset-copy"><div><strong>${item.name?.trim() || `Default ${this._presetLabel(item.preset_source)} state`}</strong></div><div>You can edit this default type configuration, but it cannot be removed.</div></div>${onReset ? html`<button type="button" class="secondary" @click=${onReset}>Reset</button>` : nothing}</div>` : nothing}
@@ -1249,9 +1361,14 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
           <div class="row single"><div class="inline-control"><div><div>Inactive icon</div><div class="hint">Top-right icon while inactive.</div></div><div class="icon-picker-row">${this._renderIconPicker(item.icon_inactive ?? "", false, (value) => onUpdate("icon_inactive", value || undefined))}</div><div class="inline-color-block"><span class="inline-color-label">Color</span>${this._renderColorSelect(item.icon_inactive_color ?? item.border_color ?? "white", false, (value) => onUpdate("icon_inactive_color", value), true)}</div></div></div>
         </div>
         <div class="subsection">
-          <div class="subsection-title">State images</div>
-          <div class="field-help">These images replace the device image shown in the tile. A transparent PNG is recommended.</div>
-          <div class="row"><label>Active image<span class="hint">Image shown for the device while this state is active.</span><input .value=${item.image_active ?? ""} @input=${(e: InputEvent) => onUpdate("image_active", valueFromEvent(e) || undefined)} /><span class="hint">Example: /local/img/products/light/on.png</span></label><label>Inactive image<span class="hint">Image shown for the device while this state is inactive.</span><input .value=${item.image_inactive ?? ""} @input=${(e: InputEvent) => onUpdate("image_inactive", valueFromEvent(e) || undefined)} /><span class="hint">Example: /local/img/products/light/off.png</span></label></div>
+          <div class="subsection-title">Active image</div>
+          <div class="field-help">Image shown while this state is active. Transparent PNG recommended.</div>
+          ${this._renderDeviceImagePicker(`${pickerId}-active`, item.image_active ?? "", (v) => onUpdate("image_active", v || undefined), deviceType)}
+        </div>
+        <div class="subsection">
+          <div class="subsection-title">Inactive image</div>
+          <div class="field-help">Image shown while this state is inactive. Transparent PNG recommended.</div>
+          ${this._renderDeviceImagePicker(`${pickerId}-inactive`, item.image_inactive ?? "", (v) => onUpdate("image_inactive", v || undefined), deviceType)}
         </div>
       </div>
       ${this._renderConditionsSection("Conditions", "All conditions must be true for this state to be active. If any condition is false, it becomes inactive.", this._renderConditionList(item.conditions, onConditions, lockMode, selectorDefaults))}
@@ -1269,6 +1386,8 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       onReset: item.preset ? () => this._resetPresetState(index, itemIndex) : undefined,
       lockMode: item.preset ? "first" : "none",
       selectorDefaults: { restrict_to_room_area: device ? this._deviceRestrictsToRoomArea(device) : false, domains: ["*"] },
+      pickerId: `d${index}-s${itemIndex}`,
+      deviceType: device?.type,
     }))}<button type="button" class="secondary" @click=${() => this._addNamedState(index)}>Add state</button>`;
   }
 
