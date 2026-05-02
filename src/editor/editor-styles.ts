@@ -639,7 +639,8 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .dc-drag-handle {
-    width: 24px;
+    width: 36px;
+    align-self: stretch;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -650,8 +651,8 @@ export const calvoRoomCardEditorStyles = css`
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
-    color: rgba(255, 255, 255, 0.28);
-    --mdc-icon-size: 16px;
+    color: rgba(255, 255, 255, 0.35);
+    --mdc-icon-size: 20px;
   }
 
   .dc-drag-handle:active {
@@ -2433,7 +2434,8 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .sr-drag-handle {
-    width: 24px;
+    width: 36px;
+    align-self: stretch;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2444,8 +2446,8 @@ export const calvoRoomCardEditorStyles = css`
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
-    color: rgba(255, 255, 255, 0.28);
-    --mdc-icon-size: 16px;
+    color: rgba(255, 255, 255, 0.35);
+    --mdc-icon-size: 20px;
   }
 
   .sr-drag-handle:active {
