@@ -446,14 +446,14 @@ export const calvoRoomCardEditorStyles = css`
 
   .dg-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
     gap: 8px;
   }
 
   .dg-tile {
     --dg-color: var(--editor-custom);
     position: relative;
-    height: 88px;
+    height: 78px;
     border-radius: 11px;
     border: 1px solid color-mix(in srgb, var(--dg-color) 38%, transparent);
     background: color-mix(in srgb, var(--dg-color) 10%, rgba(10, 14, 20, 0.7));
