@@ -443,13 +443,12 @@ export const calvoRoomCardEditorStyles = css`
     background: rgba(12, 18, 28, 0.95);
     background-size: cover;
     background-position: center;
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    outline: 1px solid rgba(255, 255, 255, 0.07);
   }
 
   .dg-preview-grid {
     display: grid;
     gap: 10px;
-    padding: 10px;
   }
 
   .dg-preview-tile {
