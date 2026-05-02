@@ -99,6 +99,7 @@ export function computeRenderModel(
     icon: alert.icon,
     messages: [alert.reason],
   }));
+  const climateAlertKeys = new Set(climateAlerts.map((alert) => alert.key));
 
   const customSensorEntries = (config.sensors?.custom ?? []).map((sc) => ({
     config: sc,
@@ -119,6 +120,7 @@ export function computeRenderModel(
       }
     }
     if (triggered) {
+      climateAlertKeys.add(`custom_${i}`);
       climateAlertBadges.push({
         key: `custom_${i}`,
         icon: sc.icon || "mdi:gauge",
@@ -165,6 +167,7 @@ export function computeRenderModel(
       customIcons,
       customSensorEntries.map(({ config: sc, entity }) => ({ name: sc.name, icon: sc.icon, entity })),
       config.sensors?.sensor_order,
+      climateAlertKeys,
     ),
     climateEntities: getClimateEntities(config.sensors),
     areaAutomations,

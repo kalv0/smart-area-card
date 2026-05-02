@@ -4,6 +4,7 @@ import {
   createCardSignature,
   getAreaAutomations,
   evaluateClimateAlert,
+  buildClimateItems,
   getClimateEntities,
 } from "../room-model";
 import type { HassEntity } from "home-assistant-js-websocket";
@@ -198,5 +199,35 @@ describe("getClimateEntities", () => {
     };
     const entities = getClimateEntities(sensors);
     expect(entities).toContain("sensor.co2");
+  });
+});
+
+describe("buildClimateItems", () => {
+  function makeClimateEntity(state: string, unit?: string): HassEntity {
+    return makeEntity("sensor.temp", state, unit ? { unit_of_measurement: unit } : {});
+  }
+
+  it("marks preset sensor items with alert class", () => {
+    const items = buildClimateItems(
+      { temp: makeClimateEntity("15", "°C") },
+      undefined,
+      undefined,
+      undefined,
+      new Set(["temperature"]),
+    );
+
+    expect(items[0]?.className).toContain("alert");
+  });
+
+  it("marks custom sensor items with alert class", () => {
+    const items = buildClimateItems(
+      {},
+      undefined,
+      [{ name: "CO2", entity: makeClimateEntity("1200", "ppm") }],
+      ["custom_0"],
+      new Set(["custom_0"]),
+    );
+
+    expect(items[0]?.className).toContain("alert");
   });
 });

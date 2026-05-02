@@ -341,6 +341,11 @@ export const smartRoomCardStyles = css`
     --mdc-icon-size: 16px;
   }
 
+  .climate-item.alert {
+    color: var(--smart-room-alert);
+    text-shadow: 0 0 10px rgba(255, 59, 48, 0.45);
+  }
+
   .climate-button {
     padding: 0;
     border: 0;

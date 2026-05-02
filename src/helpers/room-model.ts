@@ -189,6 +189,7 @@ export function buildClimateItems(
   customIcons?: Record<string, string | undefined>,
   customSensors?: Array<{ name: string; icon?: string; entity?: HassEntity }>,
   sensorOrder?: string[],
+  alertKeys: ReadonlySet<string> = new Set(),
 ): Array<{ key: string; icon: string; value: string; className: string }> {
   const resolveIcon = (key: string) => customIcons?.[key] || CLIMATE_DEFAULT_ICONS[key] || "mdi:gauge";
 
@@ -231,14 +232,16 @@ export function buildClimateItems(
       const sensor = customSensors?.[i];
       if (!sensor?.entity || isUnavailable(sensor.entity)) continue;
       const unit = sensor.entity.attributes.unit_of_measurement ? String(sensor.entity.attributes.unit_of_measurement) : undefined;
-      items.push({ key, icon: sensor.icon || "mdi:gauge", value: `${sensor.entity.state}${unit ? ` ${unit}` : ""}`, className: `custom${posClass}` });
+      const alertClass = alertKeys.has(key) ? " alert" : "";
+      items.push({ key, icon: sensor.icon || "mdi:gauge", value: `${sensor.entity.state}${unit ? ` ${unit}` : ""}`, className: `custom${posClass}${alertClass}` });
     } else {
       const def = presetMap[key];
       if (!def?.entity || isUnavailable(def.entity)) continue;
       const unit = def.entity.attributes.unit_of_measurement ? String(def.entity.attributes.unit_of_measurement) : undefined;
       const raw = String(def.entity.state);
       const value = def.formatter ? def.formatter(raw, unit) : `${raw}${unit ? ` ${unit}` : ""}`;
-      items.push({ key, icon: resolveIcon(key), value, className: `${key}${posClass}` });
+      const alertClass = alertKeys.has(key) ? " alert" : "";
+      items.push({ key, icon: resolveIcon(key), value, className: `${key}${posClass}${alertClass}` });
     }
   }
 
