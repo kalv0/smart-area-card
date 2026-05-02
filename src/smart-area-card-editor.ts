@@ -90,7 +90,10 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _cardSetupCollapsed = false;
   @state() private _headerCollapsed = false;
 
+  @state() private _previewGridWidth = 0;
+
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
+  private _previewGridObserver?: ResizeObserver;
   private _touchDragPointerId?: number;
   private _touchDragStartX = 0;
   private _touchDragStartY = 0;
@@ -103,6 +106,23 @@ export class SmartAreaCardEditor extends LitElement {
 
   protected firstUpdated(): void {
     this._refreshRegistries();
+    this._attachPreviewObserver();
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._previewGridObserver?.disconnect();
+    this._previewGridObserver = undefined;
+  }
+
+  private _attachPreviewObserver(): void {
+    const grid = this.shadowRoot?.querySelector<Element>('.dg-preview-grid');
+    if (!grid || this._previewGridObserver) return;
+    this._previewGridObserver = new ResizeObserver(entries => {
+      const w = Math.round(entries[0]?.contentRect.width ?? 0);
+      if (w > 0 && w !== this._previewGridWidth) this._previewGridWidth = w;
+    });
+    this._previewGridObserver.observe(grid);
   }
 
   public setConfig(config: SmartRoomCardConfig): void {
@@ -701,6 +721,10 @@ export class SmartAreaCardEditor extends LitElement {
   private _renderDevices(config: SmartRoomCardConfig) {
     const tileSize = config.ui?.device_tile_size ?? 110;
     const pct = Math.round(((tileSize - 70) / (160 - 70)) * 100);
+    const GAP = 10;
+    const CARD_DELTA = 12;
+    const pw = this._previewGridWidth || (window.innerWidth - 32);
+    const cardCols = Math.max(1, Math.floor((pw - CARD_DELTA + GAP) / (tileSize + GAP)));
     return html`
       <section class="section">
         <div class="devices-header">
@@ -716,7 +740,7 @@ export class SmartAreaCardEditor extends LitElement {
                  .value=${String(tileSize)}
                  style="--range-pct: ${pct}%"
                  @input=${(e: InputEvent) => this._setUi("device_tile_size", Number((e.target as HTMLInputElement).value))} />
-          <span class="tile-size-value">${tileSize}px</span>
+          <span class="tile-size-value">${tileSize}px · ${cardCols}/row</span>
         </div>
         <div class="devices-list">
           ${(config.devices ?? []).map((device, index) => this._renderDevice(device, index))}
@@ -734,7 +758,12 @@ export class SmartAreaCardEditor extends LitElement {
     const devices = config.devices ?? [];
     const tileSize = config.ui?.device_tile_size ?? 110;
     const bgOn = config.ui?.images?.background_on ?? "";
-    const gridStyle = `grid-template-columns: repeat(auto-fill, minmax(${tileSize}px, 1fr)); --sr-tile-size: ${tileSize}px`;
+    const GAP = 10;
+    const CARD_DELTA = 12;
+    const pw = this._previewGridWidth || (window.innerWidth - 32);
+    const cardCols = Math.max(1, Math.floor((pw - CARD_DELTA + GAP) / (tileSize + GAP)));
+    const previewMinmax = Math.max(40, Math.floor((pw - GAP * (cardCols - 1)) / cardCols));
+    const gridStyle = `grid-template-columns: repeat(auto-fill, minmax(${previewMinmax}px, 1fr)); --sr-tile-size: ${tileSize}px`;
     const previewStyle = bgOn ? `background-image: url('${bgOn}')` : "";
     return html`
       <div class="dg-preview" style=${previewStyle}>
