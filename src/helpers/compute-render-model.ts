@@ -8,6 +8,7 @@ import {
   buildClimateItems,
   countHeaderBadges,
   CLIMATE_DEFAULT_ICONS,
+  formatSensorAlertReason,
   getAreaAutomations,
 } from "./room-model";
 import type { SmartRoomCardConfig } from "./types";
@@ -74,24 +75,23 @@ export function computeRenderModel(
   const alertsConfig = config.sensors?.alerts;
   const customIcons = config.sensors?.icons ?? {};
   const resolveIcon = (key: string) => customIcons[key as keyof typeof customIcons] || CLIMATE_DEFAULT_ICONS[key] || "mdi:gauge";
-  const roomName = config.room || undefined;
 
   const climateAlerts = [
-    evaluateClimateAlert("temperature", temp, alertsConfig?.temperature, "Temperature", resolveIcon("temperature"), roomName),
-    evaluateClimateAlert("humidity", humidity, alertsConfig?.humidity, "Humidity", resolveIcon("humidity"), roomName),
-    evaluateClimateAlert("co2", co2, alertsConfig?.co2, "CO₂", resolveIcon("co2"), roomName),
-    evaluateClimateAlert("voc", voc, alertsConfig?.voc, "VOC", resolveIcon("voc"), roomName),
-    evaluateClimateAlert("pm25", pm25, alertsConfig?.pm25, "PM2.5", resolveIcon("pm25"), roomName),
-    evaluateClimateAlert("pm10", pm10, alertsConfig?.pm10, "PM10", resolveIcon("pm10"), roomName),
-    evaluateClimateAlert("aqi", aqi, alertsConfig?.aqi, "AQI", resolveIcon("aqi"), roomName),
-    evaluateClimateAlert("presence", presence, alertsConfig?.presence, "Presence", resolveIcon("presence"), roomName),
-    evaluateClimateAlert("noise", noise, alertsConfig?.noise, "Noise", resolveIcon("noise"), roomName),
-    evaluateClimateAlert("illuminance", illuminance, alertsConfig?.illuminance, "Illuminance", resolveIcon("illuminance"), roomName),
-    evaluateClimateAlert("power", power, alertsConfig?.power, "Power", resolveIcon("power"), roomName),
-    evaluateClimateAlert("energy", energy, alertsConfig?.energy, "Energy", resolveIcon("energy"), roomName),
-    evaluateClimateAlert("carbon_monoxide", carbon_monoxide, alertsConfig?.carbon_monoxide, "CO", resolveIcon("carbon_monoxide"), roomName),
-    evaluateClimateAlert("radon", radon, alertsConfig?.radon, "Radon", resolveIcon("radon"), roomName),
-    evaluateClimateAlert("moisture", moisture, alertsConfig?.moisture, "Moisture", resolveIcon("moisture"), roomName),
+    evaluateClimateAlert("temperature", temp, alertsConfig?.temperature, "Temperature", resolveIcon("temperature")),
+    evaluateClimateAlert("humidity", humidity, alertsConfig?.humidity, "Humidity", resolveIcon("humidity")),
+    evaluateClimateAlert("co2", co2, alertsConfig?.co2, "CO₂", resolveIcon("co2")),
+    evaluateClimateAlert("voc", voc, alertsConfig?.voc, "VOC", resolveIcon("voc")),
+    evaluateClimateAlert("pm25", pm25, alertsConfig?.pm25, "PM2.5", resolveIcon("pm25")),
+    evaluateClimateAlert("pm10", pm10, alertsConfig?.pm10, "PM10", resolveIcon("pm10")),
+    evaluateClimateAlert("aqi", aqi, alertsConfig?.aqi, "AQI", resolveIcon("aqi")),
+    evaluateClimateAlert("presence", presence, alertsConfig?.presence, "Presence", resolveIcon("presence")),
+    evaluateClimateAlert("noise", noise, alertsConfig?.noise, "Noise", resolveIcon("noise")),
+    evaluateClimateAlert("illuminance", illuminance, alertsConfig?.illuminance, "Illuminance", resolveIcon("illuminance")),
+    evaluateClimateAlert("power", power, alertsConfig?.power, "Power", resolveIcon("power")),
+    evaluateClimateAlert("energy", energy, alertsConfig?.energy, "Energy", resolveIcon("energy")),
+    evaluateClimateAlert("carbon_monoxide", carbon_monoxide, alertsConfig?.carbon_monoxide, "CO", resolveIcon("carbon_monoxide")),
+    evaluateClimateAlert("radon", radon, alertsConfig?.radon, "Radon", resolveIcon("radon")),
+    evaluateClimateAlert("moisture", moisture, alertsConfig?.moisture, "Moisture", resolveIcon("moisture")),
   ].filter((item): item is ClimateAlert => Boolean(item));
 
   const climateAlertBadges = climateAlerts.map((alert) => ({
@@ -122,7 +122,7 @@ export function computeRenderModel(
       climateAlertBadges.push({
         key: `custom_${i}`,
         icon: sc.icon || "mdi:gauge",
-        messages: [sc.name],
+        messages: [formatSensorAlertReason(sc.name, entity)],
       });
     }
   });

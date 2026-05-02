@@ -20,13 +20,13 @@ Rules:
 <claude-mem-context>
 # Memory Context
 
-# [smart-area] recent context, 2026-05-02 11:45pm GMT+2
+# [smart-area] recent context, 2026-05-02 11:48pm GMT+2
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 12 obs (5365t read) | 897.980t work | 99% savings
+Stats: 14 obs (6277t read) | 925.792t work | 99% savings
 
 ### May 2, 2026
 1 10:25p 🔵 smart-area-card: Project Structure and Toolchain
@@ -41,6 +41,8 @@ Stats: 12 obs (5365t read) | 897.980t work | 99% savings
 10 " 🔄 Sensor Click Target Merged Into Sensor Strip Element
 11 " 🔵 Pre-existing Failing Test: evaluateClimateAlert Room Name
 12 11:40p 🔄 Sensor "Primary" tip moved inside sensor card header row
+13 11:41p 🟣 Primary sensor tip relocated inside sensor card header — deployed to main
+14 11:43p 🔵 Persistent patch-not-sticking issue: same primaryTip change attempted 3+ times
 
-Access 898k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 926k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

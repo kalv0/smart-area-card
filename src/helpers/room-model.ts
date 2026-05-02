@@ -100,19 +100,24 @@ export function getClimateEntities(sensors: SmartRoomCardConfig["sensors"]): str
   return [...presets, ...custom];
 }
 
+export function formatSensorAlertReason(label: string, entity: HassEntity): string {
+  const unit = entity.attributes["unit_of_measurement"] as string | undefined;
+  const value = unit ? `${entity.state} ${unit}` : entity.state;
+  return `${label}: ${value}`;
+}
+
 export function evaluateClimateAlert(
   key: string,
   entity: HassEntity | undefined,
   alertConfig: { enabled?: boolean; min?: number; max?: number; eq?: number | string; neq?: string; text_eq?: string; text_neq?: string } | undefined,
   label: string,
   icon: string,
-  roomName?: string,
 ): ClimateAlert | undefined {
   if (!alertConfig?.enabled || !entity || isUnavailable(entity)) {
     return undefined;
   }
 
-  const message = label;
+  const message = formatSensorAlertReason(label, entity);
 
   const state = entity.state;
 

@@ -171,10 +171,9 @@ describe("evaluateClimateAlert", () => {
     expect(evaluateClimateAlert("temperature", entity, { enabled: true, min: 18 }, "Temperature", "mdi:thermometer")).toBeUndefined();
   });
 
-  it("includes room name in reason when provided", () => {
-    const alert = evaluateClimateAlert("temperature", makeClimateEntity("15", "°C"), { enabled: true, min: 18 }, "Temperature", "mdi:thermometer", "Living Room");
-    expect(alert?.reason).toContain("Living Room");
-    expect(alert?.reason).toContain("15 °C");
+  it("includes sensor name and value in reason", () => {
+    const alert = evaluateClimateAlert("temperature", makeClimateEntity("15", "°C"), { enabled: true, min: 18 }, "Temperature", "mdi:thermometer");
+    expect(alert?.reason).toBe("Temperature: 15 °C");
   });
 });
 
