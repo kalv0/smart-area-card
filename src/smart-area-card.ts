@@ -88,6 +88,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         show_area_icon: false,
         keep_background_on_until_sunset: false,
         automation_badge_enabled: false,
+        automation_badge_click_details: true,
         blur: true,
         glassmorphism: true,
       },
@@ -134,6 +135,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         show_area_icon: false,
         keep_background_on_until_sunset: false,
         automation_badge_enabled: false,
+        automation_badge_click_details: true,
       },
       expander: {
         enabled: true,
@@ -408,7 +410,11 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     if (!this._config?.ui?.automation_badge_enabled) return nothing;
     const count = this._renderModel?.badgeCounts?.automation ?? 0;
     if (!count) return nothing;
-    return html`<button class="automation-badge automation-badge-clickable" aria-label="${count} automations enabled" @click=${this._handleAutomationBadgeClick}><ha-icon icon="mdi:home-automation"></ha-icon><span class="badge-count">${count}</span></button>`;
+    const content = html`<ha-icon icon="mdi:home-automation"></ha-icon><span class="badge-count">${count}</span>`;
+    if (this._config.ui?.automation_badge_click_details === false) {
+      return html`<span class="automation-badge" aria-label="${count} automations enabled">${content}</span>`;
+    }
+    return html`<button class="automation-badge automation-badge-clickable" aria-label="${count} automations enabled" @click=${this._handleAutomationBadgeClick}>${content}</button>`;
   }
 
   private _handleAutomationBadgeClick = (event: Event): void => {
@@ -494,6 +500,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   private _renderAutomationPanel(): TemplateResult | typeof nothing {
+    if (this._config?.ui?.automation_badge_click_details === false) return nothing;
     if (!this._showAutomationPanel) return nothing;
     const automations = this._renderModel?.areaAutomations ?? [];
     if (!automations.length) return nothing;

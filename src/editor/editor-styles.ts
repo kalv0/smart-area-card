@@ -471,12 +471,13 @@ export const calvoRoomCardEditorStyles = css`
 
   .ehp-top {
     position: relative;
-    z-index: 1;
+    z-index: 3;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     padding: 14px;
+    pointer-events: none;
   }
 
   .ehp-title {
@@ -517,8 +518,13 @@ export const calvoRoomCardEditorStyles = css`
     font: inherit;
     font-size: 0.72rem;
     line-height: 1;
-    cursor: pointer;
+    cursor: default;
     flex-shrink: 0;
+    pointer-events: auto;
+  }
+
+  .ehp-automation-badge--cta {
+    cursor: pointer;
     animation: ehp-automation-cta 1.5s ease-in-out infinite;
   }
 
@@ -531,24 +537,6 @@ export const calvoRoomCardEditorStyles = css`
     align-items: center;
     margin-left: 2px;
     line-height: 1;
-  }
-
-  .ehp-automation-cta {
-    position: relative;
-    z-index: 1;
-    width: fit-content;
-    max-width: calc(100% - 28px);
-    margin: -4px 14px 12px;
-    padding: 5px 9px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 0.72rem;
-    font-weight: 700;
-    line-height: 1.2;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
-    pointer-events: none;
   }
 
   .ehp-automation-panel {
@@ -608,6 +596,128 @@ export const calvoRoomCardEditorStyles = css`
     50% {
       transform: scale(1.08);
       box-shadow: 0 0 0 7px color-mix(in srgb, var(--primary-color, #1565c0) 0%, transparent);
+    }
+  }
+
+  .ehp-sensor-click-target {
+    position: absolute;
+    inset: 8px;
+    z-index: 2;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px dashed rgba(255, 255, 255, 0.55);
+    border-radius: 14px;
+    background: transparent;
+    cursor: pointer;
+    animation: ehp-sensor-cta 1.65s ease-in-out infinite;
+  }
+
+  .ehp-sensor-click-target:hover {
+    border-color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .ehp-sensor-popup-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+  }
+
+  .ehp-sensor-popup {
+    width: min(420px, 100%);
+    max-height: calc(100dvh - 48px);
+    overflow: hidden;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(160deg, rgba(14, 20, 38, 0.98), rgba(18, 26, 50, 0.98));
+    color: white;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  }
+
+  .ehp-sensor-popup-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 1rem;
+    font-weight: 800;
+  }
+
+  .ehp-sensor-popup-icon,
+  .ehp-sensor-popup-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.72);
+    flex-shrink: 0;
+  }
+
+  .ehp-sensor-popup-header > span {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ehp-sensor-popup-close {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+  }
+
+  .ehp-sensor-popup-body {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    overflow: auto;
+  }
+
+  .ehp-sensor-popup-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .ehp-sensor-popup-item > ha-icon {
+    --mdc-icon-size: 22px;
+    color: rgba(255, 255, 255, 0.78);
+  }
+
+  .ehp-sensor-popup-item div {
+    display: grid;
+    gap: 2px;
+  }
+
+  .ehp-sensor-popup-item span {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.58);
+  }
+
+  .ehp-sensor-popup-item strong {
+    font-size: 0.96rem;
+  }
+
+  @keyframes ehp-sensor-cta {
+    0%, 100% {
+      opacity: 0.78;
+      box-shadow: inset 0 0 0 0 rgba(255, 255, 255, 0.04), 0 0 0 0 rgba(255, 255, 255, 0.18);
+    }
+    50% {
+      opacity: 1;
+      box-shadow: inset 0 0 0 999px rgba(255, 255, 255, 0.025), 0 0 0 6px rgba(255, 255, 255, 0);
     }
   }
 

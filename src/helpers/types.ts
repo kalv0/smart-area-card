@@ -259,6 +259,7 @@ export interface SmartRoomCardConfig {
     show_area_icon?: boolean;
     keep_background_on_until_sunset?: boolean;
     automation_badge_enabled?: boolean;
+    automation_badge_click_details?: boolean;
     battery_alerts_enabled?: boolean;
     battery_alert_outlined?: boolean;
     battery_alert_border_color?: SmartRoomPaletteColor;

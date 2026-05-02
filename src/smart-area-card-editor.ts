@@ -91,6 +91,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _cardSetupCollapsed = false;
   @state() private _headerCollapsed = false;
   @state() private _showHeaderAutomationDetails = false;
+  @state() private _showHeaderSensorPreviewPopup = false;
   @state() private _imgPickerMode: "library" | "path" = "library";
   @state() private _imgUploading = false;
   @state() private _devImgPickerTabs: Record<string, "library" | "path"> = {};
@@ -269,7 +270,7 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   public setConfig(config: SmartRoomCardConfig): void {
-    const fallback: SmartRoomCardConfig = { type: "custom:smart-area-card", room: "", room_id: "", devices: [], sensors: { alerts: {} }, ui: { header_climate_more_info: true, battery_threshold: 20, battery_alerts_enabled: true, show_entity_icons: false, show_area_icon: false, keep_background_on_until_sunset: false, automation_badge_enabled: false }, expander: { enabled: true, initial_state: "closed", persist_state: true } };
+    const fallback: SmartRoomCardConfig = { type: "custom:smart-area-card", room: "", room_id: "", devices: [], sensors: { alerts: {} }, ui: { header_climate_more_info: true, battery_threshold: 20, battery_alerts_enabled: true, show_entity_icons: false, show_area_icon: false, keep_background_on_until_sunset: false, automation_badge_enabled: false, automation_badge_click_details: true }, expander: { enabled: true, initial_state: "closed", persist_state: true } };
     try {
       const clone = deepClone(config);
       const nextConfig: SmartRoomCardConfig = { ...fallback, ...clone, ui: { ...fallback.ui, ...(clone.ui ?? {}) }, expander: { ...fallback.expander, ...(clone.expander ?? {}) } };
@@ -742,12 +743,46 @@ export class SmartAreaCardEditor extends LitElement {
     ];
   }
 
+  private _renderSensorPreviewPopup(roomName: string, sensors: Array<{ icon: string; value: string }>) {
+    const close = (event: Event): void => {
+      event.stopPropagation();
+      this._showHeaderSensorPreviewPopup = false;
+    };
+
+    return html`
+      <div class="ehp-sensor-popup-overlay" @click=${close}>
+        <div class="ehp-sensor-popup" @click=${(event: Event) => event.stopPropagation()}>
+          <div class="ehp-sensor-popup-header">
+            <div class="ehp-sensor-popup-icon"><ha-icon icon="mdi:gauge"></ha-icon></div>
+            <span>${roomName}</span>
+            <button type="button" class="ehp-sensor-popup-close" aria-label="Close" @click=${close}>
+              <ha-icon icon="mdi:close"></ha-icon>
+            </button>
+          </div>
+          <div class="ehp-sensor-popup-body">
+            ${sensors.map((sensor, index) => html`
+              <div class="ehp-sensor-popup-item">
+                <ha-icon icon=${sensor.icon}></ha-icon>
+                <div>
+                  <span>Sensor ${index + 1}</span>
+                  <strong>${sensor.value}</strong>
+                </div>
+              </div>
+            `)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   private _renderHeaderSection(config: SmartRoomCardConfig, roomNameEmpty: boolean) {
     const areaName = this._areaName(config.room_id);
     const roomName = config.room ?? areaName ?? "";
     const showAreaIcon = config.ui?.show_area_icon ?? false;
     const areaIcon = (this.hass as import("./types/ha-extensions").HomeAssistantExtended)?.areas?.[config.room_id ?? ""]?.icon ?? "mdi:home-outline";
     const automationEnabled = config.ui?.automation_badge_enabled ?? false;
+    const automationClickDetails = config.ui?.automation_badge_click_details !== false;
+    const sensorClickDetails = config.ui?.header_climate_more_info !== false;
     const previewAutomations = this._previewAreaAutomations(config.room_id);
     const enabledAutomationCount = previewAutomations.filter((item) => item.enabled).length;
 
@@ -801,23 +836,41 @@ export class SmartAreaCardEditor extends LitElement {
         </div>
         <div class="editor-header-preview">
           <div class="ehp-overlay"></div>
+          ${sensorClickDetails && _previewSensors.length ? html`
+            <button
+              type="button"
+              class="ehp-sensor-click-target"
+              aria-label="Open sensor details preview"
+              @click=${(e: Event) => {
+                e.stopPropagation();
+                this._showHeaderSensorPreviewPopup = true;
+              }}
+            ></button>
+          ` : nothing}
           <div class="ehp-top">
             <div class="ehp-title ${roomNameEmpty ? "ehp-title--empty" : ""}">
               ${showAreaIcon ? html`<ha-icon icon=${areaIcon}></ha-icon>` : nothing}
               <span>${roomNameEmpty ? "Area name" : roomName}</span>
               ${automationEnabled ? html`
-                <button
-                  type="button"
-                  class="ehp-automation-badge"
-                  aria-label="Clicar para mostrar / ocultar automations detail"
-                  @click=${(e: Event) => {
-                    e.stopPropagation();
-                    this._showHeaderAutomationDetails = !this._showHeaderAutomationDetails;
-                  }}
-                >
+                ${automationClickDetails ? html`
+                  <button
+                    type="button"
+                    class="ehp-automation-badge ehp-automation-badge--cta"
+                    aria-label="Mostrar u ocultar detalles de automatizaciones"
+                    @click=${(e: Event) => {
+                      e.stopPropagation();
+                      this._showHeaderAutomationDetails = !this._showHeaderAutomationDetails;
+                    }}
+                  >
+                    <ha-icon icon="mdi:home-automation"></ha-icon>
+                    <span class="ehp-badge-count">${enabledAutomationCount}</span>
+                  </button>
+                ` : html`
+                <span class="ehp-automation-badge" aria-label="${enabledAutomationCount} automations enabled">
                   <ha-icon icon="mdi:home-automation"></ha-icon>
                   <span class="ehp-badge-count">${enabledAutomationCount}</span>
-                </button>
+                </span>
+                `}
               ` : nothing}
             </div>
             ${_previewSensors.length ? html`
@@ -831,10 +884,7 @@ export class SmartAreaCardEditor extends LitElement {
               </div>
             ` : nothing}
           </div>
-          ${automationEnabled ? html`
-            <div class="ehp-automation-cta">
-              Clicar para mostrar / ocultar automations detail
-            </div>
+          ${automationEnabled && automationClickDetails ? html`
             ${this._showHeaderAutomationDetails ? html`
               <div class="ehp-automation-panel">
                 <ha-icon icon="mdi:home-automation"></ha-icon>
@@ -852,6 +902,7 @@ export class SmartAreaCardEditor extends LitElement {
             ` : nothing}
           ` : nothing}
         </div>
+        ${this._showHeaderSensorPreviewPopup ? this._renderSensorPreviewPopup(roomNameEmpty ? "Area name" : roomName, _previewSensors) : nothing}
 
         <div class="section-collapsible ${this._headerCollapsed ? "section-collapsible--collapsed" : ""}">
         <div class="section-collapsible-inner">
@@ -875,6 +926,11 @@ export class SmartAreaCardEditor extends LitElement {
           <div class="row single">
             ${this._renderToggleField("Show automation count", "Shows a badge with the count of enabled automations in this area.", automationEnabled, (checked) => this._setUi("automation_badge_enabled", checked), !this._isRoomIdValid(config.room_id))}
           </div>
+          ${automationEnabled ? html`
+            <div class="row single">
+              ${this._renderCompactCheckField("Click despliega detalles", "Allows the automation badge to show or hide automation details.", automationClickDetails, (checked) => this._setUi("automation_badge_click_details", checked))}
+            </div>
+          ` : nothing}
         </div>
 
         ${this._renderSensors(config)}
