@@ -270,7 +270,7 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   public setConfig(config: SmartRoomCardConfig): void {
-    const fallback: SmartRoomCardConfig = { type: "custom:smart-area-card", room: "", room_id: "", devices: [], sensors: { alerts: {} }, ui: { header_climate_more_info: true, battery_threshold: 20, battery_alerts_enabled: true, show_entity_icons: false, show_area_icon: false, keep_background_on_until_sunset: false, automation_badge_enabled: false, automation_badge_click_details: true }, expander: { enabled: true, initial_state: "closed", persist_state: true } };
+    const fallback: SmartRoomCardConfig = { type: "custom:smart-area-card", room: "", room_id: "", devices: [], sensors: { alerts: {} }, ui: { header_sensors_enabled: true, header_climate_more_info: true, battery_threshold: 20, battery_alerts_enabled: true, show_entity_icons: false, show_area_icon: false, keep_background_on_until_sunset: false, automation_badge_enabled: false, automation_badge_click_details: true }, expander: { enabled: true, initial_state: "closed", persist_state: true } };
     try {
       const clone = deepClone(config);
       const nextConfig: SmartRoomCardConfig = { ...fallback, ...clone, ui: { ...fallback.ui, ...(clone.ui ?? {}) }, expander: { ...fallback.expander, ...(clone.expander ?? {}) } };
@@ -696,16 +696,9 @@ export class SmartAreaCardEditor extends LitElement {
     };
 
     return html`
-      <div class="panel">
-        <div class="panel-title">Sensors</div>
-
-        <div class="row single">
-          ${this._renderToggleField("Click opens details", "Tapping the climate strip opens a popup with sensor history.", config.ui?.header_climate_more_info ?? true, (checked) => this._setUi("header_climate_more_info", checked))}
-        </div>
-
-        <div class="sensor-ordered-list">
+      <div class="sensor-ordered-list">
           ${repeat(visibleKeys, k => k, (k, vi) => renderSensorRow(k, sensorOrder.indexOf(k), vi === 0))}
-        </div>
+      </div>
         ${!this._showMoreSensors ? html`
           <button type="button" class="secondary sensor-more-btn" @click=${() => { this._showMoreSensors = true; }}>More sensors ▾</button>
         ` : html`
@@ -718,7 +711,6 @@ export class SmartAreaCardEditor extends LitElement {
           <button type="button" class="sensor-add-row" @click=${this._addCustomSensor.bind(this)}>+ Add custom sensor</button>
           <button type="button" class="secondary sensor-more-btn" @click=${collapseSensors}>Less sensors ▴</button>
         `}
-      </div>
     `;
   }
 
@@ -782,7 +774,8 @@ export class SmartAreaCardEditor extends LitElement {
     const areaIcon = (this.hass as import("./types/ha-extensions").HomeAssistantExtended)?.areas?.[config.room_id ?? ""]?.icon ?? "mdi:home-outline";
     const automationEnabled = config.ui?.automation_badge_enabled ?? false;
     const automationClickDetails = config.ui?.automation_badge_click_details !== false;
-    const sensorClickDetails = config.ui?.header_climate_more_info !== false;
+    const sensorsEnabled = config.ui?.header_sensors_enabled !== false;
+    const sensorClickDetails = sensorsEnabled && config.ui?.header_climate_more_info !== false;
     const previewAutomations = this._previewAreaAutomations(config.room_id);
     const enabledAutomationCount = previewAutomations.filter((item) => item.enabled).length;
 
@@ -862,7 +855,7 @@ export class SmartAreaCardEditor extends LitElement {
                 `}
               ` : nothing}
             </div>
-            ${_previewSensors.length ? html`
+            ${sensorsEnabled && _previewSensors.length ? html`
               ${sensorClickDetails ? html`
               <button
                 type="button"
@@ -909,7 +902,7 @@ export class SmartAreaCardEditor extends LitElement {
               </div>
             ` : nothing}
           ` : nothing}
-          ${this._showHeaderSensorPreviewPopup ? this._renderSensorPreviewPopup(roomNameEmpty ? "Area name" : roomName, _previewSensors) : nothing}
+          ${sensorsEnabled && this._showHeaderSensorPreviewPopup ? this._renderSensorPreviewPopup(roomNameEmpty ? "Area name" : roomName, _previewSensors) : nothing}
         </div>
 
         <div class="section-collapsible ${this._headerCollapsed ? "section-collapsible--collapsed" : ""}">
@@ -941,7 +934,18 @@ export class SmartAreaCardEditor extends LitElement {
           ` : nothing}
         </div>
 
-        ${this._renderSensors(config)}
+        <div class="panel">
+          <div class="panel-title">Sensors</div>
+          <div class="row single">
+            ${this._renderToggleField("Show sensors", "Shows the sensor strip in the header.", sensorsEnabled, (checked) => this._setUi("header_sensors_enabled", checked))}
+          </div>
+          ${sensorsEnabled ? html`
+            <div class="row single">
+              ${this._renderCompactCheckField("Click despliega detalles", "Allows the sensor strip to show the sensor details popup.", sensorClickDetails, (checked) => this._setUi("header_climate_more_info", checked))}
+            </div>
+            ${this._renderSensors(config)}
+          ` : nothing}
+        </div>
         `}
         </div></div>
       </section>
