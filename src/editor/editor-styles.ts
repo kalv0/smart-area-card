@@ -525,7 +525,8 @@ export const calvoRoomCardEditorStyles = css`
 
   .ehp-automation-badge--cta {
     cursor: pointer;
-    animation: ehp-automation-cta 1.5s ease-in-out infinite;
+    animation: ehp-automation-cta 3.2s ease-in-out infinite;
+    animation-delay: 0s;
   }
 
   .ehp-automation-badge ha-icon {
@@ -593,7 +594,7 @@ export const calvoRoomCardEditorStyles = css`
       transform: scale(1);
       box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color, #1565c0) 32%, transparent);
     }
-    50% {
+    48% {
       transform: scale(1.08);
       box-shadow: 0 0 0 7px color-mix(in srgb, var(--primary-color, #1565c0) 0%, transparent);
     }
@@ -610,7 +611,8 @@ export const calvoRoomCardEditorStyles = css`
     font: inherit;
     cursor: pointer;
     pointer-events: auto;
-    animation: ehp-sensor-cta 1.65s ease-in-out infinite;
+    animation: ehp-sensor-cta 3.2s ease-in-out infinite;
+    animation-delay: 0s;
   }
 
   .ehp-sensor-click-target:hover {
@@ -716,7 +718,7 @@ export const calvoRoomCardEditorStyles = css`
       opacity: 0.78;
       box-shadow: inset 0 0 0 0 rgba(255, 255, 255, 0.04), 0 0 0 0 rgba(255, 255, 255, 0.18);
     }
-    50% {
+    48% {
       opacity: 1;
       box-shadow: inset 0 0 0 999px rgba(255, 255, 255, 0.025), 0 0 0 6px rgba(255, 255, 255, 0);
     }
