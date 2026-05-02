@@ -836,17 +836,6 @@ export class SmartAreaCardEditor extends LitElement {
         </div>
         <div class="editor-header-preview">
           <div class="ehp-overlay"></div>
-          ${sensorClickDetails && _previewSensors.length ? html`
-            <button
-              type="button"
-              class="ehp-sensor-click-target"
-              aria-label="Open sensor details preview"
-              @click=${(e: Event) => {
-                e.stopPropagation();
-                this._showHeaderSensorPreviewPopup = true;
-              }}
-            ></button>
-          ` : nothing}
           <div class="ehp-top">
             <div class="ehp-title ${roomNameEmpty ? "ehp-title--empty" : ""}">
               ${showAreaIcon ? html`<ha-icon icon=${areaIcon}></ha-icon>` : nothing}
@@ -874,14 +863,33 @@ export class SmartAreaCardEditor extends LitElement {
               ` : nothing}
             </div>
             ${_previewSensors.length ? html`
-              <div class="ehp-sensors">
+              ${sensorClickDetails ? html`
+              <button
+                type="button"
+                class="ehp-sensors ehp-sensor-click-target"
+                aria-label="Open sensor details preview"
+                @click=${(e: Event) => {
+                  e.stopPropagation();
+                  this._showHeaderSensorPreviewPopup = true;
+                }}
+              >
                 ${_previewSensors.map((s, i) => html`
-                  <div class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
+                  <span class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
                     <ha-icon icon=${s.icon}></ha-icon>
                     <span>${s.value}</span>
-                  </div>
+                  </span>
+                `)}
+              </button>
+              ` : html`
+              <div class="ehp-sensors">
+                ${_previewSensors.map((s, i) => html`
+                  <span class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
+                    <ha-icon icon=${s.icon}></ha-icon>
+                    <span>${s.value}</span>
+                  </span>
                 `)}
               </div>
+              `}
             ` : nothing}
           </div>
           ${automationEnabled && automationClickDetails ? html`

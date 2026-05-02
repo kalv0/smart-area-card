@@ -600,18 +600,16 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .ehp-sensor-click-target {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    bottom: 8px;
-    width: min(46%, 190px);
-    z-index: 2;
     appearance: none;
     -webkit-appearance: none;
+    box-sizing: border-box;
+    padding: 8px;
     border: 2px dashed rgba(255, 255, 255, 0.55);
-    border-radius: 14px;
+    border-radius: 12px;
     background: transparent;
+    font: inherit;
     cursor: pointer;
+    pointer-events: auto;
     animation: ehp-sensor-cta 1.65s ease-in-out infinite;
   }
 
