@@ -87,12 +87,24 @@ export const smartRoomCardStyles = css`
 
   .room-mask {
     position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.18) 0%,
-      rgba(0, 0, 0, 0.42) 100%
-    );
+    top: -1px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    min-height: calc(100% + 1px);
+    pointer-events: none;
+    background:
+      linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.72) 0,
+        rgba(0, 0, 0, 0.3) 40px,
+        rgba(0, 0, 0, 0) 80px
+      ),
+      linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.18) 0%,
+        rgba(0, 0, 0, 0.42) 100%
+      );
   }
 
   .shell {
