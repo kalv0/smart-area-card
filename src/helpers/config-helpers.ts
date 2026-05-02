@@ -47,11 +47,13 @@ export const resolveDeviceImage = (
       ? matchedState.image_active
       : !matchedState && imageState?.image_inactive
         ? imageState.image_inactive
-        : isOn && config.image_on
-          ? config.image_on
-          : !isOn && config.image_off
-            ? config.image_off
-            : config.image,
+        : config.image
+          ? config.image
+          : isOn && config.image_on
+            ? config.image_on
+            : !isOn && config.image_off
+              ? config.image_off
+              : undefined,
     "product",
   );
 
