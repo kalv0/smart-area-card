@@ -97,8 +97,11 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _devImgPickerTabs: Record<string, "library" | "path"> = {};
   @state() private _devImgUploading = false;
   @state() private _devGallery: Array<{ url: string; name: string; type?: string }> = [];
+  @state() private _bgGallery: Array<{ url: string; name: string }> = [];
 
   private static readonly _DEV_GALLERY_KEY = "smart-area:device-gallery";
+  private static readonly _BG_GALLERY_HA_KEY = "smart_area_bg_gallery";
+  private _bgGalleryLoaded = false;
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
   private _touchDragPointerId?: number;
@@ -121,21 +124,55 @@ export class SmartAreaCardEditor extends LitElement {
     } catch { /* ignore */ }
   }
 
+  protected updated(changedProps: Map<string, unknown>): void {
+    if (changedProps.has("hass") && this.hass && !this._bgGalleryLoaded) {
+      this._bgGalleryLoaded = true;
+      this._loadBgGallery();
+    }
+  }
+
+  private async _loadBgGallery(): Promise<void> {
+    try {
+      const result = await (this.hass!.connection as any).sendMessagePromise({
+        type: "frontend/get_user_data",
+        key: SmartAreaCardEditor._BG_GALLERY_HA_KEY,
+      });
+      const remote = result?.value;
+      if (Array.isArray(remote) && remote.length > 0) {
+        this._bgGallery = remote;
+      } else {
+        // Migrate from old per-card config gallery on first use
+        const legacy = this._config?.ui?.images?.gallery ?? [];
+        if (legacy.length > 0) {
+          await this._persistBgGallery(legacy);
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  private async _persistBgGallery(next: Array<{ url: string; name: string }>): Promise<void> {
+    this._bgGallery = next;
+    try {
+      await (this.hass!.connection as any).sendMessagePromise({
+        type: "frontend/set_user_data",
+        key: SmartAreaCardEditor._BG_GALLERY_HA_KEY,
+        value: next,
+      });
+    } catch { /* ignore */ }
+  }
+
   private _getGallery(): Array<{ url: string; name: string }> {
-    return this._config?.ui?.images?.gallery ?? [];
+    return this._bgGallery;
   }
 
   private _saveToGallery(url: string, name: string): void {
-    const images = this._config?.ui?.images ?? {};
-    const current = images.gallery ?? [];
-    const next = [{ url, name }, ...current.filter((g) => g.url !== url)].slice(0, 8);
-    this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...images, gallery: next } } });
+    const next = [{ url, name }, ...this._bgGallery.filter((g) => g.url !== url)].slice(0, 20);
+    this._persistBgGallery(next);
   }
 
   private _removeFromGallery(url: string): void {
-    const images = this._config?.ui?.images ?? {};
-    const next = (images.gallery ?? []).filter((g) => g.url !== url);
-    this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...images, gallery: next } } });
+    const next = this._bgGallery.filter((g) => g.url !== url);
+    this._persistBgGallery(next);
   }
 
   private _getDeviceGallery(): Array<{ url: string; name: string; type?: string }> {
