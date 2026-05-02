@@ -502,6 +502,115 @@ export const calvoRoomCardEditorStyles = css`
     flex-shrink: 0;
   }
 
+  .ehp-automation-badge {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--primary-color, #1565c0) 55%, transparent);
+    background: color-mix(in srgb, var(--primary-color, #1565c0) 32%, transparent);
+    color: white;
+    font: inherit;
+    font-size: 0.72rem;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    animation: ehp-automation-cta 1.5s ease-in-out infinite;
+  }
+
+  .ehp-automation-badge ha-icon {
+    --mdc-icon-size: 15px;
+  }
+
+  .ehp-badge-count {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 2px;
+    line-height: 1;
+  }
+
+  .ehp-automation-cta {
+    position: relative;
+    z-index: 1;
+    width: fit-content;
+    max-width: calc(100% - 28px);
+    margin: -4px 14px 12px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+  }
+
+  .ehp-automation-panel {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 14px 14px;
+    padding: 7px 10px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--primary-color, #1565c0) 28%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary-color, #1565c0) 50%, transparent);
+    color: #e8f4ff;
+    font-size: 0.84rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+  }
+
+  .ehp-automation-panel > ha-icon {
+    color: color-mix(in srgb, var(--primary-color, #1565c0) 80%, white);
+    --mdc-icon-size: 18px;
+    flex: 0 0 auto;
+    align-self: center;
+  }
+
+  .ehp-automation-list {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .ehp-automation-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .ehp-automation-item span {
+    font-size: 0.72rem;
+    font-weight: 400;
+    opacity: 0.78;
+  }
+
+  .ehp-automation-item--disabled {
+    opacity: 0.52;
+    font-weight: 400;
+  }
+
+  @keyframes ehp-automation-cta {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color, #1565c0) 32%, transparent);
+    }
+    50% {
+      transform: scale(1.08);
+      box-shadow: 0 0 0 7px color-mix(in srgb, var(--primary-color, #1565c0) 0%, transparent);
+    }
+  }
+
   .ehp-sensors {
     display: flex;
     flex-direction: column;

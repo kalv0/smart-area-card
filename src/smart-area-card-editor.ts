@@ -90,6 +90,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _bgPreviewError = false;
   @state() private _cardSetupCollapsed = false;
   @state() private _headerCollapsed = false;
+  @state() private _showHeaderAutomationDetails = false;
   @state() private _imgPickerMode: "library" | "path" = "library";
   @state() private _imgUploading = false;
   @state() private _devImgPickerTabs: Record<string, "library" | "path"> = {};
@@ -720,12 +721,35 @@ export class SmartAreaCardEditor extends LitElement {
     `;
   }
 
+  private _previewAreaAutomations(roomId?: string): Array<{ entityId: string; name: string; enabled: boolean }> {
+    const normalized = (roomId ?? "").trim();
+    if (!normalized) return [];
+
+    const automations = this._entityRegistry
+      .filter((entry) => entry.area_id === normalized && entry.entity_id.startsWith("automation."))
+      .map((entry) => {
+        const entity = this.hass?.states?.[entry.entity_id];
+        return {
+          entityId: entry.entity_id,
+          name: String(entity?.attributes?.friendly_name ?? entry.entity_id),
+          enabled: entity?.state === "on",
+        };
+      });
+
+    return [
+      ...automations.filter((item) => item.enabled),
+      ...automations.filter((item) => !item.enabled),
+    ];
+  }
+
   private _renderHeaderSection(config: SmartRoomCardConfig, roomNameEmpty: boolean) {
     const areaName = this._areaName(config.room_id);
     const roomName = config.room ?? areaName ?? "";
     const showAreaIcon = config.ui?.show_area_icon ?? false;
     const areaIcon = (this.hass as import("./types/ha-extensions").HomeAssistantExtended)?.areas?.[config.room_id ?? ""]?.icon ?? "mdi:home-outline";
     const automationEnabled = config.ui?.automation_badge_enabled ?? false;
+    const previewAutomations = this._previewAreaAutomations(config.room_id);
+    const enabledAutomationCount = previewAutomations.filter((item) => item.enabled).length;
 
     const _SENSOR_ICONS: Record<string, string> = {
       temperature: "mdi:thermometer", humidity: "mdi:water-percent", co2: "mdi:molecule-co2",
@@ -781,6 +805,20 @@ export class SmartAreaCardEditor extends LitElement {
             <div class="ehp-title ${roomNameEmpty ? "ehp-title--empty" : ""}">
               ${showAreaIcon ? html`<ha-icon icon=${areaIcon}></ha-icon>` : nothing}
               <span>${roomNameEmpty ? "Area name" : roomName}</span>
+              ${automationEnabled ? html`
+                <button
+                  type="button"
+                  class="ehp-automation-badge"
+                  aria-label="Clicar para mostrar / ocultar automations detail"
+                  @click=${(e: Event) => {
+                    e.stopPropagation();
+                    this._showHeaderAutomationDetails = !this._showHeaderAutomationDetails;
+                  }}
+                >
+                  <ha-icon icon="mdi:home-automation"></ha-icon>
+                  <span class="ehp-badge-count">${enabledAutomationCount}</span>
+                </button>
+              ` : nothing}
             </div>
             ${_previewSensors.length ? html`
               <div class="ehp-sensors">
@@ -793,6 +831,26 @@ export class SmartAreaCardEditor extends LitElement {
               </div>
             ` : nothing}
           </div>
+          ${automationEnabled ? html`
+            <div class="ehp-automation-cta">
+              Clicar para mostrar / ocultar automations detail
+            </div>
+            ${this._showHeaderAutomationDetails ? html`
+              <div class="ehp-automation-panel">
+                <ha-icon icon="mdi:home-automation"></ha-icon>
+                <div class="ehp-automation-list">
+                  ${previewAutomations.length
+                    ? previewAutomations.map((item) => html`
+                        <div class="ehp-automation-item ${item.enabled ? "" : "ehp-automation-item--disabled"}">
+                          ${item.name}
+                          <span>${item.enabled ? "enabled" : "disabled"}</span>
+                        </div>
+                      `)
+                    : html`<div class="ehp-automation-item ehp-automation-item--disabled">No automations in this area</div>`}
+                </div>
+              </div>
+            ` : nothing}
+          ` : nothing}
         </div>
 
         <div class="section-collapsible ${this._headerCollapsed ? "section-collapsible--collapsed" : ""}">
