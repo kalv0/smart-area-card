@@ -279,6 +279,7 @@ export interface SmartRoomCardConfig {
       dark_mode_condition?: "always" | "daytime" | "lux";
       dark_mode_lux_entity?: string;
       dark_mode_lux_threshold?: number;
+      background_position_y?: number;
       gallery?: Array<{ url: string; name: string }>;
     };
     device_image_gallery?: Array<{ url: string; name: string; type?: string }>;

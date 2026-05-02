@@ -270,7 +270,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         : {
             backgroundImage: buildRoomBackgroundImage(model.roomBackground),
             backgroundSize: model.roomBackground ? "cover, cover" : "auto",
-            backgroundPosition: model.roomBackground ? "top center, top center" : "center",
+            backgroundPosition: model.roomBackground ? `center ${model.roomBackgroundPositionY ?? 50}%, center ${model.roomBackgroundPositionY ?? 50}%` : "center",
             backgroundRepeat: "no-repeat",
           }),
     };

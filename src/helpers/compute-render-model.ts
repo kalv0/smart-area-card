@@ -172,6 +172,7 @@ export function computeRenderModel(
     roomBackground: darkModeEnabled
       ? undefined
       : normalizeAssetPath(config.ui?.images?.background_on, "room"),
+    roomBackgroundPositionY: config.ui?.images?.background_position_y ?? 50,
     roomImageUrl: darkModeEnabled
       ? normalizeAssetPath(config.ui?.images?.background_on, "room")
       : undefined,

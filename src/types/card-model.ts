@@ -21,6 +21,7 @@ export interface RenderModel {
   climateEntities: string[];
   areaAutomations: AreaAutomation[];
   roomBackground?: string;
+  roomBackgroundPositionY?: number;
   roomImageUrl?: string;
   roomImageDark?: boolean;
   areaIcon?: string;

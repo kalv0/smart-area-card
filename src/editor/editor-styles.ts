@@ -373,7 +373,7 @@ export const calvoRoomCardEditorStyles = css`
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: top center;
+    object-position: center 50%;
     display: block;
   }
 
@@ -770,6 +770,26 @@ export const calvoRoomCardEditorStyles = css`
     display: flex;
     justify-content: space-between;
     font-size: 0.78rem;
+    color: var(--editor-muted);
+  }
+
+  .bg-crop-control {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 0 8px;
+  }
+
+  .bg-crop-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--editor-text);
+  }
+
+  .bg-crop-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
     color: var(--editor-muted);
   }
 

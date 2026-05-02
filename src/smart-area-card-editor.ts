@@ -155,7 +155,8 @@ export class SmartAreaCardEditor extends LitElement {
     (e.target as HTMLInputElement).value = "";
     this._devImgUploading = true;
     try {
-      const dataUrl = await this._resizeImage(file, 400, 400, 0.85);
+      const format = file.type === "image/png" ? "png" : "jpeg";
+      const dataUrl = await this._resizeImage(file, 400, 400, 0.85, format);
       const name = file.name.replace(/\.[^.]+$/, "");
       this._saveToDeviceGallery(dataUrl, name, this._devImgUploadType);
       this._devImgUploadCallback?.(dataUrl);
@@ -245,7 +246,7 @@ export class SmartAreaCardEditor extends LitElement {
     }
   }
 
-  private _resizeImage(file: File, maxW = 1280, maxH = 800, quality = 0.82): Promise<string> {
+  private _resizeImage(file: File, maxW = 1280, maxH = 800, quality = 0.82, format: "jpeg" | "png" = "jpeg"): Promise<string> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const objectUrl = URL.createObjectURL(file);
@@ -258,7 +259,7 @@ export class SmartAreaCardEditor extends LitElement {
         canvas.width = w;
         canvas.height = h;
         canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+        resolve(canvas.toDataURL(`image/${format}`, quality));
       };
       img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("load failed")); };
       img.src = objectUrl;
@@ -344,6 +345,7 @@ export class SmartAreaCardEditor extends LitElement {
     const darkEnabled = images.dark_mode_enabled !== false;
     const darkCond = images.dark_mode_condition ?? "always";
     const bgOn = images.background_on ?? "";
+    const bgPosY = images.background_position_y ?? 50;
 
     return html`
       <section class="section">
@@ -433,11 +435,13 @@ export class SmartAreaCardEditor extends LitElement {
             <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"
                  style=${this._bgPreviewValid ? "" : "display:none"}>
               <img class="bg-preview-img" src=${bgOn} alt=""
+                style="object-position: center ${bgPosY}%"
                 @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
                 @error=${() => { this._bgPreviewValid = false; this._bgPreviewError = true; }}
               />
               ${darkEnabled ? html`
-                <img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt="" />
+                <img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt=""
+                  style="object-position: center ${bgPosY}%" />
                 <span class="bg-preview-tag bg-preview-tag--left">ON</span>
                 <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
               ` : nothing}
@@ -449,6 +453,15 @@ export class SmartAreaCardEditor extends LitElement {
             ` : nothing}
           ` : nothing}
           ${this._bgPreviewValid ? html`
+            <div class="bg-crop-control">
+              <span class="bg-crop-label">Crop position</span>
+              <div class="tile-size-range-wrap" style="--range-pct: ${bgPosY}%">
+                <input class="tile-size-range" type="range" min="0" max="100" step="5"
+                       .value=${String(bgPosY)}
+                       @input=${(e: InputEvent) => this._setImageKey("background_position_y", Number((e.target as HTMLInputElement).value))} />
+              </div>
+              <div class="bg-crop-labels"><span>Top</span><span>Center</span><span>Bottom</span></div>
+            </div>
             <div class="row single">
               ${this._renderToggleField("Dark version when lights are off", "Applies a dark filter to the same image when all devices are inactive.", darkEnabled, (checked) => this._setImageKey("dark_mode_enabled", checked))}
             </div>
