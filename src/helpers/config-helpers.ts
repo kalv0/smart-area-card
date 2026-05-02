@@ -23,7 +23,7 @@ export const normalizeAssetPath = (
 };
 
 export const buildRoomBackgroundImage = (path?: string, darken = false): string => {
-  const topShadow = "linear-gradient(to bottom, rgba(0, 0, 0, 0.78) 0px, rgba(0, 0, 0, 0.56) 48px, rgba(0, 0, 0, 0.34) 112px, rgba(0, 0, 0, 0.12) 180px, rgba(0, 0, 0, 0) 240px)";
+  const topShadow = "linear-gradient(to bottom, rgba(0, 0, 0, 0.78) 0px, rgba(0, 0, 0, 0.56) 44px, rgba(0, 0, 0, 0.28) 76px, rgba(0, 0, 0, 0.12) 96px, rgba(0, 0, 0, 0) 118px)";
   if (!path) return topShadow;
 
   const layers = [topShadow];

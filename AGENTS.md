@@ -20,13 +20,13 @@ Rules:
 <claude-mem-context>
 # Memory Context
 
-# [smart-area] recent context, 2026-05-02 11:48pm GMT+2
+# [smart-area] recent context, 2026-05-03 12:11am GMT+2
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 14 obs (6277t read) | 925.792t work | 99% savings
+Stats: 17 obs (7514t read) | 1.035.956t work | 99% savings
 
 ### May 2, 2026
 1 10:25p 🔵 smart-area-card: Project Structure and Toolchain
@@ -43,6 +43,9 @@ Stats: 14 obs (6277t read) | 925.792t work | 99% savings
 12 11:40p 🔄 Sensor "Primary" tip moved inside sensor card header row
 13 11:41p 🟣 Primary sensor tip relocated inside sensor card header — deployed to main
 14 11:43p 🔵 Persistent patch-not-sticking issue: same primaryTip change attempted 3+ times
+15 11:44p ✅ CTA animations slowed from ~1.5s to 3.2s in editor preview
+17 11:45p 🔴 evaluateClimateAlert reason now includes sensor value and unit via formatSensorAlertReason helper
+16 11:48p 🔵 evaluateClimateAlert signature accepts roomName but doesn't use it in reason string
 
-Access 926k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 1036k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>
