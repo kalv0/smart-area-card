@@ -699,6 +699,8 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderDevices(config: SmartRoomCardConfig) {
+    const tileSize = config.ui?.device_tile_size ?? 110;
+    const pct = Math.round(((tileSize - 70) / (160 - 70)) * 100);
     return html`
       <section class="section">
         <div class="devices-header">
@@ -708,6 +710,14 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
         </div>
         ${this._renderDeviceGridPreview(config)}
+        <div class="tile-size-control">
+          <span class="tile-size-label">Tile size</span>
+          <input class="tile-size-range" type="range" min="70" max="160" step="5"
+                 .value=${String(tileSize)}
+                 style="--range-pct: ${pct}%"
+                 @input=${(e: InputEvent) => this._setUi("device_tile_size", Number((e.target as HTMLInputElement).value))} />
+          <span class="tile-size-value">${tileSize}px</span>
+        </div>
         <div class="devices-list">
           ${(config.devices ?? []).map((device, index) => this._renderDevice(device, index))}
         </div>
@@ -722,9 +732,13 @@ export class SmartAreaCardEditor extends LitElement {
 
   private _renderDeviceGridPreview(config: SmartRoomCardConfig) {
     const devices = config.devices ?? [];
+    const tileSize = config.ui?.device_tile_size ?? 110;
+    const bgOn = config.ui?.images?.background_on ?? "";
+    const gridStyle = `grid-template-columns: repeat(auto-fill, minmax(${tileSize}px, 1fr)); --sr-tile-size: ${tileSize}px`;
+    const previewStyle = bgOn ? `background-image: url('${bgOn}')` : "";
     return html`
-      <div class="dg-preview">
-        <div class="dg-grid">
+      <div class="dg-preview" style=${previewStyle}>
+        <div class="dg-preview-grid" style=${gridStyle}>
           ${devices.map((device, index) => {
             const type = device.type ?? "custom";
             const isDragging = this._dragIndex === index;
@@ -732,7 +746,7 @@ export class SmartAreaCardEditor extends LitElement {
             const isActive = this._expandedDevices.includes(index);
             const rawName = device.name || (device.entity ? device.entity.split(".").pop()?.replace(/_/g, " ") ?? "" : "") || `Device ${index + 1}`;
             return html`
-              <div class="dg-tile dg-tile--${type} ${isDragging ? "dg-tile--dragging" : ""} ${isDropTarget ? "dg-tile--drop" : ""} ${isActive ? "dg-tile--active" : ""}"
+              <div class="dg-preview-tile dg-tile--${type} ${isDragging ? "dg-tile--dragging" : ""} ${isDropTarget ? "dg-tile--drop" : ""} ${isActive ? "dg-preview-tile--active" : ""}"
                    data-device-index=${String(index)}
                    draggable="true"
                    @dragstart=${() => this._handleDragStart(index)}
@@ -751,8 +765,10 @@ export class SmartAreaCardEditor extends LitElement {
                        this.shadowRoot?.querySelector<HTMLElement>(`.device-card[data-device-index="${index}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
                      }
                    }}>
-                <div class="dg-tile-icon"><ha-icon icon=${this._typeIcon(type)}></ha-icon></div>
-                <div class="dg-tile-name">${rawName}</div>
+                <div class="dg-preview-tile-label">
+                  <ha-icon class="dg-preview-tile-icon" icon=${this._typeIcon(type)}></ha-icon>
+                  <div class="dg-preview-tile-name">${rawName}</div>
+                </div>
               </div>
             `;
           })}

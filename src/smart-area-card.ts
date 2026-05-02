@@ -524,9 +524,10 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   private _renderGrid(): TemplateResult {
+    const tileSize = this._config?.ui?.device_tile_size ?? 110;
     return html`
       <section class="device-zone">
-        <div class="device-grid">
+        <div class="device-grid" style="grid-template-columns: repeat(auto-fill, minmax(${tileSize}px, 1fr)); --sr-tile-size: ${tileSize}px">
           ${this._renderModel?.devices.map((device) => this._renderDeviceSafe(device))}
         </div>
       </section>

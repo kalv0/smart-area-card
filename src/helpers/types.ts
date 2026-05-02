@@ -252,6 +252,7 @@ export interface SmartRoomCardConfig {
   ui?: {
     blur?: boolean;
     glassmorphism?: boolean;
+    device_tile_size?: number;
     battery_threshold?: number;
     header_climate_more_info?: boolean;
     show_entity_icons?: boolean;

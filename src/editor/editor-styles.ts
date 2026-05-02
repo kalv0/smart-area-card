@@ -439,9 +439,137 @@ export const calvoRoomCardEditorStyles = css`
 
   .dg-preview {
     border-radius: 14px;
-    background: rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+    background: rgba(12, 18, 28, 0.95);
+    background-size: cover;
+    background-position: center;
     border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .dg-preview-grid {
+    display: grid;
+    gap: 10px;
     padding: 10px;
+  }
+
+  .dg-preview-tile {
+    position: relative;
+    height: var(--sr-tile-size, 110px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.13);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dg-preview-tile--active {
+    border-color: rgba(255, 255, 255, 0.32);
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .dg-tile--dragging {
+    opacity: 0.35;
+    cursor: grabbing;
+  }
+
+  .dg-tile--drop {
+    border-color: rgba(255, 255, 255, 0.7) !important;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18) !important;
+  }
+
+  .dg-preview-tile-label {
+    display: flex;
+    flex-direction: column;
+    padding: 7px 8px;
+    gap: 2px;
+  }
+
+  .dg-preview-tile-icon {
+    --mdc-icon-size: 18px;
+    color: rgba(255, 255, 255, 0.72);
+    margin-bottom: 1px;
+  }
+
+  .dg-preview-tile-name {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.92);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ─── Tile Size Slider ──────────────────────────────── */
+
+  .tile-size-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+  }
+
+  .tile-size-label {
+    font-size: 0.8rem;
+    color: var(--editor-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .tile-size-value {
+    font-size: 0.8rem;
+    color: var(--editor-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 34px;
+    text-align: right;
+  }
+
+  .tile-size-range {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    background: linear-gradient(
+      to right,
+      var(--editor-accent) 0%,
+      var(--editor-accent) var(--range-pct, 50%),
+      rgba(255, 255, 255, 0.15) var(--range-pct, 50%),
+      rgba(255, 255, 255, 0.15) 100%
+    );
+  }
+
+  .tile-size-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--editor-accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  }
+
+  .tile-size-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--editor-accent);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
   }
 
   .dg-grid {
