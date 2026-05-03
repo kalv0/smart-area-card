@@ -17,10 +17,6 @@ function warn(tag: string, message: string): void {
  * silent runtime failures or misleading UI. Call once in setConfig — dev only.
  */
 export function warnOnInvalidConfig(config: SmartRoomCardConfig): void {
-  if (!config.room?.trim()) {
-    warn("CONFIG", "Missing required field: room");
-  }
-
   if (config.ui?.automation_badge_enabled && !config.room_id?.trim()) {
     warn("CONFIG", "automation_badge_enabled is true but room_id is missing — automation badge will always be empty");
   }

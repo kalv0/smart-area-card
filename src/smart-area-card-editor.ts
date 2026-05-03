@@ -811,8 +811,7 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderHeaderSection(config: SmartRoomCardConfig) {
-    const areaName = this._areaName(config.room_id);
-    const roomName = config.room ?? areaName ?? "";
+    const roomName = config.room?.trim() ?? "";
     const showAreaIcon = config.ui?.show_area_icon ?? false;
     const areaIcon = (this.hass as import("./types/ha-extensions").HomeAssistantExtended)?.areas?.[config.room_id ?? ""]?.icon ?? "mdi:home-outline";
     const automationEnabled = config.ui?.automation_badge_enabled ?? false;
@@ -955,7 +954,7 @@ export class SmartAreaCardEditor extends LitElement {
           <label>
             Area name
             <span class="hint">Header label. Leave empty to hide the name and show only badges.</span>
-            <input .value=${config.room ?? areaName ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} />
+            <input .value=${config.room ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} />
           </label>
         </div>
 

@@ -176,7 +176,7 @@ export interface SmartRoomCustomSensor {
 
 export interface SmartRoomCardConfig {
   type: string;
-  room: string;
+  room?: string;
   room_id?: string;
   devices?: SmartRoomDeviceConfig[];
   sensors?: {

@@ -18,11 +18,6 @@ describe("warnOnInvalidConfig", () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it("warns when room is missing", () => {
-    warnOnInvalidConfig({ type: "custom:smart-area-card", room: "" });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Missing required field: room"));
-  });
-
   it("warns when automation_badge_enabled is true without room_id", () => {
     warnOnInvalidConfig(makeConfig({ room_id: undefined, ui: { automation_badge_enabled: true } }));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("automation_badge_enabled"));

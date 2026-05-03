@@ -119,10 +119,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private readonly _onPressClear = (): void => this._press.clear();
 
   public setConfig(config: SmartRoomCardConfig): void {
-    if (!config?.room) {
-      throw new Error("`room` is required.");
-    }
-
     this._config = {
       devices: [],
       room_id: "",
@@ -318,7 +314,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
   private _renderHeader(): TemplateResult {
     const model = this._renderModel!;
-    const room = this._config!.room;
+    const room = this._config!.room?.trim() ?? "";
     const sensorsEnabled = this._config?.ui?.header_sensors_enabled !== false;
     const climateItems = model.climateItems.map((item) => html`
       <div class="climate-item ${item.className}">
@@ -337,8 +333,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         <div class="header-top">
           <div class="title-line">
             ${alertBadge}
-            ${this._config?.ui?.show_area_icon && model.areaIcon ? html`<ha-icon icon=${model.areaIcon}></ha-icon>` : nothing}
-            <span>${room}</span>
+            ${room && this._config?.ui?.show_area_icon && model.areaIcon ? html`<ha-icon icon=${model.areaIcon}></ha-icon>` : nothing}
+            ${room ? html`<span>${room}</span>` : nothing}
             <div class="header-states">
               ${this._renderAutomationBadge()}
               ${this._renderHeaderBadge("door_closed")}
