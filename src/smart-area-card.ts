@@ -121,6 +121,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   public setConfig(config: SmartRoomCardConfig): void {
     this._config = {
       devices: [],
+      room: "",
       room_id: "",
       ui: {
         blur: true,
