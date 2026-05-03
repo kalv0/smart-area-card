@@ -4,7 +4,14 @@
       "Bash(git commit *)",
       "Bash(npx tsc *)",
       "Bash(python3 -c ' *)",
-      "Bash(node -e \"const fs=require\\('fs'\\); const t=fs.readFileSync\\('src/smart-area-card-editor.ts','utf8'\\); console.log\\(JSON.stringify\\(t.slice\\(t.indexOf\\('sr-header-info'\\), t.indexOf\\('sr-header-info'\\)+80\\)\\)\\)\")"
+      "Bash(node -e \"const fs=require\\('fs'\\); const t=fs.readFileSync\\('src/smart-area-card-editor.ts','utf8'\\); console.log\\(JSON.stringify\\(t.slice\\(t.indexOf\\('sr-header-info'\\), t.indexOf\\('sr-header-info'\\)+80\\)\\)\\)\")",
+      "Bash(awk 'NR>=966 && NR<=1100' src/smart-area-card-editor.ts)",
+      "Bash(awk 'NR>=966 && NR<=980' src/smart-area-card-editor.ts)",
+      "Bash(awk 'NR>=966' src/smart-area-card-editor.ts)",
+      "Bash(grep -n \"^\\\\`}\")",
+      "Bash(awk 'NR>=1050 && NR<=1090' src/smart-area-card-editor.ts)",
+      "Bash(awk 'NR>=1000 && NR<=1050' src/smart-area-card-editor.ts)",
+      "Bash(awk 'NR>=980 && NR<=1002' src/smart-area-card-editor.ts)"
     ]
   }
 }
