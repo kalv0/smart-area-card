@@ -266,6 +266,12 @@ export interface SmartRoomCardConfig {
     battery_alert_border_color?: SmartRoomPaletteColor;
     battery_alert_header_badge?: SmartRoomHeaderBadge;
     battery_alert_header_border?: boolean;
+    performance?: {
+      mode?: "balanced" | "maximum";
+      reduce_effects?: boolean;
+      unload_collapsed_grid?: boolean;
+      lazy_sensor_charts?: boolean;
+    };
     colors?: {
       active?: string;
       alert?: string;

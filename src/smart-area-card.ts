@@ -1,6 +1,7 @@
 import { LitElement, TemplateResult, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
+import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 import type { HomeAssistant, LovelaceCard } from "custom-card-helpers";
 import { fireEvent } from "custom-card-helpers";
@@ -13,7 +14,7 @@ import {
   storageKey,
   type ComputedDeviceModel,
   type PopupConfig,
-type SmartRoomActionConfig,
+  type SmartRoomActionConfig,
   type SmartRoomActionType,
   type SmartRoomCardConfig,
   type SmartRoomHeaderBadge,
@@ -26,7 +27,6 @@ import { computeRenderModel } from "./helpers/compute-render-model";
 import { warnOnInvalidConfig } from "./helpers/validate-config";
 import { PressController } from "./controllers/press-controller";
 import { ImageFitController } from "./controllers/image-fit-controller";
-import "./smart-area-card-editor";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -74,6 +74,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   public static styles = smartRoomCardStyles;
 
   public static async getConfigElement(): Promise<HTMLElement> {
+    await import("./smart-area-card-editor");
     return document.createElement("smart-area-card-editor");
   }
 
@@ -95,6 +96,11 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         automation_badge_click_details: true,
         blur: true,
         glassmorphism: true,
+        performance: {
+          mode: "balanced",
+          unload_collapsed_grid: true,
+          lazy_sensor_charts: true,
+        },
       },
       expander: {
         enabled: true,
@@ -111,12 +117,15 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   @state() private _showAutomationPanel = false;
   @state() private _showClimateHistory = false;
   @state() private _alertsHidden = false;
+  @state() private _activeSensorChartKey?: string;
 
   private _renderModel?: RenderModel;
+  private _deviceByKey = new Map<string, ComputedDeviceModel>();
   /** Cached automation entity IDs for the current room. Rebuilt on config change. */
   private _automationEntityIds: string[] = [];
   private _trackedEntityIds: string[] = [];
   private _trackedEntityRefs: Array<unknown> = [];
+  private _changedEntityIds?: Set<string>;
   private _lastEntityRegistry?: HomeAssistantExtended["entities"];
 
   private readonly _press = new PressController(this);
@@ -124,7 +133,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private readonly _onPressClear = (): void => this._press.clear();
 
   public setConfig(config: SmartRoomCardConfig): void {
-    this._config = {
+    const defaults: SmartRoomCardConfig = {
+      type: "custom:smart-area-card",
       devices: [],
       room: "",
       room_id: "",
@@ -140,19 +150,41 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         keep_background_on_until_sunset: false,
         automation_badge_enabled: false,
         automation_badge_click_details: true,
+        performance: {
+          mode: "balanced",
+          unload_collapsed_grid: true,
+          lazy_sensor_charts: true,
+        },
       },
       expander: {
         enabled: true,
         initial_state: "closed",
         persist_state: true,
       },
+    };
+
+    this._config = {
+      ...defaults,
       ...config,
+      ui: {
+        ...defaults.ui,
+        ...(config.ui ?? {}),
+        performance: {
+          ...defaults.ui?.performance,
+          ...(config.ui?.performance ?? {}),
+        },
+      },
+      expander: {
+        ...defaults.expander,
+        ...(config.expander ?? {}),
+      },
     };
 
     warnOnInvalidConfig(this._config);
     this._rebuildAutomationIds();
     this._rebuildTrackedEntityIds();
     this._trackedEntityRefs = [];
+    this._changedEntityIds = undefined;
     this._restoreExpanded();
     this._restoreAutomationPanel();
     this._restoreAlertPanels();
@@ -166,7 +198,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
   protected updated(changedProps: Map<string, unknown>): void {
     if (this._showClimateHistory) {
-      if (changedProps.has("_showClimateHistory") || changedProps.has("_config")) {
+      if (changedProps.has("_showClimateHistory") || changedProps.has("_config") || changedProps.has("_activeSensorChartKey")) {
         this._buildPopupCharts();
       } else if (changedProps.has("hass")) {
         this.shadowRoot?.querySelectorAll(".sensor-popup-chart > *").forEach((el) => {
@@ -181,6 +213,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const HistoryCard = customElements.get("hui-history-graph-card") as (new () => HTMLElement) | undefined;
     if (!HistoryCard) return;
     for (const item of items) {
+      if (this._lazySensorCharts() && item.key !== this._activeSensorChartKey) continue;
       const entityId = this._entityIdForKey(item.key);
       if (!entityId) continue;
       const container = this.shadowRoot?.querySelector<HTMLElement>(`.sensor-popup-chart[data-key="${item.key}"]`);
@@ -217,7 +250,12 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       if (this._config && this.hass) {
         this._refreshAutomationTracking();
         try {
-          this._renderModel = computeRenderModel(this._config, this.hass, this._automationEntityIds);
+          const previous = changedProps.has("_config") ? undefined : this._renderModel;
+          this._renderModel = computeRenderModel(this._config, this.hass, this._automationEntityIds, {
+            previous,
+            changedEntityIds: this._changedEntityIds,
+          });
+          this._deviceByKey = new Map(this._renderModel.devices.map((device) => [device.key, device]));
           this._syncTrackedEntityRefs();
           // Auto-reset hidden flag when all alerts clear so next alert always shows.
           if (this._alertsHidden && this._totalAlertCount() === 0) {
@@ -231,6 +269,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     }
     this.toggleAttribute("alert", Boolean(this._renderModel?.hasAlert && !this._expanded));
     this.toggleAttribute("pressed", this._press.pressed);
+    this.toggleAttribute("performance-lite", this._reduceVisualEffects());
   }
 
   protected shouldUpdate(changedProps: Map<string, unknown>): boolean {
@@ -240,6 +279,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       changedProps.has("_expanded") ||
       changedProps.has("_showAutomationPanel") ||
       changedProps.has("_showClimateHistory") ||
+      changedProps.has("_activeSensorChartKey") ||
       changedProps.has("_alertsHidden")
     ) {
       return true;
@@ -247,6 +287,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     if (changedProps.has("hass")) {
       if (this._refreshAutomationTracking()) {
         this._trackedEntityRefs = [];
+        this._changedEntityIds = undefined;
         return true;
       }
       if (this._trackedEntityRefsChanged()) {
@@ -317,11 +358,30 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     return badgeTotal + climateTotal;
   }
 
+  private _reduceVisualEffects(): boolean {
+    const performance = this._config?.ui?.performance;
+    return performance?.reduce_effects === true || performance?.mode === "maximum";
+  }
+
+  private _unloadCollapsedGrid(): boolean {
+    const performance = this._config?.ui?.performance;
+    return performance?.unload_collapsed_grid ?? true;
+  }
+
+  private _lazySensorCharts(): boolean {
+    const performance = this._config?.ui?.performance;
+    return performance?.lazy_sensor_charts ?? true;
+  }
+
+  private _renderGridWhenCollapsed(): boolean {
+    return this._expanded || (!this._unloadCollapsedGrid() && this._everExpanded);
+  }
+
   private _renderHeader(): TemplateResult {
     const model = this._renderModel!;
     const room = this._config!.room?.trim() ?? "";
     const sensorsEnabled = this._config?.ui?.header_sensors_enabled !== false;
-    const climateItems = model.climateItems.map((item) => html`
+    const climateItems = repeat(model.climateItems, (item) => item.key, (item) => html`
       <div class="climate-item ${item.className}">
         <ha-icon icon=${item.icon}></ha-icon>
         ${item.value}
@@ -330,7 +390,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
     const totalAlerts = this._totalAlertCount();
     const alertBadge = totalAlerts > 0
-      ? html`<div class="header-alerts"><button class="header-pill header-pill-red header-pill-button header-pill-clickable" @click=${(e: Event) => this._handleAlertBadgeClick(e)}><ha-icon icon="mdi:alert-circle-outline"></ha-icon>${totalAlerts > 1 ? html`<span class="badge-count">${totalAlerts}</span>` : nothing}</button></div>`
+      ? html`<div class="header-alerts"><button class="header-pill header-pill-red header-pill-button header-pill-clickable" @click=${this._handleAlertBadgeClick}><ha-icon icon="mdi:alert-circle-outline"></ha-icon>${totalAlerts > 1 ? html`<span class="badge-count">${totalAlerts}</span>` : nothing}</button></div>`
       : nothing;
 
     return html`
@@ -351,7 +411,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
             </div>
           </div>
 
-          ${sensorsEnabled && climateItems.length
+          ${sensorsEnabled && model.climateItems.length
             ? this._config?.ui?.header_climate_more_info === false
               ? html`<div class="climate climate-static">${climateItems}</div>`
               : html`<button class="climate climate-button" @click=${this._handleClimateClick}>${climateItems}</button>`
@@ -398,7 +458,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
     if (!flatPanels.length || this._alertsHidden) return nothing;
 
-    return html`${flatPanels.map(({ icon, message }) => html`
+    return html`${repeat(flatPanels, ({ icon, message }, index) => `${index}:${icon}:${message}`, ({ icon, message }) => html`
       <section class="alert-bar">
         <ha-icon icon=${icon}></ha-icon>
         <div class="alert-lines"><div>${message}</div></div>
@@ -406,11 +466,11 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     `)}`;
   }
 
-  private _handleAlertBadgeClick(event: Event): void {
+  private _handleAlertBadgeClick = (event: Event): void => {
     event.stopPropagation();
     this._alertsHidden = !this._alertsHidden;
     this._persistAlertPanels();
-  }
+  };
 
   private _renderAutomationBadge(): TemplateResult | typeof nothing {
     if (!this._config?.ui?.automation_badge_enabled) return nothing;
@@ -429,13 +489,39 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._persistAutomationPanel();
   };
 
+  private _handleAutomationItemClick = (event: Event): void => {
+    event.stopPropagation();
+    const entityId = (event.currentTarget as HTMLElement | null)?.dataset.entityId;
+    if (entityId) this._navigateToAutomation(entityId);
+  };
+
+  private _closeSensorPopup = (event?: Event): void => {
+    event?.stopPropagation();
+    this._showClimateHistory = false;
+    this._activeSensorChartKey = undefined;
+  };
+
+  private _stopPropagation = (event: Event): void => {
+    event.stopPropagation();
+  };
+
+  private _handleSensorMoreInfoClick = (event: Event): void => {
+    event.stopPropagation();
+    const entityId = (event.currentTarget as HTMLElement | null)?.dataset.entityId;
+    if (entityId) fireEvent(this, "hass-more-info", { entityId });
+  };
+
+  private _handleSensorChartClick = (event: Event): void => {
+    event.stopPropagation();
+    const key = (event.currentTarget as HTMLElement | null)?.dataset.key;
+    this._activeSensorChartKey = this._activeSensorChartKey === key ? undefined : key;
+  };
+
   private _renderSensorPopup(): TemplateResult | typeof nothing {
     if (this._config?.ui?.header_sensors_enabled === false) return nothing;
     const items = this._renderModel?.climateItems ?? [];
     if (!items.length) return nothing;
     const roomName = this._config?.room ?? "Sensors";
-    const close = (e: Event): void => { e.stopPropagation(); this._showClimateHistory = false; };
-
     const POPUP_META: Record<string, { label: string; color: string }> = {
       temperature:    { label: "Temperature",  color: "#f59e0b" },
       humidity:       { label: "Humidity",     color: "#3b82f6" },
@@ -455,24 +541,26 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     };
 
     return html`
-      <div class="sensor-popup-overlay" @click=${close}>
-        <div class="sensor-popup" @click=${(e: Event) => e.stopPropagation()}>
+      <div class="sensor-popup-overlay" @click=${this._closeSensorPopup}>
+        <div class="sensor-popup" @click=${this._stopPropagation}>
           <div class="sensor-popup-header">
             <div class="sensor-popup-header-icon"><ha-icon icon="mdi:gauge"></ha-icon></div>
             <span class="sensor-popup-title">${roomName}</span>
-            <button class="sensor-popup-close" @click=${close} aria-label="Close">
+            <button class="sensor-popup-close" @click=${this._closeSensorPopup} aria-label="Close">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>
           <div class="sensor-popup-body">
-            ${items.map((item) => {
+            ${repeat(items, (item) => item.key, (item) => {
               const entityId = this._entityIdForKey(item.key);
               const meta = item.key.startsWith("custom_")
                 ? { label: this._config?.sensors?.custom?.[Number(item.key.slice(7))]?.name ?? item.key, color: "#94a3b8" }
                 : (POPUP_META[item.key] ?? { label: item.key, color: "#94a3b8" });
+              const chartVisible = !this._lazySensorCharts() || this._activeSensorChartKey === item.key;
               return html`
                 <div class="sensor-popup-item ${entityId ? "sensor-popup-item--clickable" : ""}"
-                  ${entityId ? html`@click=${(e: Event) => { e.stopPropagation(); fireEvent(this, "hass-more-info", { entityId }); }}` : nothing}>
+                  data-entity-id=${entityId ?? nothing}
+                  ${entityId ? html`@click=${this._handleSensorMoreInfoClick}` : nothing}>
                   <div class="sensor-popup-item-row">
                     <div class="sensor-popup-item-icon" style="--sensor-accent:${meta.color}">
                       <ha-icon icon=${item.icon}></ha-icon>
@@ -482,9 +570,20 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                       <div class="sensor-popup-item-value">${item.value}</div>
                       ${entityId ? html`<div class="sensor-popup-item-updated">${this._relativeTime(this.hass.states[entityId]?.last_updated)}</div>` : nothing}
                     </div>
+                    ${entityId && this._lazySensorCharts() ? html`
+                      <button
+                        class="sensor-popup-chart-button"
+                        type="button"
+                        data-key=${item.key}
+                        aria-label="History"
+                        @click=${this._handleSensorChartClick}
+                      >
+                        <ha-icon icon="mdi:chart-line"></ha-icon>
+                      </button>
+                    ` : nothing}
                     ${entityId ? html`<ha-icon class="sensor-popup-item-chevron" icon="mdi:chevron-right"></ha-icon>` : nothing}
                   </div>
-                  ${entityId ? html`<div class="sensor-popup-chart" data-key=${item.key}></div>` : nothing}
+                  ${entityId && chartVisible ? html`<div class="sensor-popup-chart" data-key=${item.key}></div>` : nothing}
                 </div>
               `;
             })}
@@ -515,8 +614,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       <section class="automation-panel">
         <ha-icon icon="mdi:home-automation"></ha-icon>
         <div class="automation-list">
-          ${automations.map((a) => html`
-            <button class="automation-item ${a.enabled ? "" : "automation-item-disabled"}" @click=${() => this._navigateToAutomation(a.entityId)}>
+          ${repeat(automations, (a) => a.entityId, (a) => html`
+            <button class="automation-item ${a.enabled ? "" : "automation-item-disabled"}" data-entity-id=${a.entityId} @click=${this._handleAutomationItemClick}>
               ${a.name}<span class="automation-last-run"> - ${_formatLastTriggered(a.lastTriggered)}</span>
             </button>
           `)}
@@ -534,7 +633,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       <section class="expander">
         <div class="expander-shell ${classMap({ open: this._expanded })}">
           <div class="expander-inner">
-            ${this._expanded || this._everExpanded ? this._renderGrid() : nothing}
+            ${this._renderGridWhenCollapsed() ? this._renderGrid() : nothing}
           </div>
         </div>
       </section>
@@ -546,7 +645,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     return html`
       <section class="device-zone">
         <div class="device-grid" style="grid-template-columns: repeat(auto-fill, minmax(${tileSize}px, 1fr)); --sr-tile-size: ${tileSize}px">
-          ${this._renderModel?.devices.map((device) => this._renderDeviceSafe(device))}
+          ${repeat(this._renderModel?.devices ?? [], (device) => device.key, (device) => this._renderDeviceSafe(device))}
         </div>
       </section>
     `;
@@ -578,7 +677,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         aria-label=${device.label}
         data-device-key=${device.key}
         class="tile ${classMap({
-          glass: this._config?.ui?.glassmorphism !== false,
+          glass: this._config?.ui?.glassmorphism !== false && !this._reduceVisualEffects(),
           active: device.isOn,
           "active-accent": device.isOn && device.activeAccent !== "none",
           outlined: device.outlined,
@@ -611,6 +710,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                   alt=${device.label}
                   src=${device.image}
                   data-src=${device.image}
+                  loading="lazy"
+                  decoding="async"
                   style=${this._imageFit.styleFor(device.image!)}
                   @load=${this._handleDeviceImageLoad}
                 />
@@ -666,6 +767,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const entities = this._renderModel?.climateEntities ?? [];
     if (!entities.length) return;
     this._showClimateHistory = !this._showClimateHistory;
+    if (!this._showClimateHistory) this._activeSensorChartKey = undefined;
   };
 
   private _handleDevicePointerDown = (event: PointerEvent): void => {
@@ -674,7 +776,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     if (!device) return;
     this._press.start(() => {
       // Re-lookup by key to get the latest computed state at hold time.
-      const target = this._renderModel?.devices.find((d) => d.key === device.key);
+      const target = this._deviceByKey.get(device.key);
       if (target) this._executeAction(target.config.hold_action, target);
     });
   };
@@ -707,7 +809,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
   private _deviceFromEvent(event: Event): ComputedDeviceModel | undefined {
     const key = (event.currentTarget as HTMLElement | null)?.dataset.deviceKey;
-    return key ? this._renderModel?.devices.find((device) => device.key === key) : undefined;
+    return key ? this._deviceByKey.get(key) : undefined;
   }
 
   private _swallowClick = (event: Event): void => {
@@ -826,18 +928,22 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const states = this.hass.states;
 
     if (this._trackedEntityRefs.length !== ids.length) {
+      this._changedEntityIds = new Set(ids);
       this._syncTrackedEntityRefs();
       return true;
     }
 
+    const changedEntityIds = new Set<string>();
     for (let i = 0; i < ids.length; i++) {
       if (this._trackedEntityRefs[i] !== states[ids[i]]) {
-        this._syncTrackedEntityRefs();
-        return true;
+        changedEntityIds.add(ids[i]);
       }
     }
 
-    return false;
+    if (!changedEntityIds.size) return false;
+    this._changedEntityIds = changedEntityIds;
+    this._syncTrackedEntityRefs();
+    return true;
   }
 
   private _syncTrackedEntityRefs(): void {

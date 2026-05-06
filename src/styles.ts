@@ -59,6 +59,15 @@ export const smartRoomCardStyles = css`
       var(--smart-room-shadow);
   }
 
+  :host([performance-lite]) ha-card {
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    transition: border-color 120ms ease;
+  }
+
+  :host([performance-lite][alert]) ha-card {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--smart-room-alert) 55%, transparent);
+  }
+
   :host([pressed]) ha-card {
     transform: scale(0.992);
   }
@@ -370,6 +379,37 @@ export const smartRoomCardStyles = css`
   .glass {
     backdrop-filter: blur(20px) saturate(130%);
     -webkit-backdrop-filter: blur(20px) saturate(130%);
+  }
+
+  :host([performance-lite]) .glass,
+  :host([performance-lite]) .integration-banner,
+  :host([performance-lite]) .alert-bar,
+  :host([performance-lite]) .sensor-popup-overlay,
+  :host([performance-lite]) .automation-panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  :host([performance-lite]) .camera-rec,
+  :host([performance-lite]) .tile.active,
+  :host([performance-lite]) .tile.active-accent,
+  :host([performance-lite]) .tile.outlined,
+  :host([performance-lite]) .tile.alert,
+  :host([performance-lite]) .tile.tile-error,
+  :host([performance-lite]) .alert-bar,
+  :host([performance-lite]) .automation-panel,
+  :host([performance-lite]) .sensor-popup {
+    box-shadow: none;
+  }
+
+  :host([performance-lite]) .tile {
+    transition: opacity 120ms ease, border-color 120ms ease;
+  }
+
+  :host([performance-lite]) .media-waves span,
+  :host([performance-lite]) .sensor-popup-overlay,
+  :host([performance-lite]) .sensor-popup {
+    animation: none;
   }
 
   .expander {
@@ -775,6 +815,26 @@ export const smartRoomCardStyles = css`
     --mdc-icon-size: 18px;
     color: rgba(255, 255, 255, 0.22);
     flex-shrink: 0;
+  }
+
+  .sensor-popup-chart-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: var(--sr-radius-full);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.86);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    flex-shrink: 0;
+  }
+
+  .sensor-popup-chart-button ha-icon {
+    --mdc-icon-size: 17px;
   }
 
   .sensor-popup-chart {

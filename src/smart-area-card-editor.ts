@@ -315,10 +315,45 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   public setConfig(config: SmartRoomCardConfig): void {
-    const fallback: SmartRoomCardConfig = { type: "custom:smart-area-card", room: "", room_id: "", devices: [], sensors: { alerts: {} }, ui: { header_sensors_enabled: true, header_climate_more_info: true, battery_threshold: 20, battery_alerts_enabled: true, show_entity_icons: false, show_area_icon: false, keep_background_on_until_sunset: false, automation_badge_enabled: false, automation_badge_click_details: true }, expander: { enabled: true, initial_state: "closed", persist_state: true } };
+    const fallback: SmartRoomCardConfig = {
+      type: "custom:smart-area-card",
+      room: "",
+      room_id: "",
+      devices: [],
+      sensors: { alerts: {} },
+      ui: {
+        header_sensors_enabled: true,
+        header_climate_more_info: true,
+        battery_threshold: 20,
+        battery_alerts_enabled: true,
+        show_entity_icons: false,
+        show_area_icon: false,
+        keep_background_on_until_sunset: false,
+        automation_badge_enabled: false,
+        automation_badge_click_details: true,
+        performance: {
+          mode: "balanced",
+          unload_collapsed_grid: true,
+          lazy_sensor_charts: true,
+        },
+      },
+      expander: { enabled: true, initial_state: "closed", persist_state: true },
+    };
     try {
       const clone = deepClone(config);
-      const nextConfig: SmartRoomCardConfig = { ...fallback, ...clone, ui: { ...fallback.ui, ...(clone.ui ?? {}) }, expander: { ...fallback.expander, ...(clone.expander ?? {}) } };
+      const nextConfig: SmartRoomCardConfig = {
+        ...fallback,
+        ...clone,
+        ui: {
+          ...fallback.ui,
+          ...(clone.ui ?? {}),
+          performance: {
+            ...fallback.ui?.performance,
+            ...(clone.ui?.performance ?? {}),
+          },
+        },
+        expander: { ...fallback.expander, ...(clone.expander ?? {}) },
+      };
       nextConfig.devices = (nextConfig.devices ?? []).map((device) => this._hydratePresetDefaults(device));
       this._config = nextConfig;
     } catch {
@@ -391,6 +426,11 @@ export class SmartAreaCardEditor extends LitElement {
     const darkCond = images.dark_mode_condition ?? "always";
     const bgOn = images.background_on ?? "";
     const bgPosY = images.background_position_y ?? 50;
+    const performance = config.ui?.performance ?? {};
+    const performanceMode = performance.mode ?? "balanced";
+    const reduceEffects = performance.reduce_effects === true || performanceMode === "maximum";
+    const unloadCollapsedGrid = performance.unload_collapsed_grid ?? true;
+    const lazySensorCharts = performance.lazy_sensor_charts ?? true;
     const backgroundPreview = bgOn ? html`
       <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"
            style=${this._bgPreviewValid ? "" : "display:none"}>
@@ -556,6 +596,27 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
           <div class="row single">
             ${this._renderCompactCheckField("Remember state", "Restores the last open or closed state from the browser.", config.expander?.persist_state ?? true, (checked) => this._setExpander("persist_state", checked))}
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Performance</div>
+          <div class="row single">
+            <label>Mode
+              <select .value=${performanceMode} @change=${(e: Event) => this._setUiPerformance("mode", valueFromEvent(e))}>
+                <option value="balanced">Balanced</option>
+                <option value="maximum">Maximum savings</option>
+              </select>
+            </label>
+          </div>
+          <div class="row single">
+            ${this._renderCompactCheckField("Reduce visual effects", "Uses cheaper paint styles for shadows, blur and motion.", reduceEffects, (checked) => this._setUiPerformance("reduce_effects", checked || undefined), performanceMode === "maximum")}
+          </div>
+          <div class="row single">
+            ${this._renderCompactCheckField("Unload closed grid", "Removes device tiles from the DOM while the card is collapsed.", unloadCollapsedGrid, (checked) => this._setUiPerformance("unload_collapsed_grid", checked))}
+          </div>
+          <div class="row single">
+            ${this._renderCompactCheckField("Lazy sensor charts", "Creates history charts only when a chart button is opened.", lazySensorCharts, (checked) => this._setUiPerformance("lazy_sensor_charts", checked))}
           </div>
         </div>
 
@@ -2145,6 +2206,17 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       return;
     }
     this._patch({ ui: { ...(this._config?.ui ?? {}), [key]: value } });
+  }
+  private _setUiPerformance(key: string, value: unknown) {
+    this._patch({
+      ui: {
+        ...(this._config?.ui ?? {}),
+        performance: {
+          ...(this._config?.ui?.performance ?? {}),
+          [key]: value,
+        },
+      },
+    });
   }
   private _setExpander(key: string, value: unknown) { this._patch({ expander: { ...(this._config?.expander ?? {}), [key]: value } }); }
   private _setRoomImage(key: "background_on" | "background_off", value: string) { this._patch({ ui: { ...(this._config?.ui ?? {}), images: { ...(this._config?.ui?.images ?? {}), [key]: value || undefined } } }); }

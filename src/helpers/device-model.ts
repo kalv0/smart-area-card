@@ -44,6 +44,32 @@ export interface ComputedDeviceModel {
   alertsByBadge: Partial<Record<SmartRoomHeaderBadge, string[]>>;
 }
 
+const deviceTrackedIdsCache = new WeakMap<SmartRoomDeviceConfig, string[]>();
+
+export const getDeviceTrackedEntityIds = (config: SmartRoomDeviceConfig): string[] => {
+  const cached = deviceTrackedIdsCache.get(config);
+  if (cached) return cached;
+  const ids = new Set<string>();
+  ids.add(config.entity);
+  if (config.battery) ids.add(config.battery);
+  if (config.privacy) ids.add(config.privacy);
+  config.offline?.conditions?.forEach((condition) => ids.add(condition.entity));
+  config.states?.on_conditions?.forEach((condition) => ids.add(condition.entity));
+  config.states?.alert_conditions?.forEach((condition) => ids.add(condition.entity));
+  config.states?.states?.forEach((namedState) => {
+    namedState.conditions?.forEach((condition) => ids.add(condition.entity));
+    if (namedState.text_entity) ids.add(namedState.text_entity);
+    if (namedState.text_entity_active) ids.add(namedState.text_entity_active);
+    if (namedState.text_entity_inactive) ids.add(namedState.text_entity_inactive);
+  });
+  config.states?.alerts?.forEach((alert) => {
+    alert.conditions?.forEach((condition) => ids.add(condition.entity));
+  });
+  const result = [...ids];
+  deviceTrackedIdsCache.set(config, result);
+  return result;
+};
+
 export const computeDeviceModel = (
   states: Record<string, HassEntity>,
   config: SmartRoomDeviceConfig,

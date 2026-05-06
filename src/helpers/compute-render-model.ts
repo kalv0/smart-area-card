@@ -1,5 +1,5 @@
 import type { HomeAssistant } from "custom-card-helpers";
-import { computeDeviceModel } from "./device-model";
+import { computeDeviceModel, getDeviceTrackedEntityIds } from "./device-model";
 import { getEntity, isUnavailable } from "./entity-helpers";
 import { normalizeAssetPath } from "./config-helpers";
 import {
@@ -19,11 +19,27 @@ export function computeRenderModel(
   config: SmartRoomCardConfig,
   hass: HomeAssistant,
   automationEntityIds: string[] = [],
+  options: {
+    previous?: RenderModel;
+    changedEntityIds?: ReadonlySet<string>;
+  } = {},
 ): RenderModel {
   const states = hass.states;
   const hassExt = hass as HomeAssistantExtended;
 
-  const devices = (config.devices ?? []).map((device, i) => computeDeviceModel(states, device, i));
+  const previousDevices = options.previous?.devices;
+  const changedEntityIds = options.changedEntityIds;
+  const devices = (config.devices ?? []).map((device, i) => {
+    const previous = previousDevices?.[i];
+    if (
+      previous?.config === device &&
+      changedEntityIds &&
+      !getDeviceTrackedEntityIds(device).some((entityId) => changedEntityIds.has(entityId))
+    ) {
+      return previous;
+    }
+    return computeDeviceModel(states, device, i);
+  });
 
   const deviceAlerts = devices.filter((device) => device.isAlert);
   const alertsByBadge: Partial<Record<import("./types").SmartRoomHeaderBadge, string[]>> = {};

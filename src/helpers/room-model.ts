@@ -1,7 +1,7 @@
 import type { HassEntity } from "home-assistant-js-websocket";
 import type { HomeAssistant } from "custom-card-helpers";
 import { isUnavailable } from "./entity-helpers";
-import type { ComputedDeviceModel } from "./device-model";
+import { getDeviceTrackedEntityIds, type ComputedDeviceModel } from "./device-model";
 import type { SmartRoomHeaderBadge, SmartRoomCardConfig } from "./types";
 import type { ClimateAlert, AreaAutomation } from "../types/card-model";
 import type { HomeAssistantExtended } from "../types/ha-extensions";
@@ -30,21 +30,7 @@ export function createTrackedEntityIds(
 ): string[] {
   const ids = new Set<string>();
   (config.devices ?? []).forEach((device) => {
-    ids.add(device.entity);
-    if (device.battery) ids.add(device.battery);
-    if (device.privacy) ids.add(device.privacy);
-    device.offline?.conditions?.forEach((condition) => ids.add(condition.entity));
-    device.states?.on_conditions?.forEach((condition) => ids.add(condition.entity));
-    device.states?.alert_conditions?.forEach((condition) => ids.add(condition.entity));
-    device.states?.states?.forEach((namedState) => {
-      namedState.conditions?.forEach((condition) => ids.add(condition.entity));
-      if (namedState.text_entity) ids.add(namedState.text_entity);
-      if (namedState.text_entity_active) ids.add(namedState.text_entity_active);
-      if (namedState.text_entity_inactive) ids.add(namedState.text_entity_inactive);
-    });
-    device.states?.alerts?.forEach((alert) => {
-      alert.conditions?.forEach((condition) => ids.add(condition.entity));
-    });
+    getDeviceTrackedEntityIds(device).forEach((id) => ids.add(id));
   });
   getClimateEntities(config.sensors).forEach((entityId) => ids.add(entityId));
   if (config.expander?.condition?.entity) ids.add(config.expander.condition.entity);

@@ -19,7 +19,7 @@ Built with Lit 3 + TypeScript. No custom integration required — works entirely
 
 ## Installation
 
-Copy `dist/smart-area-card.js` to your Home Assistant `www/` folder and add the resource:
+Copy `dist/smart-area-card.js` plus the generated `dist/chunks/` and `dist/assets/` folders to your Home Assistant `www/` folder, then add the resource:
 
 ```yaml
 resources:
@@ -48,7 +48,7 @@ npm install --include=dev
 
 | Command | Description |
 |---|---|
-| `npm run build` | Bundle to `dist/smart-area-card.js` |
+| `npm run build` | Bundle the card to `dist/smart-area-card.js` with lazy-loaded chunks/assets |
 | `npm run check` | TypeScript strict type check (no emit) |
 | `npm run test:run` | Run all unit tests (Vitest) |
 | `npm test` | Run tests in watch mode |

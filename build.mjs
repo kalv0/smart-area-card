@@ -7,6 +7,8 @@ await build({
   outdir: "dist",
   bundle: true,
   format: "esm",
+  splitting: true,
+  chunkNames: "chunks/[name]-[hash]",
   target: "es2021",
   minify: true,
   sourcemap: false,
