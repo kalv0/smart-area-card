@@ -27,6 +27,7 @@ export class PressController implements ReactiveController {
     window.clearTimeout(this._timer);
     this._timer = window.setTimeout(() => {
       this.pressed = false;
+      this._timer = undefined;
       this._longPressTriggered = true;
       this._tapHandled = true;
       this._host.requestUpdate();
@@ -47,8 +48,10 @@ export class PressController implements ReactiveController {
   }
 
   clear(): void {
+    const wasActive = this.pressed || this._timer !== undefined;
     this.pressed = false;
     window.clearTimeout(this._timer);
-    this._host.requestUpdate();
+    this._timer = undefined;
+    if (wasActive) this._host.requestUpdate();
   }
 }

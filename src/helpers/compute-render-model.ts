@@ -9,7 +9,7 @@ import {
   countHeaderBadges,
   CLIMATE_DEFAULT_ICONS,
   formatSensorAlertReason,
-  getAreaAutomations,
+  getAreaAutomationsByIds,
 } from "./room-model";
 import type { SmartRoomCardConfig } from "./types";
 import type { RenderModel, ClimateAlert } from "../types/card-model";
@@ -140,15 +140,19 @@ export function computeRenderModel(
   const badgeCounts = countHeaderBadges(devices, automationCount);
 
   // Automations list — computed from the same filtered IDs to avoid divergence
-  const areaAutomations = config.ui?.automation_badge_enabled && config.room_id?.trim()
-    ? getAreaAutomations(hass, hassExt.entities ?? {}, config.room_id)
+  const areaAutomations = config.ui?.automation_badge_enabled && automationEntityIds.length
+    ? getAreaAutomationsByIds(states, automationEntityIds)
     : [];
+
+  const activeLightCount = badgeCounts.light ?? 0;
+  const activeMediaCount = badgeCounts.playing ?? 0;
+  const activeRecCount = badgeCounts.rec ?? 0;
 
   return {
     devices,
-    activeLightCount: devices.filter((d) => d.countsAsRoomActive).length,
-    activeMediaCount: devices.filter((d) => d.countsAsMediaActive).length,
-    activeRecCount: devices.filter((d) => d.countsAsRecActive).length,
+    activeLightCount,
+    activeMediaCount,
+    activeRecCount,
     badgeCounts,
     // hasAlert drives the red border on the collapsed card.
     // Device alerts respect their per-alert header_border config.

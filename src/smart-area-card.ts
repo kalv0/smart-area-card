@@ -13,7 +13,7 @@ import {
   storageKey,
   type ComputedDeviceModel,
   type PopupConfig,
-  type SmartRoomActionConfig,
+type SmartRoomActionConfig,
   type SmartRoomActionType,
   type SmartRoomCardConfig,
   type SmartRoomHeaderBadge,
@@ -21,7 +21,7 @@ import {
 import { smartRoomCardStyles } from "./styles";
 import type { RenderModel } from "./types/card-model";
 import type { HomeAssistantExtended } from "./types/ha-extensions";
-import { createCardSignature, resolveAreaAutomationIds } from "./helpers/room-model";
+import { createTrackedEntityIds, resolveAreaAutomationIds } from "./helpers/room-model";
 import { computeRenderModel } from "./helpers/compute-render-model";
 import { warnOnInvalidConfig } from "./helpers/validate-config";
 import { PressController } from "./controllers/press-controller";
@@ -38,6 +38,7 @@ declare global {
   }
 }
 
+type EntityRegistry = NonNullable<HomeAssistantExtended["entities"]>;
 
 const BADGE_CONFIG: Partial<Record<SmartRoomHeaderBadge, { pillClass: string; icon: string }>> = {
   alert_generic: { pillClass: "header-pill header-pill-red",    icon: "mdi:alert-circle-outline" },
@@ -51,6 +52,8 @@ const BADGE_CONFIG: Partial<Record<SmartRoomHeaderBadge, { pillClass: string; ic
   plug_off:      { pillClass: "header-pill header-pill-red",    icon: "mdi:power-plug-off-outline" },
   low_battery:   { pillClass: "header-pill header-pill-red",    icon: "mdi:battery-alert-variant-outline" },
 };
+
+const EMPTY_ENTITY_REGISTRY: EntityRegistry = {};
 
 function _formatLastTriggered(lastTriggered: string | null | undefined): string {
   if (!lastTriggered) return "never";
@@ -110,9 +113,11 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   @state() private _alertsHidden = false;
 
   private _renderModel?: RenderModel;
-  private _lastSignature = "";
   /** Cached automation entity IDs for the current room. Rebuilt on config change. */
   private _automationEntityIds: string[] = [];
+  private _trackedEntityIds: string[] = [];
+  private _trackedEntityRefs: Array<unknown> = [];
+  private _lastEntityRegistry?: HomeAssistantExtended["entities"];
 
   private readonly _press = new PressController(this);
   private readonly _imageFit = new ImageFitController(this);
@@ -146,6 +151,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
     warnOnInvalidConfig(this._config);
     this._rebuildAutomationIds();
+    this._rebuildTrackedEntityIds();
+    this._trackedEntityRefs = [];
     this._restoreExpanded();
     this._restoreAutomationPanel();
     this._restoreAlertPanels();
@@ -208,12 +215,10 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   protected willUpdate(changedProps: Map<string, unknown>): void {
     if (changedProps.has("hass") || changedProps.has("_config")) {
       if (this._config && this.hass) {
-        // Rebuild automation IDs when hass first becomes available after setConfig
-        if (changedProps.has("hass") && !this._automationEntityIds.length && this._config.ui?.automation_badge_enabled) {
-          this._rebuildAutomationIds();
-        }
+        this._refreshAutomationTracking();
         try {
           this._renderModel = computeRenderModel(this._config, this.hass, this._automationEntityIds);
+          this._syncTrackedEntityRefs();
           // Auto-reset hidden flag when all alerts clear so next alert always shows.
           if (this._alertsHidden && this._totalAlertCount() === 0) {
             this._alertsHidden = false;
@@ -240,12 +245,11 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       return true;
     }
     if (changedProps.has("hass")) {
-      const hassExt = this.hass as HomeAssistantExtended;
-      const signature = this._config
-        ? createCardSignature(this._config, this.hass.states, this._automationEntityIds)
-        : "";
-      if (signature !== this._lastSignature) {
-        this._lastSignature = signature;
+      if (this._refreshAutomationTracking()) {
+        this._trackedEntityRefs = [];
+        return true;
+      }
+      if (this._trackedEntityRefsChanged()) {
         return true;
       }
     }
@@ -572,6 +576,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       <button
         type="button"
         aria-label=${device.label}
+        data-device-key=${device.key}
         class="tile ${classMap({
           glass: this._config?.ui?.glassmorphism !== false,
           active: device.isOn,
@@ -585,12 +590,12 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
           "--smart-room-tile-accent": device.activeAccentCss ?? "transparent",
           "--smart-room-alert-accent": device.alertAccentCss ?? "var(--smart-room-alert)",
         })}
-        @pointerdown=${(event: PointerEvent) => this._handleDevicePointerDown(event, device)}
-        @pointerup=${(event: PointerEvent) => this._handleDevicePointerUp(event, device)}
+        @pointerdown=${this._handleDevicePointerDown}
+        @pointerup=${this._handleDevicePointerUp}
         @pointerleave=${this._onPressClear}
         @pointercancel=${this._onPressClear}
         @click=${this._swallowClick}
-        @keydown=${(event: KeyboardEvent) => this._handleDeviceKeyDown(event, device)}
+        @keydown=${this._handleDeviceKeyDown}
       >
         <div class="tile-header">
           <span></span>
@@ -605,8 +610,9 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                 <img
                   alt=${device.label}
                   src=${device.image}
+                  data-src=${device.image}
                   style=${this._imageFit.styleFor(device.image!)}
-                  @load=${(event: Event) => this._imageFit.handleLoad(event, device.image!)}
+                  @load=${this._handleDeviceImageLoad}
                 />
               `
             : nothing}
@@ -662,30 +668,46 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._showClimateHistory = !this._showClimateHistory;
   };
 
-  private _handleDevicePointerDown(event: PointerEvent, device: ComputedDeviceModel): void {
+  private _handleDevicePointerDown = (event: PointerEvent): void => {
     event.stopPropagation();
+    const device = this._deviceFromEvent(event);
+    if (!device) return;
     this._press.start(() => {
       // Re-lookup by key to get the latest computed state at hold time.
       const target = this._renderModel?.devices.find((d) => d.key === device.key);
       if (target) this._executeAction(target.config.hold_action, target);
     });
-  }
+  };
 
-  private _handleDevicePointerUp(event: PointerEvent, device: ComputedDeviceModel): void {
+  private _handleDevicePointerUp = (event: PointerEvent): void => {
     event.stopPropagation();
+    const device = this._deviceFromEvent(event);
+    if (!device) return;
     const didTap = this._press.commitTap();
     if (didTap) {
       this._executeAction(device.config.tap_action, device);
     } else {
       event.preventDefault();
     }
-  }
+  };
 
-  private _handleDeviceKeyDown(event: KeyboardEvent, device: ComputedDeviceModel): void {
+  private _handleDeviceKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== "Enter" && event.key !== " ") return;
+    const device = this._deviceFromEvent(event);
+    if (!device) return;
     event.preventDefault();
     event.stopPropagation();
     this._executeAction(device.config.tap_action, device);
+  };
+
+  private _handleDeviceImageLoad = (event: Event): void => {
+    const src = (event.currentTarget as HTMLElement | null)?.dataset.src;
+    if (src) this._imageFit.handleLoad(event, src);
+  };
+
+  private _deviceFromEvent(event: Event): ComputedDeviceModel | undefined {
+    const key = (event.currentTarget as HTMLElement | null)?.dataset.deviceKey;
+    return key ? this._renderModel?.devices.find((device) => device.key === key) : undefined;
   }
 
   private _swallowClick = (event: Event): void => {
@@ -762,10 +784,69 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _rebuildAutomationIds(): void {
     if (!this._config?.ui?.automation_badge_enabled || !this._config.room_id?.trim()) {
       this._automationEntityIds = [];
+      this._lastEntityRegistry = undefined;
       return;
     }
-    const entityRegistry = (this.hass as HomeAssistantExtended | undefined)?.entities ?? {};
+    const entityRegistry = (this.hass as HomeAssistantExtended | undefined)?.entities ?? EMPTY_ENTITY_REGISTRY;
     this._automationEntityIds = resolveAreaAutomationIds(entityRegistry, this._config.room_id);
+    this._lastEntityRegistry = entityRegistry;
+  }
+
+  private _rebuildTrackedEntityIds(): void {
+    this._trackedEntityIds = this._config
+      ? createTrackedEntityIds(this._config, this._automationEntityIds)
+      : [];
+  }
+
+  private _refreshAutomationTracking(): boolean {
+    if (!this._config?.ui?.automation_badge_enabled || !this._config.room_id?.trim()) {
+      const hadAutomationIds = this._automationEntityIds.length > 0;
+      if (hadAutomationIds) {
+        this._automationEntityIds = [];
+        this._rebuildTrackedEntityIds();
+      }
+      this._lastEntityRegistry = undefined;
+      return hadAutomationIds;
+    }
+
+    const entityRegistry = (this.hass as HomeAssistantExtended | undefined)?.entities ?? EMPTY_ENTITY_REGISTRY;
+    if (entityRegistry === this._lastEntityRegistry) return false;
+
+    const previous = this._automationEntityIds.join("|");
+    this._automationEntityIds = resolveAreaAutomationIds(entityRegistry, this._config.room_id);
+    this._lastEntityRegistry = entityRegistry;
+    const changed = previous !== this._automationEntityIds.join("|");
+    if (changed) this._rebuildTrackedEntityIds();
+    return changed;
+  }
+
+  private _trackedEntityRefsChanged(): boolean {
+    if (!this.hass) return false;
+    const ids = this._trackedEntityIds;
+    const states = this.hass.states;
+
+    if (this._trackedEntityRefs.length !== ids.length) {
+      this._syncTrackedEntityRefs();
+      return true;
+    }
+
+    for (let i = 0; i < ids.length; i++) {
+      if (this._trackedEntityRefs[i] !== states[ids[i]]) {
+        this._syncTrackedEntityRefs();
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private _syncTrackedEntityRefs(): void {
+    if (!this.hass) {
+      this._trackedEntityRefs = [];
+      return;
+    }
+    const states = this.hass.states;
+    this._trackedEntityRefs = this._trackedEntityIds.map((entityId) => states[entityId]);
   }
 
   private _restoreExpanded(): void {

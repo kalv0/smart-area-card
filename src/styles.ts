@@ -113,6 +113,7 @@ export const smartRoomCardStyles = css`
     display: grid;
     gap: var(--sr-space-2);
     min-height: 0;
+    contain: layout style;
   }
 
   .summary-zone {
@@ -122,6 +123,7 @@ export const smartRoomCardStyles = css`
     padding: 4px 2px 0;
     border-radius: 0;
     background: transparent;
+    contain: layout style;
   }
 
   .header {
@@ -398,6 +400,8 @@ export const smartRoomCardStyles = css`
     position: relative;
     padding: var(--sr-space-2) 0 0;
     border-radius: 0;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 240px;
   }
 
   .device-grid {
@@ -406,6 +410,7 @@ export const smartRoomCardStyles = css`
     grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
     gap: 10px;
     z-index: 1;
+    contain: layout style;
   }
 
   .tile {
@@ -423,6 +428,7 @@ export const smartRoomCardStyles = css`
     font: inherit;
     color: inherit;
     touch-action: manipulation;
+    contain: layout style;
     transition:
       transform 160ms ease,
       opacity 160ms ease,
@@ -911,7 +917,8 @@ export const smartRoomCardStyles = css`
     width: 2px;
     border-radius: var(--sr-radius-full);
     background: white;
-    animation: smart-room-wave 0.9s ease-in-out infinite;
+    animation: smart-room-wave 1.6s ease-in-out infinite;
+    transform-origin: center bottom;
   }
 
   .media-waves span:nth-child(1) {
@@ -955,6 +962,23 @@ export const smartRoomCardStyles = css`
     .active-pill {
       min-height: 22px;
       font-size: 0.74rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ha-card,
+    .room-image,
+    .tile,
+    .sensor-popup-overlay,
+    .sensor-popup {
+      animation: none;
+      transition: none;
+    }
+
+    .media-waves span {
+      animation: none;
+      transform: scaleY(0.85);
+      opacity: 0.85;
     }
   }
 

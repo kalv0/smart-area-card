@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   resolveAreaAutomationIds,
   createCardSignature,
+  createTrackedEntityIds,
   getAreaAutomations,
+  getAreaAutomationsByIds,
   evaluateClimateAlert,
   buildClimateItems,
   getClimateEntities,
@@ -87,6 +89,30 @@ describe("createCardSignature", () => {
   });
 });
 
+describe("createTrackedEntityIds", () => {
+  it("includes display text entities from named states", () => {
+    const config = makeCardConfig({
+      devices: [{
+        entity: "light.living",
+        type: "light",
+        states: {
+          states: [{
+            name: "Power",
+            text_entity: "sensor.power",
+            text_entity_active: "sensor.active_power",
+            text_entity_inactive: "sensor.idle_power",
+          }],
+        },
+      }],
+    });
+
+    const ids = createTrackedEntityIds(config);
+    expect(ids).toContain("sensor.power");
+    expect(ids).toContain("sensor.active_power");
+    expect(ids).toContain("sensor.idle_power");
+  });
+});
+
 describe("getAreaAutomations", () => {
   const registry = {
     "automation.lights": { entity_id: "automation.lights", area_id: "living_room" },
@@ -123,6 +149,19 @@ describe("getAreaAutomations", () => {
     const results = getAreaAutomations(hass, registry, "living_room");
     const lights = results.find((r) => r.name === "Lights");
     expect(lights?.lastTriggered).toBe("2024-01-01T12:00:00Z");
+  });
+});
+
+describe("getAreaAutomationsByIds", () => {
+  it("uses pre-filtered IDs without scanning the registry", () => {
+    const states = {
+      "automation.lights": makeEntity("automation.lights", "on", { friendly_name: "Lights" }),
+      "automation.blinds": makeEntity("automation.blinds", "off", { friendly_name: "Blinds" }),
+      "automation.missing_area": makeEntity("automation.missing_area", "on", { friendly_name: "Other" }),
+    };
+
+    const results = getAreaAutomationsByIds(states, ["automation.blinds", "automation.lights"]);
+    expect(results.map((item) => item.name)).toEqual(["Lights", "Blinds"]);
   });
 });
 

@@ -16,6 +16,18 @@ export function createCardSignature(
   states: Record<string, HassEntity>,
   automationEntityIds: string[] = [],
 ): string {
+  return createCardSignatureFromIds(createTrackedEntityIds(config, automationEntityIds), states);
+}
+
+/**
+ * Builds the stable list of entity IDs that can affect this card.
+ * Keep this cached on the element; rebuilding it for every global hass update
+ * becomes expensive on dashboards with many cards.
+ */
+export function createTrackedEntityIds(
+  config: SmartRoomCardConfig,
+  automationEntityIds: string[] = [],
+): string[] {
   const ids = new Set<string>();
   (config.devices ?? []).forEach((device) => {
     ids.add(device.entity);
@@ -26,6 +38,9 @@ export function createCardSignature(
     device.states?.alert_conditions?.forEach((condition) => ids.add(condition.entity));
     device.states?.states?.forEach((namedState) => {
       namedState.conditions?.forEach((condition) => ids.add(condition.entity));
+      if (namedState.text_entity) ids.add(namedState.text_entity);
+      if (namedState.text_entity_active) ids.add(namedState.text_entity_active);
+      if (namedState.text_entity_inactive) ids.add(namedState.text_entity_inactive);
     });
     device.states?.alerts?.forEach((alert) => {
       alert.conditions?.forEach((condition) => ids.add(condition.entity));
@@ -35,11 +50,27 @@ export function createCardSignature(
   if (config.expander?.condition?.entity) ids.add(config.expander.condition.entity);
   automationEntityIds.forEach((id) => ids.add(id));
 
-  return [...ids]
-    .sort()
+  return [...ids].sort();
+}
+
+export function createCardSignatureFromIds(
+  entityIds: readonly string[],
+  states: Record<string, HassEntity>,
+): string {
+  return entityIds
     .map((entityId) => {
       const entity = states[entityId];
-      return entity ? `${entityId}:${entity.state}` : `${entityId}:missing`;
+      if (!entity) return `${entityId}:missing`;
+      const attrs = entity.attributes;
+      return [
+        entityId,
+        entity.state,
+        attrs.friendly_name ?? "",
+        attrs.icon ?? "",
+        attrs.unit_of_measurement ?? "",
+        attrs.battery_level ?? attrs.battery ?? "",
+        attrs.last_triggered ?? "",
+      ].join(":");
     })
     .join("|");
 }
@@ -85,6 +116,28 @@ export function getAreaAutomations(
 
   const enabled = automations.filter((e) => e.state === "on").map(toItem);
   const disabled = automations.filter((e) => e.state !== "on").map(toItem);
+  return [...enabled, ...disabled];
+}
+
+export function getAreaAutomationsByIds(
+  states: Record<string, HassEntity>,
+  automationEntityIds: readonly string[],
+): AreaAutomation[] {
+  const enabled: AreaAutomation[] = [];
+  const disabled: AreaAutomation[] = [];
+
+  for (const entityId of automationEntityIds) {
+    const entity = states[entityId];
+    if (!entity || isUnavailable(entity)) continue;
+    const item: AreaAutomation = {
+      entityId,
+      name: String(entity.attributes.friendly_name ?? entityId),
+      enabled: entity.state === "on",
+      lastTriggered: entity.attributes.last_triggered as string | null | undefined,
+    };
+    (item.enabled ? enabled : disabled).push(item);
+  }
+
   return [...enabled, ...disabled];
 }
 
