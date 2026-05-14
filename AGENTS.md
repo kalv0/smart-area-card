@@ -175,13 +175,13 @@ Antes de responder:
 <claude-mem-context>
 # Memory Context
 
-# [smart-area] recent context, 2026-05-15 12:52am GMT+2
+# [smart-area] recent context, 2026-05-15 1:02am GMT+2
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 32 obs (12.895t read) | 2.082.563t work | 99% savings
+Stats: 39 obs (15.430t read) | 2.237.046t work | 99% savings
 
 ### May 2, 2026
 1 10:25p 🔵 smart-area-card: Project Structure and Toolchain
@@ -220,6 +220,13 @@ Stats: 32 obs (12.895t read) | 2.082.563t work | 99% savings
 30 " ✅ AGENTS.md Rewritten as Comprehensive Agent Guide
 31 " 🔵 Git index.lock Permission Denied on Windows
 32 12:44a 🔵 Git Operations Require Escalated Sandbox Permissions on This Machine
+33 12:55a 🟣 Editor Preview Scaling System — Stage/Frame Architecture Added
+34 12:57a 🔴 Device Grid Preview Refactored to Use Final-Card Stage Scaling
+35 " 🟣 CSS Stage/Frame Classes Added to editor-styles.ts for Scaled Previews
+36 12:58a 🔴 Device Grid Preview Tile Styles Aligned to Final Card
+37 12:59a 🔵 TypeScript Check Passes; Build/Test Blocked by Windows EPERM on esbuild
+38 1:00a ✅ Preview Scaling Fix Built and Deployed to dist/
+39 " ✅ Editor Preview Scaling Fix Committed and Pushed to GitHub
 
-Access 2083k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 2237k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>
