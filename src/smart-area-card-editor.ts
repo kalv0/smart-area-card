@@ -67,11 +67,6 @@ const SENSOR_ACCENT: Record<string, string> = {
 };
 
 const CUSTOM_SENSOR_COLORS = ["#6366f1", "#22d3ee", "#f43f5e", "#84cc16", "#d946ef", "#fb923c", "#2dd4bf", "#a78bfa"];
-const FINAL_PREVIEW_MIN_WIDTH = 420;
-const FINAL_PREVIEW_MAX_WIDTH = 560;
-const FINAL_PREVIEW_EDIT_WIDTH_DELTA = 120;
-const FINAL_PREVIEW_CARD_PADDING = 14;
-const FINAL_PREVIEW_GRID_GAP = 10;
 
 export class SmartAreaCardEditor extends LitElement {
   static styles = calvoRoomCardEditorStyles;
@@ -182,39 +177,6 @@ export class SmartAreaCardEditor extends LitElement {
 
   private _getDeviceGallery(): Array<{ url: string; name: string; type?: string }> {
     return this._devGallery;
-  }
-
-  private _previewAvailableWidth(): number {
-    const hostWidth = this.offsetWidth > 0 ? this.offsetWidth : window.innerWidth;
-    return Math.max(260, hostWidth - 28);
-  }
-
-  private _finalCardPreviewWidth(): number {
-    const available = this._previewAvailableWidth();
-    return Math.round(Math.min(FINAL_PREVIEW_MAX_WIDTH, Math.max(FINAL_PREVIEW_MIN_WIDTH, available + FINAL_PREVIEW_EDIT_WIDTH_DELTA)));
-  }
-
-  private _finalCardPreviewInnerWidth(): number {
-    return Math.max(1, this._finalCardPreviewWidth() - FINAL_PREVIEW_CARD_PADDING * 2);
-  }
-
-  private _finalCardPreviewScale(): number {
-    return Math.min(1, this._previewAvailableWidth() / this._finalCardPreviewWidth());
-  }
-
-  private _finalCardPreviewFrameStyle(stageHeight: number): string {
-    const scale = this._finalCardPreviewScale();
-    return [
-      `--sap-preview-width: ${this._finalCardPreviewWidth()}px`,
-      `--sap-preview-height: ${stageHeight}px`,
-      `--sap-preview-scale: ${scale}`,
-      `--sap-preview-frame-height: ${Math.ceil(stageHeight * scale)}px`,
-    ].join("; ");
-  }
-
-  private _finalCardPreviewColumns(tileSize: number): number {
-    const innerWidth = this._finalCardPreviewInnerWidth();
-    return Math.max(1, Math.min(8, Math.floor((innerWidth + FINAL_PREVIEW_GRID_GAP) / (tileSize + FINAL_PREVIEW_GRID_GAP))));
   }
 
   private _saveToDeviceGallery(url: string, name: string, type?: string): void {
@@ -919,7 +881,6 @@ export class SmartAreaCardEditor extends LitElement {
     const sensorClickDetails = sensorsEnabled && config.ui?.header_climate_more_info !== false;
     const previewAutomations = this._previewAreaAutomations(config.room_id);
     const enabledAutomationCount = previewAutomations.filter((item) => item.enabled).length;
-    const headerPreviewHeight = this._showHeaderAutomationDetails && automationEnabled && automationClickDetails ? 218 : 156;
 
     const _SENSOR_ICONS: Record<string, string> = {
       temperature: "mdi:thermometer", humidity: "mdi:water-percent", co2: "mdi:molecule-co2",
@@ -969,86 +930,82 @@ export class SmartAreaCardEditor extends LitElement {
             <ha-icon icon=${this._headerCollapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
           </button>
         </div>
-        <div class="final-card-preview final-card-preview--header" style=${this._finalCardPreviewFrameStyle(headerPreviewHeight)}>
-          <div class="editor-header-preview final-card-preview-stage">
-            <div class="ehp-overlay"></div>
-            <div class="ehp-top">
-              <div class="ehp-title">
-                ${showAreaIcon ? html`<ha-icon icon=${areaIcon}></ha-icon>` : nothing}
-                ${roomName ? html`<span>${roomName}</span>` : nothing}
-                <div class="ehp-header-states">
-                  ${automationEnabled ? html`
-                    ${automationClickDetails ? html`
-                      <button
-                        type="button"
-                        class="ehp-automation-badge ehp-automation-badge--cta"
-                        aria-label="Mostrar u ocultar detalles de automatizaciones"
-                        @click=${(e: Event) => {
-                          e.stopPropagation();
-                          this._showHeaderAutomationDetails = !this._showHeaderAutomationDetails;
-                        }}
-                      >
-                        <ha-icon icon="mdi:home-automation"></ha-icon>
-                        <span class="ehp-badge-count">${enabledAutomationCount}</span>
-                      </button>
-                    ` : html`
-                    <span class="ehp-automation-badge" aria-label="${enabledAutomationCount} automations enabled">
-                      <ha-icon icon="mdi:home-automation"></ha-icon>
-                      <span class="ehp-badge-count">${enabledAutomationCount}</span>
-                    </span>
-                    `}
-                  ` : nothing}
-                </div>
-              </div>
-              ${sensorsEnabled && _previewSensors.length ? html`
-                ${sensorClickDetails ? html`
-                <button
-                  type="button"
-                  class="ehp-sensors ehp-sensor-click-target"
-                  aria-label="Open sensor details preview"
-                  @click=${(e: Event) => {
-                    e.stopPropagation();
-                    this._showHeaderSensorPreviewPopup = true;
-                  }}
-                >
-                  ${_previewSensors.map((s, i) => html`
-                    <span class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
-                      <ha-icon icon=${s.icon}></ha-icon>
-                      <span>${s.value}</span>
-                    </span>
-                  `)}
-                </button>
+        <div class="editor-header-preview">
+          <div class="ehp-overlay"></div>
+          <div class="ehp-top">
+            <div class="ehp-title">
+              ${showAreaIcon ? html`<ha-icon icon=${areaIcon}></ha-icon>` : nothing}
+              ${roomName ? html`<span>${roomName}</span>` : nothing}
+              ${automationEnabled ? html`
+                ${automationClickDetails ? html`
+                  <button
+                    type="button"
+                    class="ehp-automation-badge ehp-automation-badge--cta"
+                    aria-label="Mostrar u ocultar detalles de automatizaciones"
+                    @click=${(e: Event) => {
+                      e.stopPropagation();
+                      this._showHeaderAutomationDetails = !this._showHeaderAutomationDetails;
+                    }}
+                  >
+                    <ha-icon icon="mdi:home-automation"></ha-icon>
+                    <span class="ehp-badge-count">${enabledAutomationCount}</span>
+                  </button>
                 ` : html`
-                <div class="ehp-sensors">
-                  ${_previewSensors.map((s, i) => html`
-                    <span class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
-                      <ha-icon icon=${s.icon}></ha-icon>
-                      <span>${s.value}</span>
-                    </span>
-                  `)}
-                </div>
+                <span class="ehp-automation-badge" aria-label="${enabledAutomationCount} automations enabled">
+                  <ha-icon icon="mdi:home-automation"></ha-icon>
+                  <span class="ehp-badge-count">${enabledAutomationCount}</span>
+                </span>
                 `}
               ` : nothing}
             </div>
-            ${automationEnabled && automationClickDetails ? html`
-              ${this._showHeaderAutomationDetails ? html`
-                <div class="ehp-automation-panel">
-                  <ha-icon icon="mdi:home-automation"></ha-icon>
-                  <div class="ehp-automation-list">
-                    ${previewAutomations.length
-                      ? previewAutomations.map((item) => html`
-                          <div class="ehp-automation-item ${item.enabled ? "" : "ehp-automation-item--disabled"}">
-                            ${item.name}
-                            <span>${item.enabled ? "enabled" : "disabled"}</span>
-                          </div>
-                        `)
-                      : html`<div class="ehp-automation-item ehp-automation-item--disabled">No automations in this area</div>`}
-                  </div>
-                </div>
-              ` : nothing}
+            ${sensorsEnabled && _previewSensors.length ? html`
+              ${sensorClickDetails ? html`
+              <button
+                type="button"
+                class="ehp-sensors ehp-sensor-click-target"
+                aria-label="Open sensor details preview"
+                @click=${(e: Event) => {
+                  e.stopPropagation();
+                  this._showHeaderSensorPreviewPopup = true;
+                }}
+              >
+                ${_previewSensors.map((s, i) => html`
+                  <span class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
+                    <ha-icon icon=${s.icon}></ha-icon>
+                    <span>${s.value}</span>
+                  </span>
+                `)}
+              </button>
+              ` : html`
+              <div class="ehp-sensors">
+                ${_previewSensors.map((s, i) => html`
+                  <span class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
+                    <ha-icon icon=${s.icon}></ha-icon>
+                    <span>${s.value}</span>
+                  </span>
+                `)}
+              </div>
+              `}
             ` : nothing}
-            ${sensorsEnabled && this._showHeaderSensorPreviewPopup ? this._renderSensorPreviewPopup(roomName, _previewSensors) : nothing}
           </div>
+          ${automationEnabled && automationClickDetails ? html`
+            ${this._showHeaderAutomationDetails ? html`
+              <div class="ehp-automation-panel">
+                <ha-icon icon="mdi:home-automation"></ha-icon>
+                <div class="ehp-automation-list">
+                  ${previewAutomations.length
+                    ? previewAutomations.map((item) => html`
+                        <div class="ehp-automation-item ${item.enabled ? "" : "ehp-automation-item--disabled"}">
+                          ${item.name}
+                          <span>${item.enabled ? "enabled" : "disabled"}</span>
+                        </div>
+                      `)
+                    : html`<div class="ehp-automation-item ehp-automation-item--disabled">No automations in this area</div>`}
+                </div>
+              </div>
+            ` : nothing}
+          ` : nothing}
+          ${sensorsEnabled && this._showHeaderSensorPreviewPopup ? this._renderSensorPreviewPopup(roomName, _previewSensors) : nothing}
         </div>
 
         <div class="section-collapsible ${this._headerCollapsed ? "section-collapsible--collapsed" : ""}">
@@ -1165,7 +1122,10 @@ export class SmartAreaCardEditor extends LitElement {
   private _renderDevices(config: SmartRoomCardConfig) {
     const tileSize = config.ui?.device_tile_size ?? 110;
     const pct = Math.round(((tileSize - 70) / (160 - 70)) * 100);
-    const cardCols = this._finalCardPreviewColumns(tileSize);
+    const GAP = 10;
+    const editorW = this.offsetWidth > 0 ? this.offsetWidth : window.innerWidth;
+    const cardGridEst = Math.max(200, editorW - 44); // editor padding 16×2 + ha-card 14×2 ≈ 44px delta
+    const cardCols = Math.max(1, Math.min(8, Math.floor((cardGridEst + GAP) / (tileSize + GAP))));
     return html`
       <section class="section">
         <div class="devices-header">
@@ -1214,53 +1174,49 @@ export class SmartAreaCardEditor extends LitElement {
   private _renderDeviceGridPreview(config: SmartRoomCardConfig, cardCols: number) {
     const devices = config.devices ?? [];
     const tileSize = config.ui?.device_tile_size ?? 110;
-    const rows = Math.max(1, Math.ceil(devices.length / cardCols));
-    const previewHeight = FINAL_PREVIEW_CARD_PADDING * 2 + rows * tileSize + Math.max(0, rows - 1) * FINAL_PREVIEW_GRID_GAP;
-    const gridStyle = `grid-template-columns: repeat(auto-fill, minmax(${tileSize}px, 1fr)); --sr-tile-size: ${tileSize}px`;
+    const gridStyle = `grid-template-columns: repeat(${cardCols}, 1fr); --sr-tile-size: ${tileSize}px`;
     return html`
-      <div class="final-card-preview final-card-preview--devices" style=${this._finalCardPreviewFrameStyle(previewHeight)}>
-        <div class="dg-preview final-card-preview-stage">
-          <div class="dg-preview-grid" style=${gridStyle}>
-            ${devices.map((device, index) => {
-              const type = device.type ?? "custom";
-              const isDragging = this._dragIndex === index;
-              const isDropTarget = this._dropIndex === index && this._dragIndex !== index;
-              const isActive = this._expandedDevices.includes(index);
-              const rawName = device.name || (device.entity ? device.entity.split(".").pop()?.replace(/_/g, " ") ?? "" : "") || `Device ${index + 1}`;
-              const previewImg = normalizeAssetPath(device.image || device.image_on || device.image_off, "product");
-              return html`
-                <div class="dg-preview-tile dg-tile--${type} ${isDragging ? "dg-tile--dragging" : ""} ${isDropTarget ? "dg-tile--drop" : ""} ${isActive ? "dg-preview-tile--active" : ""}"
-                     data-device-index=${String(index)}
-                     draggable="true"
-                     @dragstart=${() => this._handleDragStart(index)}
-                     @dragend=${this._handleDragEnd}
-                     @dragover=${this._handleDragOver}
-                     @drop=${() => this._handleDrop(index)}
-                     @pointerdown=${(e: PointerEvent) => this._handleTouchDragStart(e, index)}
-                     @pointermove=${this._handleTouchDragMove}
-                     @pointerup=${this._handleTouchDragEnd}
-                     @pointercancel=${this._handleTouchDragCancel}
-                     @click=${async () => {
-                       const wasExpanded = this._expandedDevices.includes(index);
-                       this._toggleDeviceExpanded(index);
-                       if (!wasExpanded) {
-                         await this.updateComplete;
-                         this.shadowRoot?.querySelector<HTMLElement>(`.device-card[data-device-index="${index}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                       }
-                     }}>
-                  ${previewImg ? html`
-                    <div class="dg-preview-tile-visual">
-                      <img src=${previewImg} alt="" />
-                    </div>
-                  ` : nothing}
-                  <div class="dg-preview-tile-label">
-                    ${!previewImg ? html`<ha-icon class="dg-preview-tile-icon" icon=${this._typeIcon(type)}></ha-icon>` : nothing}
-                    <div class="dg-preview-tile-name">${rawName}</div>
+      <div class="dg-preview">
+        <div class="dg-preview-grid" style=${gridStyle}>
+          ${devices.map((device, index) => {
+            const type = device.type ?? "custom";
+            const isDragging = this._dragIndex === index;
+            const isDropTarget = this._dropIndex === index && this._dragIndex !== index;
+            const isActive = this._expandedDevices.includes(index);
+            const rawName = device.name || (device.entity ? device.entity.split(".").pop()?.replace(/_/g, " ") ?? "" : "") || `Device ${index + 1}`;
+            const previewImg = normalizeAssetPath(device.image || device.image_on || device.image_off, "product");
+            return html`
+              <div class="dg-preview-tile dg-tile--${type} ${isDragging ? "dg-tile--dragging" : ""} ${isDropTarget ? "dg-tile--drop" : ""} ${isActive ? "dg-preview-tile--active" : ""}"
+                   data-device-index=${String(index)}
+                   draggable="true"
+                   @dragstart=${() => this._handleDragStart(index)}
+                   @dragend=${this._handleDragEnd}
+                   @dragover=${this._handleDragOver}
+                   @drop=${() => this._handleDrop(index)}
+                   @pointerdown=${(e: PointerEvent) => this._handleTouchDragStart(e, index)}
+                   @pointermove=${this._handleTouchDragMove}
+                   @pointerup=${this._handleTouchDragEnd}
+                   @pointercancel=${this._handleTouchDragCancel}
+                   @click=${async () => {
+                     const wasExpanded = this._expandedDevices.includes(index);
+                     this._toggleDeviceExpanded(index);
+                     if (!wasExpanded) {
+                       await this.updateComplete;
+                       this.shadowRoot?.querySelector<HTMLElement>(`.device-card[data-device-index="${index}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                     }
+                   }}>
+                ${previewImg ? html`
+                  <div class="dg-preview-tile-visual">
+                    <img src=${previewImg} alt="" />
                   </div>
+                ` : nothing}
+                <div class="dg-preview-tile-label">
+                  ${!previewImg ? html`<ha-icon class="dg-preview-tile-icon" icon=${this._typeIcon(type)}></ha-icon>` : nothing}
+                  <div class="dg-preview-tile-name">${rawName}</div>
                 </div>
-              `;
-            })}
-          </div>
+              </div>
+            `;
+          })}
         </div>
       </div>
     `;
