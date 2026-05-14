@@ -453,6 +453,26 @@ export const calvoRoomCardEditorStyles = css`
 
   /* ─── Editor header preview ─────────────────────────── */
 
+  .final-card-preview {
+    --sap-preview-width: 520px;
+    --sap-preview-height: 156px;
+    --sap-preview-scale: 1;
+    --sap-preview-frame-height: var(--sap-preview-height);
+    position: relative;
+    inline-size: 100%;
+    block-size: var(--sap-preview-frame-height);
+    overflow: hidden;
+    border-radius: var(--editor-radius-lg);
+  }
+
+  .final-card-preview-stage {
+    inline-size: var(--sap-preview-width);
+    block-size: var(--sap-preview-height);
+    transform: scale(var(--sap-preview-scale));
+    transform-origin: top left;
+    box-sizing: border-box;
+  }
+
   .editor-header-preview {
     position: relative;
     border-radius: var(--editor-radius-lg);
@@ -461,6 +481,7 @@ export const calvoRoomCardEditorStyles = css`
     background-size: cover;
     background-position: top center;
     border: 1px solid var(--editor-border);
+    padding: 14px;
   }
 
   .ehp-overlay {
@@ -476,7 +497,6 @@ export const calvoRoomCardEditorStyles = css`
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 14px;
     pointer-events: none;
   }
 
@@ -501,6 +521,15 @@ export const calvoRoomCardEditorStyles = css`
   .ehp-title ha-icon {
     --mdc-icon-size: 1em;
     flex-shrink: 0;
+  }
+
+  .ehp-header-states {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
   }
 
   .ehp-automation-badge {
@@ -546,7 +575,7 @@ export const calvoRoomCardEditorStyles = css`
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    margin: 0 14px 14px;
+    margin: 10px 0 0;
     padding: 7px 10px;
     border-radius: 14px;
     background: color-mix(in srgb, var(--primary-color, #1565c0) 28%, transparent);
@@ -839,6 +868,7 @@ export const calvoRoomCardEditorStyles = css`
     background-size: cover;
     background-position: center;
     outline: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 14px;
   }
 
   .dg-preview-grid {
@@ -849,7 +879,7 @@ export const calvoRoomCardEditorStyles = css`
   .dg-preview-tile {
     position: relative;
     height: var(--sr-tile-size, 110px);
-    border-radius: 12px;
+    border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     overflow: hidden;
     background: rgba(255, 255, 255, 0.13);
@@ -898,9 +928,9 @@ export const calvoRoomCardEditorStyles = css`
 
   .dg-preview-tile-label {
     position: absolute;
-    left: 8px;
-    bottom: 7px;
-    right: 8px;
+    left: 10px;
+    bottom: 8px;
+    right: 52px;
     z-index: 1;
     display: flex;
     flex-direction: column;
@@ -915,8 +945,9 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .dg-preview-tile-name {
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     font-weight: 700;
+    line-height: 1;
     color: rgba(255, 255, 255, 0.92);
     overflow: hidden;
     text-overflow: ellipsis;
