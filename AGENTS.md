@@ -160,6 +160,8 @@ Antes de responder:
    - Que se cambio.
    - Que comandos se ejecutaron.
    - Commit subido.
+   - Que archivos de `dist/` debe copiar el usuario a `/config/www/area-card/` para probar el commit en Home Assistant.
+   - Como refrescar la prueba en Home Assistant: recargar recurso/dashboard o limpiar cache fuerte del navegador si sigue apareciendo codigo viejo.
 
 ## Si Algo Falla
 
