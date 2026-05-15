@@ -108,6 +108,7 @@ Flujo del editor visual:
 - Preferir helpers existentes a nuevos patrones.
 - No introducir dependencias nuevas salvo necesidad clara.
 - Evitar cambios cosmeticos no solicitados.
+- Los textos visibles de la card y del editor deben estar siempre en ingles, con tono preciso y personal.
 - Si se modifica una estructura de config, actualizar tambien:
   - `SmartRoomCardConfig` en `src/helpers/types.ts`
   - defaults en card/editor si aplica
@@ -156,7 +157,7 @@ Antes de responder:
 2. Ejecutar validacion adecuada.
 3. Confirmar si tests/build/check pasaron o explicar cualquier fallo.
 4. Hacer commit y push si hubo cambios.
-5. Responder breve, siempre en ingles y con tono preciso y personal, indicando:
+5. Responder breve, en espanol, indicando:
    - Que se cambio.
    - Que comandos se ejecutaron.
    - Commit subido.
