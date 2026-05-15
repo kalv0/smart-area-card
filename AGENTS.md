@@ -160,7 +160,12 @@ Antes de responder:
    - Que se cambio.
    - Que comandos se ejecutaron.
    - Commit subido.
-   - Que archivos de `dist/` debe copiar el usuario a `/config/www/area-card/` para probar el commit en Home Assistant.
+   - El comando para desplegar `./dist/*` en Home Assistant, borrando antes el contenido remoto:
+
+     ```powershell
+     ssh yow@192.168.1.13 "mkdir -p /home/yow/docker/homeassistant/config/www/smart-area-card && find /home/yow/docker/homeassistant/config/www/smart-area-card -mindepth 1 -maxdepth 1 -exec rm -rf {} +" ; if ($LASTEXITCODE -eq 0) { scp -r .\dist\* yow@192.168.1.13:/home/yow/docker/homeassistant/config/www/smart-area-card/ }
+     ```
+
    - Como refrescar la prueba en Home Assistant: recargar recurso/dashboard o limpiar cache fuerte del navegador si sigue apareciendo codigo viejo.
 
 ## Si Algo Falla
