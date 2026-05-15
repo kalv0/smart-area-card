@@ -126,6 +126,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _trackedEntityRefs: Array<unknown> = [];
   private _changedEntityIds?: Set<string>;
   private _lastEntityRegistry?: HomeAssistantExtended["entities"];
+  private _previousScrollLock?: { bodyOverflow: string; documentOverflow: string };
 
   private readonly _press = new PressController(this);
   private readonly _imageFit = new ImageFitController(this);
@@ -197,6 +198,9 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   protected updated(changedProps: Map<string, unknown>): void {
+    if (changedProps.has("_showClimateHistory")) {
+      this._setPageScrollLocked(this._showClimateHistory);
+    }
     if (this._showClimateHistory) {
       const chartContainers = this.shadowRoot?.querySelectorAll(".sensor-popup-chart");
       const missingChart = Array.from(chartContainers ?? []).some((el) => !el.firstElementChild);
@@ -208,6 +212,11 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         });
       }
     }
+  }
+
+  public disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._setPageScrollLocked(false);
   }
 
   private _buildPopupCharts(): void {
@@ -223,7 +232,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       container.innerHTML = "";
       const card = new HistoryCard() as HTMLElement & { hass: HomeAssistant; setConfig(c: unknown): void };
       card.hass = this.hass;
-      card.setConfig({ type: "history-graph", entities: [{ entity: entityId }], hours_to_show: 168 });
+      card.setConfig({ type: "history-graph", entities: [{ entity: entityId }], hours_to_show: 24 });
       container.appendChild(card);
     }
   }
@@ -232,6 +241,25 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this.shadowRoot?.querySelectorAll(".sensor-popup-chart").forEach((container) => {
       container.replaceChildren();
     });
+  }
+
+  private _setPageScrollLocked(locked: boolean): void {
+    if (locked) {
+      if (!this._previousScrollLock) {
+        this._previousScrollLock = {
+          bodyOverflow: document.body.style.overflow,
+          documentOverflow: document.documentElement.style.overflow,
+        };
+      }
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+      return;
+    }
+
+    if (!this._previousScrollLock) return;
+    document.body.style.overflow = this._previousScrollLock.bodyOverflow;
+    document.documentElement.style.overflow = this._previousScrollLock.documentOverflow;
+    this._previousScrollLock = undefined;
   }
 
   private _entityIdForKey(key: string): string | undefined {
@@ -278,6 +306,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this.toggleAttribute("alert", Boolean(this._renderModel?.hasAlert && !this._expanded));
     this.toggleAttribute("pressed", this._press.pressed);
     this.toggleAttribute("performance-lite", this._reduceVisualEffects());
+    this.toggleAttribute("no-blur", !this._blurEnabled());
   }
 
   protected shouldUpdate(changedProps: Map<string, unknown>): boolean {
@@ -368,6 +397,10 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _reduceVisualEffects(): boolean {
     const performance = this._config?.ui?.performance;
     return performance?.reduce_effects === true || performance?.mode === "maximum";
+  }
+
+  private _blurEnabled(): boolean {
+    return this._config?.ui?.blur !== false && this._config?.ui?.glassmorphism !== false && !this._reduceVisualEffects();
   }
 
   private _unloadCollapsedGrid(): boolean {
@@ -507,17 +540,42 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     event.stopPropagation();
   };
 
+  private _preventDefault = (event: Event): void => {
+    event.preventDefault();
+  };
+
   private _handleSensorInfoClick = (event: Event): void => {
     event.stopPropagation();
     const entityId = (event.currentTarget as HTMLElement | null)?.dataset.entityId;
-    if (entityId) this._showMoreInfo(entityId);
+    if (entityId) this._openEntityHistory(entityId);
   };
 
   private _renderSensorPopup(): TemplateResult | typeof nothing {
     if (this._config?.ui?.header_sensors_enabled === false) return nothing;
     const items = this._renderModel?.climateItems ?? [];
     if (!items.length) return nothing;
-    const roomName = this._config?.room ?? "Sensors";
+    const model = this._renderModel;
+    const roomName = this._config?.room?.trim() || "Sensors";
+    const hasRoomBackground = Boolean(model?.roomBackground);
+    const roomBackgroundPosition = `center ${model?.roomBackgroundPositionY ?? 50}%`;
+    const backgroundSize = hasRoomBackground
+      ? model?.roomImageDark
+        ? "100% 100%, 100% 100%, cover"
+        : "100% 100%, cover"
+      : "100% 100%";
+    const backgroundPosition = hasRoomBackground
+      ? model?.roomImageDark
+        ? `top left, top left, ${roomBackgroundPosition}`
+        : `top left, ${roomBackgroundPosition}`
+      : "top left";
+    const popupStyles = {
+      backgroundImage: buildRoomBackgroundImage(model?.roomBackground, model?.roomImageDark),
+      backgroundSize,
+      backgroundPosition,
+      backgroundRepeat: "no-repeat",
+      backgroundOrigin: "border-box",
+      backgroundClip: "border-box",
+    };
     const POPUP_META: Record<string, { label: string; color: string }> = {
       temperature:    { label: "Temperature",  color: "#f59e0b" },
       humidity:       { label: "Humidity",     color: "#3b82f6" },
@@ -537,10 +595,9 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     };
 
     return html`
-      <div class="sensor-popup-overlay" @click=${this._closeSensorPopup}>
-        <div class="sensor-popup" @click=${this._stopPropagation}>
+      <div class="sensor-popup-overlay" @click=${this._closeSensorPopup} @wheel=${this._preventDefault} @touchmove=${this._preventDefault}>
+        <div class="sensor-popup" style=${styleMap(popupStyles)} @click=${this._stopPropagation} @wheel=${this._stopPropagation} @touchmove=${this._stopPropagation}>
           <div class="sensor-popup-header">
-            <div class="sensor-popup-header-icon"><ha-icon icon="mdi:gauge"></ha-icon></div>
             <span class="sensor-popup-title">${roomName}</span>
             <button class="sensor-popup-close" @click=${this._closeSensorPopup} aria-label="Close">
               <ha-icon icon="mdi:close"></ha-icon>
@@ -553,7 +610,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                 ? { label: this._config?.sensors?.custom?.[Number(item.key.slice(7))]?.name ?? item.key, color: "#94a3b8" }
                 : (POPUP_META[item.key] ?? { label: item.key, color: "#94a3b8" });
               return html`
-                <div class="sensor-popup-item">
+                <div class="sensor-popup-item ${this._blurEnabled() ? "glass" : ""}">
                   <div class="sensor-popup-item-row">
                     <div class="sensor-popup-item-icon" style="--sensor-accent:${meta.color}">
                       <ha-icon icon=${item.icon}></ha-icon>
@@ -561,7 +618,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                     <div class="sensor-popup-item-meta">
                       <div class="sensor-popup-item-label">${meta.label}</div>
                       <div class="sensor-popup-item-value">${item.value}</div>
-                      ${entityId ? html`<div class="sensor-popup-item-updated">${this._relativeTime(this.hass.states[entityId]?.last_updated)}</div>` : nothing}
+                      ${entityId ? html`<div class="sensor-popup-item-entity">${entityId}</div>` : nothing}
+                      ${entityId ? html`<div class="sensor-popup-item-updated">Updated ${this._relativeTime(this.hass.states[entityId]?.last_updated)}</div>` : nothing}
                     </div>
                     ${entityId ? html`
                       <button
@@ -595,6 +653,13 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     } else {
       this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
     }
+  }
+
+  private _openEntityHistory(entityId: string): void {
+    this._destroyPopupCharts();
+    this._showClimateHistory = false;
+    history.pushState(null, "", `/history?entity_id=${encodeURIComponent(entityId)}`);
+    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false }, bubbles: true, composed: true }));
   }
 
   private _renderAutomationPanel(): TemplateResult | typeof nothing {
@@ -669,7 +734,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         aria-label=${device.label}
         data-device-key=${device.key}
         class="tile ${classMap({
-          glass: this._config?.ui?.glassmorphism !== false && !this._reduceVisualEffects(),
+          glass: this._blurEnabled(),
           active: device.isOn,
           "active-accent": device.isOn && device.activeAccent !== "none",
           outlined: device.outlined,

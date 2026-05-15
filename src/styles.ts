@@ -390,6 +390,16 @@ export const smartRoomCardStyles = css`
     -webkit-backdrop-filter: none;
   }
 
+  :host([no-blur]) .glass,
+  :host([no-blur]) .integration-banner,
+  :host([no-blur]) .alert-bar,
+  :host([no-blur]) .sensor-popup-overlay,
+  :host([no-blur]) .sensor-popup-item,
+  :host([no-blur]) .automation-panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
   :host([performance-lite]) .camera-rec,
   :host([performance-lite]) .tile.active,
   :host([performance-lite]) .tile.active-accent,
@@ -644,9 +654,12 @@ export const smartRoomCardStyles = css`
     z-index: 999;
     background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
     display: flex;
     align-items: center;
     justify-content: center;
+    overscroll-behavior: contain;
+    touch-action: none;
     animation: popup-fade-in 180ms ease both;
   }
 
@@ -656,14 +669,15 @@ export const smartRoomCardStyles = css`
   }
 
   .sensor-popup {
-    background: linear-gradient(160deg, rgba(14, 20, 38, 0.98), rgba(18, 26, 50, 0.98));
+    background-color: rgba(9, 12, 22, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 22px;
-    width: min(460px, calc(100vw - 28px));
+    width: min(520px, calc(100vw - 28px));
     max-height: calc(100dvh - 56px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    touch-action: auto;
     box-shadow:
       0 32px 80px rgba(0, 0, 0, 0.7),
       0 0 0 1px rgba(255, 255, 255, 0.04) inset;
@@ -678,31 +692,20 @@ export const smartRoomCardStyles = css`
   .sensor-popup-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 18px 18px 16px;
+    gap: 14px;
+    padding: 20px 20px 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    flex-shrink: 0;
-  }
-
-  .sensor-popup-header-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.08);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    --mdc-icon-size: 18px;
-    color: rgba(255, 255, 255, 0.65);
     flex-shrink: 0;
   }
 
   .sensor-popup-title {
     flex: 1;
-    font-size: 0.95rem;
-    font-weight: 700;
+    font-size: 1.45rem;
+    font-weight: 800;
     color: white;
-    letter-spacing: 0.01em;
+    line-height: 1.1;
+    letter-spacing: 0;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
   }
 
   .sensor-popup-close {
@@ -736,10 +739,12 @@ export const smartRoomCardStyles = css`
   }
 
   .sensor-popup-item {
-    background: rgba(255, 255, 255, 0.035);
-    border: 1px solid rgba(255, 255, 255, 0.075);
+    background: rgba(0, 0, 0, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.11);
     border-radius: 16px;
     overflow: hidden;
+    backdrop-filter: blur(18px) saturate(125%);
+    -webkit-backdrop-filter: blur(18px) saturate(125%);
     transition: border-color 140ms ease;
   }
 
@@ -751,7 +756,7 @@ export const smartRoomCardStyles = css`
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 14px 14px 10px;
+    padding: 14px 14px 8px;
   }
 
   .sensor-popup-item-icon {
@@ -791,10 +796,18 @@ export const smartRoomCardStyles = css`
     line-height: 1.1;
   }
 
+  .sensor-popup-item-entity {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.62);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
   .sensor-popup-item-updated {
-    font-size: 0.68rem;
-    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.48);
     margin-top: 2px;
+    line-height: 1.25;
   }
 
   .sensor-popup-info-button {
@@ -824,7 +837,7 @@ export const smartRoomCardStyles = css`
   }
 
   .sensor-popup-chart {
-    padding: 0 10px 10px;
+    padding: 0 10px 12px;
   }
 
   .sensor-popup-chart > * {

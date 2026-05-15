@@ -163,13 +163,13 @@ Antes de responder:
    - El comando para desplegar `./dist/*` en Home Assistant, borrando antes el contenido remoto:
 
      ```powershell
-     ssh -i ~/.ssh/id_rsa_servidor1 yow@192.168.1.13 "mkdir -p /home/yow/docker/homeassistant/config/www/smart-area-card && find /home/yow/docker/homeassistant/config/www/smart-area-card -mindepth 1 -maxdepth 1 -exec rm -rf {} +" ; if ($LASTEXITCODE -eq 0) { scp -i ~/.ssh/id_rsa_servidor1 -r .\dist\* yow@192.168.1.13:/home/yow/docker/homeassistant/config/www/smart-area-card/ }
+     C:\Windows\System32\OpenSSH\ssh.exe -i ~/.ssh/id_rsa_servidor1 yow@192.168.1.13 "mkdir -p /home/yow/docker/homeassistant/config/www/smart-area-card && find /home/yow/docker/homeassistant/config/www/smart-area-card -mindepth 1 -maxdepth 1 -exec rm -rf {} +" ; if ($LASTEXITCODE -eq 0) { C:\Windows\System32\OpenSSH\scp.exe -i ~/.ssh/id_rsa_servidor1 -r .\dist\* yow@192.168.1.13:/home/yow/docker/homeassistant/config/www/smart-area-card/ }
      ```
 
    - Abrir Firefox para probar la card despues del despliegue:
 
      ```powershell
-     Start-Process firefox "http://192.168.1.13:8123/lovelace/0?smart-area-card-cache=$(Get-Date -Format yyyyMMddHHmmss)"
+     Start-Process "C:\Program Files\Mozilla Firefox\firefox.exe" "http://192.168.1.13:8123/lovelace/0?smart-area-card-cache=$(Get-Date -Format yyyyMMddHHmmss)"
      ```
 
    - Como refrescar la prueba en Home Assistant: recargar recurso/dashboard o limpiar cache fuerte del navegador si sigue apareciendo codigo viejo.
