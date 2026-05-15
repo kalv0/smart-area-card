@@ -756,7 +756,28 @@ export const smartRoomCardStyles = css`
     display: flex;
     align-items: center;
     gap: 14px;
+    width: 100%;
     padding: 14px 14px 8px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .sensor-popup-item-row--toggle {
+    cursor: pointer;
+  }
+
+  .sensor-popup-item-row--toggle:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.75);
+    outline-offset: -4px;
+  }
+
+  .sensor-popup-item-row:disabled {
+    cursor: default;
   }
 
   .sensor-popup-item-icon {
@@ -810,30 +831,35 @@ export const smartRoomCardStyles = css`
     line-height: 1.25;
   }
 
-  .sensor-popup-info-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: 0;
-    border-radius: var(--sr-radius-full);
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.86);
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    align-self: flex-start;
+  .sensor-popup-item-arrow {
+    --mdc-icon-size: 22px;
+    color: rgba(255, 255, 255, 0.72);
     flex-shrink: 0;
   }
 
-  .sensor-popup-info-button:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
+  .sensor-popup-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 12px 12px;
   }
 
-  .sensor-popup-info-button ha-icon {
-    --mdc-icon-size: 18px;
+  .sensor-popup-more-button {
+    border: 0;
+    border-radius: var(--sr-radius-full);
+    padding: 7px 13px;
+    background: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.88);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .sensor-popup-more-button:hover {
+    background: rgba(255, 255, 255, 0.24);
+    color: white;
   }
 
   .sensor-popup-chart {

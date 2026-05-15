@@ -117,6 +117,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   @state() private _showAutomationPanel = false;
   @state() private _showClimateHistory = false;
   @state() private _alertsHidden = false;
+  @state() private _expandedSensorChartKeys = new Set<string>();
 
   private _renderModel?: RenderModel;
   private _deviceByKey = new Map<string, ComputedDeviceModel>();
@@ -204,7 +205,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     if (this._showClimateHistory) {
       const chartContainers = this.shadowRoot?.querySelectorAll(".sensor-popup-chart");
       const missingChart = Array.from(chartContainers ?? []).some((el) => !el.firstElementChild);
-      if (changedProps.has("_showClimateHistory") || changedProps.has("_config") || missingChart) {
+      if (changedProps.has("_showClimateHistory") || changedProps.has("_config") || changedProps.has("_expandedSensorChartKeys") || missingChart) {
         this._buildPopupCharts();
       } else if (changedProps.has("hass")) {
         this.shadowRoot?.querySelectorAll(".sensor-popup-chart > *").forEach((el) => {
@@ -225,6 +226,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const HistoryCard = customElements.get("hui-history-graph-card") as (new () => HTMLElement) | undefined;
     if (!HistoryCard) return;
     for (const item of items) {
+      if (!this._expandedSensorChartKeys.has(item.key)) continue;
       const entityId = this._entityIdForKey(item.key);
       if (!entityId) continue;
       const container = this.shadowRoot?.querySelector<HTMLElement>(`.sensor-popup-chart[data-key="${item.key}"]`);
@@ -316,6 +318,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       changedProps.has("_expanded") ||
       changedProps.has("_showAutomationPanel") ||
       changedProps.has("_showClimateHistory") ||
+      changedProps.has("_expandedSensorChartKeys") ||
       changedProps.has("_alertsHidden")
     ) {
       return true;
@@ -533,6 +536,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _closeSensorPopup = (event?: Event): void => {
     event?.stopPropagation();
     this._destroyPopupCharts();
+    this._expandedSensorChartKeys = new Set();
     this._showClimateHistory = false;
   };
 
@@ -544,7 +548,20 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     event.preventDefault();
   };
 
-  private _handleSensorInfoClick = (event: Event): void => {
+  private _handleSensorToggleClick = (event: Event): void => {
+    event.stopPropagation();
+    const key = (event.currentTarget as HTMLElement | null)?.dataset.key;
+    if (!key) return;
+    const next = new Set(this._expandedSensorChartKeys);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    this._expandedSensorChartKeys = next;
+  };
+
+  private _handleSensorMoreClick = (event: Event): void => {
     event.stopPropagation();
     const entityId = (event.currentTarget as HTMLElement | null)?.dataset.entityId;
     if (entityId) this._openEntityHistory(entityId);
@@ -556,6 +573,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     if (!items.length) return nothing;
     const model = this._renderModel;
     const roomName = this._config?.room?.trim() || "Sensors";
+    const popupTitle = `${roomName}${roomName.toLowerCase().endsWith("s") ? "'" : "'s"} sensors`;
     const hasRoomBackground = Boolean(model?.roomBackground);
     const roomBackgroundPosition = `center ${model?.roomBackgroundPositionY ?? 50}%`;
     const backgroundSize = hasRoomBackground
@@ -598,7 +616,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       <div class="sensor-popup-overlay" @click=${this._closeSensorPopup} @wheel=${this._preventDefault} @touchmove=${this._preventDefault}>
         <div class="sensor-popup" style=${styleMap(popupStyles)} @click=${this._stopPropagation} @wheel=${this._stopPropagation} @touchmove=${this._stopPropagation}>
           <div class="sensor-popup-header">
-            <span class="sensor-popup-title">${roomName}</span>
+            <span class="sensor-popup-title">${popupTitle}</span>
             <button class="sensor-popup-close" @click=${this._closeSensorPopup} aria-label="Close">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
@@ -609,31 +627,34 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
               const meta = item.key.startsWith("custom_")
                 ? { label: this._config?.sensors?.custom?.[Number(item.key.slice(7))]?.name ?? item.key, color: "#94a3b8" }
                 : (POPUP_META[item.key] ?? { label: item.key, color: "#94a3b8" });
+              const expanded = this._expandedSensorChartKeys.has(item.key);
               return html`
                 <div class="sensor-popup-item ${this._blurEnabled() ? "glass" : ""}">
-                  <div class="sensor-popup-item-row">
-                    <div class="sensor-popup-item-icon" style="--sensor-accent:${meta.color}">
+                  <button
+                    class="sensor-popup-item-row ${entityId ? "sensor-popup-item-row--toggle" : ""}"
+                    type="button"
+                    data-key=${item.key}
+                    ?disabled=${!entityId}
+                    aria-expanded=${entityId ? String(expanded) : nothing}
+                    @click=${entityId ? this._handleSensorToggleClick : nothing}
+                  >
+                    <span class="sensor-popup-item-icon" style="--sensor-accent:${meta.color}">
                       <ha-icon icon=${item.icon}></ha-icon>
+                    </span>
+                    <span class="sensor-popup-item-meta">
+                      <span class="sensor-popup-item-label">${meta.label}</span>
+                      <span class="sensor-popup-item-value">${item.value}</span>
+                      ${entityId ? html`<span class="sensor-popup-item-entity">${entityId}</span>` : nothing}
+                      ${entityId ? html`<span class="sensor-popup-item-updated">Updated ${this._relativeTime(this.hass.states[entityId]?.last_updated)}</span>` : nothing}
+                    </span>
+                    ${entityId ? html`<ha-icon class="sensor-popup-item-arrow" icon=${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>` : nothing}
+                  </button>
+                  ${entityId && expanded ? html`
+                    <div class="sensor-popup-chart" data-key=${item.key}></div>
+                    <div class="sensor-popup-actions">
+                      <button class="sensor-popup-more-button" type="button" data-entity-id=${entityId} @click=${this._handleSensorMoreClick}>Mostrar mas</button>
                     </div>
-                    <div class="sensor-popup-item-meta">
-                      <div class="sensor-popup-item-label">${meta.label}</div>
-                      <div class="sensor-popup-item-value">${item.value}</div>
-                      ${entityId ? html`<div class="sensor-popup-item-entity">${entityId}</div>` : nothing}
-                      ${entityId ? html`<div class="sensor-popup-item-updated">Updated ${this._relativeTime(this.hass.states[entityId]?.last_updated)}</div>` : nothing}
-                    </div>
-                    ${entityId ? html`
-                      <button
-                        class="sensor-popup-info-button"
-                        type="button"
-                        data-entity-id=${entityId}
-                        aria-label="Open sensor details"
-                        @click=${this._handleSensorInfoClick}
-                      >
-                        <ha-icon icon="mdi:information-outline"></ha-icon>
-                      </button>
-                    ` : nothing}
-                  </div>
-                  ${entityId ? html`<div class="sensor-popup-chart" data-key=${item.key}></div>` : nothing}
+                  ` : nothing}
                 </div>
               `;
             })}
@@ -657,6 +678,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
   private _openEntityHistory(entityId: string): void {
     this._destroyPopupCharts();
+    this._expandedSensorChartKeys = new Set();
     this._showClimateHistory = false;
     history.pushState(null, "", `/history?entity_id=${encodeURIComponent(entityId)}`);
     window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false }, bubbles: true, composed: true }));
@@ -824,7 +846,10 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const entities = this._renderModel?.climateEntities ?? [];
     if (!entities.length) return;
     this._showClimateHistory = !this._showClimateHistory;
-    if (!this._showClimateHistory) this._destroyPopupCharts();
+    if (!this._showClimateHistory) {
+      this._destroyPopupCharts();
+      this._expandedSensorChartKeys = new Set();
+    }
   };
 
   private _handleDevicePointerDown = (event: PointerEvent): void => {
