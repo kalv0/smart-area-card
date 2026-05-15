@@ -172,6 +172,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
         performance: {
           ...defaults.ui?.performance,
           ...(config.ui?.performance ?? {}),
+          lazy_sensor_charts: true,
         },
       },
       expander: {
@@ -369,8 +370,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   private _lazySensorCharts(): boolean {
-    const performance = this._config?.ui?.performance;
-    return performance?.lazy_sensor_charts ?? true;
+    return true;
   }
 
   private _renderGridWhenCollapsed(): boolean {
@@ -505,12 +505,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     event.stopPropagation();
   };
 
-  private _handleSensorMoreInfoClick = (event: Event): void => {
-    event.stopPropagation();
-    const entityId = (event.currentTarget as HTMLElement | null)?.dataset.entityId;
-    if (entityId) fireEvent(this, "hass-more-info", { entityId });
-  };
-
   private _handleSensorChartClick = (event: Event): void => {
     event.stopPropagation();
     const key = (event.currentTarget as HTMLElement | null)?.dataset.key;
@@ -560,7 +554,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
               return html`
                 <div class="sensor-popup-item ${entityId ? "sensor-popup-item--clickable" : ""}"
                   data-entity-id=${entityId ?? nothing}
-                  ${entityId ? html`@click=${this._handleSensorMoreInfoClick}` : nothing}>
+                  data-key=${item.key}
+                  ${entityId ? html`@click=${this._handleSensorChartClick}` : nothing}>
                   <div class="sensor-popup-item-row">
                     <div class="sensor-popup-item-icon" style="--sensor-accent:${meta.color}">
                       <ha-icon icon=${item.icon}></ha-icon>
@@ -572,16 +567,17 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                     </div>
                     ${entityId && this._lazySensorCharts() ? html`
                       <button
-                        class="sensor-popup-chart-button"
+                        class="sensor-popup-chart-button ${chartVisible ? "sensor-popup-chart-button--active" : ""}"
                         type="button"
                         data-key=${item.key}
                         aria-label="History"
+                        aria-expanded=${chartVisible ? "true" : "false"}
                         @click=${this._handleSensorChartClick}
                       >
                         <ha-icon icon="mdi:chart-line"></ha-icon>
                       </button>
                     ` : nothing}
-                    ${entityId ? html`<ha-icon class="sensor-popup-item-chevron" icon="mdi:chevron-right"></ha-icon>` : nothing}
+                    ${entityId ? html`<ha-icon class="sensor-popup-item-chevron" icon=${chartVisible ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>` : nothing}
                   </div>
                   ${entityId && chartVisible ? html`<div class="sensor-popup-chart" data-key=${item.key}></div>` : nothing}
                 </div>

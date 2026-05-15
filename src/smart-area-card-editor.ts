@@ -350,6 +350,7 @@ export class SmartAreaCardEditor extends LitElement {
           performance: {
             ...fallback.ui?.performance,
             ...(clone.ui?.performance ?? {}),
+            lazy_sensor_charts: true,
           },
         },
         expander: { ...fallback.expander, ...(clone.expander ?? {}) },
@@ -430,7 +431,6 @@ export class SmartAreaCardEditor extends LitElement {
     const performanceMode = performance.mode ?? "balanced";
     const reduceEffects = performance.reduce_effects === true || performanceMode === "maximum";
     const unloadCollapsedGrid = performance.unload_collapsed_grid ?? true;
-    const lazySensorCharts = performance.lazy_sensor_charts ?? true;
     const backgroundPreview = bgOn ? html`
       <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"
            style=${this._bgPreviewValid ? "" : "display:none"}>
@@ -614,9 +614,6 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
           <div class="row single">
             ${this._renderCompactCheckField("Unload closed grid", "Removes device tiles from the DOM while the card is collapsed.", unloadCollapsedGrid, (checked) => this._setUiPerformance("unload_collapsed_grid", checked))}
-          </div>
-          <div class="row single">
-            ${this._renderCompactCheckField("Lazy sensor charts", "Creates history charts only when a chart button is opened.", lazySensorCharts, (checked) => this._setUiPerformance("lazy_sensor_charts", checked))}
           </div>
         </div>
 
@@ -2214,6 +2211,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
         performance: {
           ...(this._config?.ui?.performance ?? {}),
           [key]: value,
+          lazy_sensor_charts: true,
         },
       },
     });

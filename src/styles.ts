@@ -837,6 +837,11 @@ export const smartRoomCardStyles = css`
     --mdc-icon-size: 17px;
   }
 
+  .sensor-popup-chart-button--active {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+
   .sensor-popup-chart {
     padding: 0 10px 10px;
   }
