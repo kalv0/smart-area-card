@@ -572,8 +572,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const items = this._renderModel?.climateItems ?? [];
     if (!items.length) return nothing;
     const model = this._renderModel;
-    const roomName = this._config?.room?.trim() || "Sensors";
-    const popupTitle = `${roomName}${roomName.toLowerCase().endsWith("s") ? "'" : "'s"} sensors`;
     const hasRoomBackground = Boolean(model?.roomBackground);
     const roomBackgroundPosition = `center ${model?.roomBackgroundPositionY ?? 50}%`;
     const backgroundSize = hasRoomBackground
@@ -616,7 +614,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       <div class="sensor-popup-overlay" @click=${this._closeSensorPopup} @wheel=${this._preventDefault} @touchmove=${this._preventDefault}>
         <div class="sensor-popup" style=${styleMap(popupStyles)} @click=${this._stopPropagation} @wheel=${this._stopPropagation} @touchmove=${this._stopPropagation}>
           <div class="sensor-popup-header">
-            <span class="sensor-popup-title">${popupTitle}</span>
+            <span class="sensor-popup-title">Sensors</span>
             <button class="sensor-popup-close" @click=${this._closeSensorPopup} aria-label="Close">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
@@ -652,7 +650,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                   ${entityId && expanded ? html`
                     <div class="sensor-popup-chart" data-key=${item.key}></div>
                     <div class="sensor-popup-actions">
-                      <button class="sensor-popup-more-button" type="button" data-entity-id=${entityId} @click=${this._handleSensorMoreClick}>Mostrar mas</button>
+                      <button class="sensor-popup-more-button" type="button" data-entity-id=${entityId} @click=${this._handleSensorMoreClick}>Show more</button>
                     </div>
                   ` : nothing}
                 </div>
