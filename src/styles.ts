@@ -797,32 +797,12 @@ export const smartRoomCardStyles = css`
     margin-top: 2px;
   }
 
-  .sensor-popup-item--clickable {
-    cursor: pointer;
-    transition: background 140ms ease, border-color 140ms ease;
-  }
-
-  .sensor-popup-item--clickable:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.15);
-  }
-
-  .sensor-popup-item--clickable:active {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .sensor-popup-item-chevron {
-    --mdc-icon-size: 18px;
-    color: rgba(255, 255, 255, 0.22);
-    flex-shrink: 0;
-  }
-
-  .sensor-popup-chart-button {
+  .sensor-popup-info-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border: 0;
     border-radius: var(--sr-radius-full);
     background: rgba(255, 255, 255, 0.1);
@@ -830,16 +810,17 @@ export const smartRoomCardStyles = css`
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
+    align-self: flex-start;
     flex-shrink: 0;
   }
 
-  .sensor-popup-chart-button ha-icon {
-    --mdc-icon-size: 17px;
-  }
-
-  .sensor-popup-chart-button--active {
+  .sensor-popup-info-button:hover {
     background: rgba(255, 255, 255, 0.2);
     color: white;
+  }
+
+  .sensor-popup-info-button ha-icon {
+    --mdc-icon-size: 18px;
   }
 
   .sensor-popup-chart {
