@@ -669,6 +669,7 @@ export const smartRoomCardStyles = css`
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
     touch-action: auto;
     box-shadow:
       0 32px 80px rgba(0, 0, 0, 0.7),
@@ -722,6 +723,8 @@ export const smartRoomCardStyles = css`
 
   .sensor-popup-body {
     overflow-y: auto;
+    min-height: 0;
+    flex: 1 1 auto;
     padding: 14px;
     display: flex;
     flex-direction: column;
@@ -730,6 +733,7 @@ export const smartRoomCardStyles = css`
   }
 
   .sensor-popup-item {
+    flex: 0 0 auto;
     background: rgba(12, 16, 26, 0.52);
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 18px;
@@ -844,7 +848,8 @@ export const smartRoomCardStyles = css`
     gap: 6px;
     margin-left: auto;
     align-self: center;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 0;
   }
 
   .sensor-popup-battery-tag {
@@ -914,6 +919,7 @@ export const smartRoomCardStyles = css`
     --mdc-icon-size: 22px;
     color: rgba(255, 255, 255, 0.66);
     align-self: center;
+    margin-left: 2px;
     flex-shrink: 0;
   }
 

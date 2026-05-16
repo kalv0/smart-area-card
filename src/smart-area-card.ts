@@ -705,7 +705,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                       ${entityId ? html`<span class="sensor-popup-item-updated">${this._relativeTime(this.hass.states[entityId]?.last_updated)}</span>` : nothing}
                       ${entityId ? html`<span class="sensor-popup-item-entity">${entityId}</span>` : nothing}
                     </span>
-                    ${entityId ? html`<ha-icon class="sensor-popup-item-arrow" icon=${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>` : nothing}
                     ${alertFlags.length || batteryInfo ? html`
                       <span class="sensor-popup-side">
                         ${batteryInfo ? html`
@@ -722,6 +721,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                         ` : nothing}
                       </span>
                     ` : nothing}
+                    ${entityId ? html`<ha-icon class="sensor-popup-item-arrow" icon=${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>` : nothing}
                   </button>
                   ${entityId && expanded ? html`
                     <div class="sensor-popup-chart" data-key=${item.key}></div>
