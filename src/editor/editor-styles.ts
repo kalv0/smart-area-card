@@ -3271,6 +3271,23 @@ export const calvoRoomCardEditorStyles = css`
     flex-shrink: 0;
   }
 
+  .sr-alert-control {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .sr-alert-control-label {
+    max-width: 64px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.58rem;
+    font-weight: 800;
+    line-height: 1.05;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
   .sr-primary-star {
     font-size: 0.8rem;
     color: #f59e0b;

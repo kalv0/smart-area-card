@@ -743,11 +743,14 @@ export class SmartAreaCardEditor extends LitElement {
               </div>
               <div class="sr-actions">
                 ${hasEntity ? html`
-                  <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert"
-                         @click=${(e: Event) => e.stopPropagation()}>
-                    ${this._renderInlineToggle(alertEnabled, (v) => this._setCustomSensorAlertEnabled(i, v))}
-                    <ha-icon icon="mdi:alert-outline"></ha-icon>
-                  </label>
+                  <div class="sr-alert-control">
+                    <span class="sr-alert-control-label">Enable alerts</span>
+                    <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Enable alerts"
+                           @click=${(e: Event) => e.stopPropagation()}>
+                      ${this._renderInlineToggle(alertEnabled, (v) => this._setCustomSensorAlertEnabled(i, v))}
+                      <ha-icon icon="mdi:alert-outline"></ha-icon>
+                    </label>
+                  </div>
                 ` : nothing}
                 <button class="dc-btn dc-btn--del" type="button" title="Remove"
                         @click=${(e: Event) => { e.stopPropagation(); this._removeCustomSensor(i); }}>
@@ -798,11 +801,14 @@ export class SmartAreaCardEditor extends LitElement {
             </div>
             <div class="sr-actions">
               ${hasEntity ? html`
-                <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert"
-                       @click=${(e: Event) => e.stopPropagation()}>
-                  ${this._renderInlineToggle(alertEnabled, (v) => this._setPresetSensorAlertEnabled(sAlertKey, v))}
-                  <ha-icon icon="mdi:alert-outline"></ha-icon>
-                </label>
+                <div class="sr-alert-control">
+                  <span class="sr-alert-control-label">Enable alerts</span>
+                  <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Enable alerts"
+                         @click=${(e: Event) => e.stopPropagation()}>
+                    ${this._renderInlineToggle(alertEnabled, (v) => this._setPresetSensorAlertEnabled(sAlertKey, v))}
+                    <ha-icon icon="mdi:alert-outline"></ha-icon>
+                  </label>
+                </div>
               ` : nothing}
             </div>
           </div>
