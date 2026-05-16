@@ -694,7 +694,6 @@ export const smartRoomCardStyles = css`
     align-items: center;
     gap: 14px;
     padding: 20px 20px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     flex-shrink: 0;
   }
 
