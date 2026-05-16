@@ -848,7 +848,7 @@ export const calvoRoomCardEditorStyles = css`
 
   .dg-preview-tile {
     position: relative;
-    height: var(--sr-tile-size, 110px);
+    height: var(--sr-tile-height, var(--sr-tile-size, 110px));
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     overflow: hidden;
@@ -928,8 +928,29 @@ export const calvoRoomCardEditorStyles = css`
   .tile-size-control {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;
     padding: 4px 0;
+  }
+
+  .tile-size-slider {
+    display: grid;
+    gap: 6px;
+  }
+
+  .tile-size-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--editor-text);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .tile-size-label span:last-child {
+    color: var(--editor-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: right;
   }
 
   .tile-size-range-wrap {

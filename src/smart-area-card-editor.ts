@@ -68,6 +68,12 @@ const SENSOR_ACCENT: Record<string, string> = {
 
 const CUSTOM_SENSOR_COLORS = ["#6366f1", "#22d3ee", "#f43f5e", "#84cc16", "#d946ef", "#fb923c", "#2dd4bf", "#a78bfa"];
 
+const DEVICE_TILE_WIDTH_MIN = 80;
+const DEVICE_TILE_WIDTH_MAX = 170;
+const DEVICE_TILE_HEIGHT_MIN = 80;
+const DEVICE_TILE_HEIGHT_MAX = 140;
+const DEVICE_TILE_STEP = 30;
+
 export class SmartAreaCardEditor extends LitElement {
   static styles = calvoRoomCardEditorStyles;
 
@@ -1119,12 +1125,14 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderDevices(config: SmartRoomCardConfig) {
-    const tileSize = config.ui?.device_tile_size ?? 110;
-    const pct = Math.round(((tileSize - 70) / (160 - 70)) * 100);
+    const tileWidth = config.ui?.device_tile_width ?? config.ui?.device_tile_size ?? 110;
+    const tileHeight = config.ui?.device_tile_height ?? config.ui?.device_tile_size ?? 110;
+    const widthPct = Math.round(((tileWidth - DEVICE_TILE_WIDTH_MIN) / (DEVICE_TILE_WIDTH_MAX - DEVICE_TILE_WIDTH_MIN)) * 100);
+    const heightPct = Math.round(((tileHeight - DEVICE_TILE_HEIGHT_MIN) / (DEVICE_TILE_HEIGHT_MAX - DEVICE_TILE_HEIGHT_MIN)) * 100);
     const GAP = 10;
     const editorW = this.offsetWidth > 0 ? this.offsetWidth : window.innerWidth;
     const cardGridEst = Math.max(200, editorW - 44); // editor padding 16×2 + ha-card 14×2 ≈ 44px delta
-    const cardCols = Math.max(1, Math.min(8, Math.floor((cardGridEst + GAP) / (tileSize + GAP))));
+    const cardCols = Math.max(1, Math.min(8, Math.floor((cardGridEst + GAP) / (tileWidth + GAP))));
     return html`
       <section class="section">
         <div class="devices-header">
@@ -1134,14 +1142,31 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
         </div>
         <div class="tile-size-control">
-          <div class="tile-size-range-wrap" style="--range-pct: ${pct}%">
-            <input class="tile-size-range" type="range" min="70" max="160" step="5"
-                   .value=${String(tileSize)}
-                   @input=${(e: InputEvent) => this._setUi("device_tile_size", Number((e.target as HTMLInputElement).value))} />
+          <div class="tile-size-slider">
+            <div class="tile-size-label">
+              <span>Tile width</span>
+              <span>Controls how many devices fit per row.</span>
+            </div>
+            <div class="tile-size-range-wrap" style="--range-pct: ${widthPct}%">
+              <input class="tile-size-range" type="range" min=${String(DEVICE_TILE_WIDTH_MIN)} max=${String(DEVICE_TILE_WIDTH_MAX)} step=${String(DEVICE_TILE_STEP)}
+                     .value=${String(tileWidth)}
+                     @input=${(e: InputEvent) => this._setUi("device_tile_width", Number((e.target as HTMLInputElement).value))} />
+            </div>
+          </div>
+          <div class="tile-size-slider">
+            <div class="tile-size-label">
+              <span>Tile height</span>
+              <span>Controls the vertical space inside each device.</span>
+            </div>
+            <div class="tile-size-range-wrap" style="--range-pct: ${heightPct}%">
+              <input class="tile-size-range" type="range" min=${String(DEVICE_TILE_HEIGHT_MIN)} max=${String(DEVICE_TILE_HEIGHT_MAX)} step=${String(DEVICE_TILE_STEP)}
+                     .value=${String(tileHeight)}
+                     @input=${(e: InputEvent) => this._setUi("device_tile_height", Number((e.target as HTMLInputElement).value))} />
+            </div>
           </div>
           <div class="tile-size-values">
             <span>${cardCols} per row</span>
-            <span>${tileSize}px high</span>
+            <span>${tileWidth} x ${tileHeight}px</span>
           </div>
         </div>
         ${this._renderDeviceGridPreview(config, cardCols)}
@@ -1172,8 +1197,9 @@ export class SmartAreaCardEditor extends LitElement {
 
   private _renderDeviceGridPreview(config: SmartRoomCardConfig, cardCols: number) {
     const devices = config.devices ?? [];
-    const tileSize = config.ui?.device_tile_size ?? 110;
-    const gridStyle = `grid-template-columns: repeat(${cardCols}, 1fr); --sr-tile-size: ${tileSize}px`;
+    const tileWidth = config.ui?.device_tile_width ?? config.ui?.device_tile_size ?? 110;
+    const tileHeight = config.ui?.device_tile_height ?? config.ui?.device_tile_size ?? 110;
+    const gridStyle = `grid-template-columns: repeat(${cardCols}, minmax(${tileWidth}px, 1fr)); --sr-tile-width: ${tileWidth}px; --sr-tile-height: ${tileHeight}px; --sr-tile-size: ${tileHeight}px`;
     return html`
       <div class="dg-preview">
         <div class="dg-preview-grid" style=${gridStyle}>

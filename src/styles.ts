@@ -465,7 +465,7 @@ export const smartRoomCardStyles = css`
 
   .tile {
     position: relative;
-    height: var(--sr-tile-size, 110px);
+    height: var(--sr-tile-height, var(--sr-tile-size, 110px));
     padding: 0;
     border-radius: var(--sr-radius-md);
     border: 1px solid transparent;
