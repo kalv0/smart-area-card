@@ -580,10 +580,10 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const state = entity?.state;
     const value = Number(state);
     const unit = entity?.attributes?.unit_of_measurement ? String(entity.attributes.unit_of_measurement) : "";
-    const formatNumber = (n: number): string => `${n}${unit ? ` ${unit}` : ""}`;
+    const formatNumber = (n: number): string => `${n}${unit}`;
     const flags: SensorPopupAlertFlag[] = [];
-    if ("min" in alert && alert.min !== undefined) flags.push({ label: `Min. ${formatNumber(alert.min)}`, active: Number.isFinite(value) && value < alert.min });
-    if ("max" in alert && alert.max !== undefined) flags.push({ label: `Max. ${formatNumber(alert.max)}`, active: Number.isFinite(value) && value > alert.max });
+    if ("min" in alert && alert.min !== undefined) flags.push({ label: `Min.${formatNumber(alert.min)}`, active: Number.isFinite(value) && value < alert.min });
+    if ("max" in alert && alert.max !== undefined) flags.push({ label: `Max.${formatNumber(alert.max)}`, active: Number.isFinite(value) && value > alert.max });
     if ("eq" in alert && alert.eq !== undefined) flags.push({ label: `= ${typeof alert.eq === "number" ? formatNumber(alert.eq) : alert.eq}`, active: state === String(alert.eq) });
     if ("neq" in alert && alert.neq !== undefined) flags.push({ label: `!= ${alert.neq}`, active: state !== undefined && state !== alert.neq });
     if ("text_eq" in alert && alert.text_eq !== undefined) flags.push({ label: `Text = ${alert.text_eq}`, active: state === alert.text_eq });
