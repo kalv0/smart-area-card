@@ -1,55 +1,196 @@
 # AGENTS.md
 
-Guia para agentes que trabajen en `smart-area-card`.
+Guia operativa para agentes que reciban tareas concretas sobre `smart-area-card`.
 
-## Objetivo del Proyecto
+El objetivo de este archivo es que el agente tarde menos en orientarse, toque solo lo necesario, mantenga el diseno deseado de la card/editor y cierre cada tarea con validacion, commit, push y deploy cuando corresponda.
 
-`smart-area-card` es una custom card de Home Assistant/Lovelace escrita en TypeScript + Lit.
-Su foco es mostrar una vista compacta de un area: imagen de fondo, header con sensores/badges, alertas, automatizaciones y grid de dispositivos.
+## Prioridades
 
-Prioridad al hacer cambios:
 1. Mantener compatibilidad con configuraciones existentes.
 2. No romper el editor visual.
 3. No introducir regresiones en la card final.
-4. Validar siempre con typecheck, build y tests cuando el cambio toque codigo.
+4. Mantener el resultado visual compacto, pulido y coherente con Home Assistant.
+5. Optimizar tiempo y recursos: leer primero los archivos correctos, hacer cambios acotados, validar proporcionalmente y evitar exploracion innecesaria.
+6. Si el cambio genera `dist/` y todo pasa, desplegar por SSH a Home Assistant antes de responder.
 
-## Flujo Git Obligatorio
+## Como Empezar Una Tarea
 
-Despues de cualquier modificacion de archivos:
+Antes de editar:
 
-1. Comprobar si hay cambios:
-
-```powershell
-git diff --quiet
-```
-
-2. Si hay cambios, anadir todo:
+1. Revisar estado del repo:
 
 ```powershell
-git add -A
+git status --short
 ```
 
-3. Crear commit:
+2. Leer solo el contexto necesario segun la tarea:
+
+- Card final: `src/smart-area-card.ts`, `src/styles.ts`, helpers relacionados.
+- Editor visual: `src/smart-area-card-editor.ts`, `src/editor/editor-styles.ts`, `src/editor/*`.
+- Config/tipos/defaults: `src/helpers/types.ts`, `src/helpers/config-helpers.ts`, card y editor.
+- Render/modelos: `src/helpers/compute-render-model.ts`, `src/helpers/room-model.ts`, `src/helpers/device-model.ts`.
+- Tests: `src/**/__tests__/*`.
+
+3. Buscar con `rg` antes de asumir nombres o relaciones:
 
 ```powershell
-git commit -m "Codex: $BreveDescripcion"
+rg "nombre_o_config"
+rg "metodo_o_clase"
 ```
 
-4. Subir:
+4. Si hay cambios previos del usuario, no revertirlos. Trabajar alrededor de ellos o integrarlos si afectan a la tarea.
 
-```powershell
-git push origin HEAD
-```
+## Mapa Rapido
+
+- `src/smart-area-card.ts`: componente final. Render principal, header, sensores, badges, alertas, automatizaciones, expander, grid y acciones.
+- `src/smart-area-card-editor.ts`: editor visual. Secciones, previews, patching de config y evento `config-changed`.
+- `src/styles.ts`: estilos de la card final.
+- `src/editor/editor-styles.ts`: estilos del editor, previews y escalado.
+- `src/helpers/types.ts`: tipos de config y contratos principales.
+- `src/helpers/compute-render-model.ts`: une config + estado de Home Assistant en un modelo renderizable.
+- `src/helpers/room-model.ts`: sensores de header, alertas, badges y helpers de area.
+- `src/helpers/device-model.ts`: estado calculado de dispositivos, badges, alertas, imagenes y acciones.
+- `src/helpers/config-helpers.ts`: defaults, imagenes, storage keys y helpers de config.
+- `src/helpers/validate-config.ts`: warnings runtime.
+- `src/**/__tests__/*`: tests unitarios.
+- `dist/`: salida generada por `npm run build`.
+
+## Rutas De Cambio
+
+### Cambios De UI En La Card Final
+
+Revisar normalmente:
+
+- `src/smart-area-card.ts`
+- `src/styles.ts`
+- helper que calcule el dato mostrado
+- tests si cambia logica observable
+
+Comprobar tambien si el editor debe previsualizar el cambio.
+
+### Cambios Del Editor Visual
+
+Revisar normalmente:
+
+- `src/smart-area-card-editor.ts`
+- `src/editor/editor-styles.ts`
+- helpers en `src/editor/*`
+- tipos/defaults si la opcion toca config
+
+El editor debe seguir siendo robusto aunque falten entidades o haya config parcial.
+
+### Cambios De Config
+
+Actualizar siempre que aplique:
+
+- `SmartRoomCardConfig` en `src/helpers/types.ts`
+- defaults/fallbacks en helpers, card y editor
+- render final
+- editor visual
+- validacion en `src/helpers/validate-config.ts`
+- tests del comportamiento nuevo
+
+No romper configuraciones antiguas. Si una opcion nueva es opcional, definir fallback claro.
+
+### Cambios De Sensores
+
+Revisar:
+
+- `room-model.ts`
+- `compute-render-model.ts`
+- render/header en `smart-area-card.ts`
+- seccion Sensors del editor
+- tests de alertas/sensores
 
 Reglas:
-- No hacer push si no hay cambios.
-- No pedir confirmacion para commit/push.
-- No usar `git reset --hard` ni revertir cambios ajenos salvo peticion explicita del usuario.
-- Si `AGENTS.md` aparece modificado antes de empezar, tratarlo como cambio existente del usuario y no revertirlo.
 
-## Comandos de Validacion
+- `ui.header_sensors_enabled` controla la tira de sensores.
+- `ui.header_climate_more_info` controla click/detalles cuando los sensores estan activos.
+- Sensores con alerta activa deben verse en rojo en el header.
+- Mensajes de alarma usan formato `Sensorname: Sensorvalue`.
+- Si no hay nombre de area, los sensores y badges deben seguir apareciendo.
 
-Para cambios de codigo:
+### Cambios De Devices
+
+Revisar:
+
+- `device-model.ts`
+- render del grid en `smart-area-card.ts`
+- estilos del grid en `styles.ts`
+- seccion Devices y preview del editor
+
+Reglas:
+
+- El slider de tamano del grid debe estar encima del preview.
+- Tipo/preset puede afectar defaults, estado, alertas, imagenes y acciones.
+- Mantener dimensiones estables para evitar saltos de layout.
+
+### Cambios De Automations
+
+Revisar:
+
+- render de badge/panel en `smart-area-card.ts`
+- modelo si cambia el dato
+- seccion correspondiente del editor
+
+Reglas:
+
+- `automation_badge_enabled` controla visibilidad del badge.
+- `automation_badge_click_details` controla click, CTA y panel.
+- Animaciones CTA del badge y sensores en preview deben sentirse coordinadas.
+
+### Cambios De Background/Header
+
+Revisar:
+
+- `config-helpers.ts`
+- `styles.ts`
+- header en `smart-area-card.ts`
+- previews del editor
+
+Reglas:
+
+- La imagen de fondo se renderiza por CSS con `buildRoomBackgroundImage()`.
+- Mantener una ruta unificada CSS tambien en dark mode.
+- El shadow superior debe proteger el header sin oscurecer paneles inferiores.
+- Header preview y devices preview usan fondo neutro/degradado, no la imagen real.
+- Card setup conserva su preview de background bajo el selector de area.
+
+## Diseno Esperado
+
+La card debe sentirse como una pieza nativa, compacta y premium dentro de Lovelace:
+
+- Densa pero legible.
+- Jerarquia clara: header, badges/sensores, alertas, automatizaciones y devices.
+- Sin texto explicativo innecesario dentro de la UI.
+- Sin cambios cosmeticos no pedidos.
+- Estados visuales claros para alerta, activo, inactivo, unavailable y acciones clicables.
+- Animaciones discretas y utiles, no decorativas.
+- Previews del editor fieles a la card final cuando sea importante para configurar.
+
+El editor debe sentirse como herramienta:
+
+- Controles previsibles y agrupados por seccion.
+- Opciones dependientes solo visibles cuando aplican.
+- Previews estables, escalados y sin romper layout.
+- Textos visibles siempre en ingles, precisos y naturales.
+
+## Reglas De Edicion
+
+- Usar `apply_patch` para ediciones manuales.
+- No reordenar bloques grandes si la tarea es pequena.
+- Preferir helpers existentes antes de crear patrones nuevos.
+- No introducir dependencias salvo necesidad clara.
+- Mantener cambios acotados al elemento/funcion pedido.
+- No modificar `dist/` manualmente; `dist/` debe salir de `npm run build`.
+- No usar `git reset --hard`.
+- No revertir cambios ajenos salvo peticion explicita.
+- Textos visibles de card/editor: siempre en ingles.
+- Comentarios de codigo: pocos y solo si aclaran logica no evidente.
+
+## Validacion
+
+Para cambios de codigo, ejecutar en este orden:
 
 ```powershell
 npm run check
@@ -57,182 +198,104 @@ npm run build
 npm run test:run
 ```
 
-Para cambios solo de documentacion:
-- No es obligatorio ejecutar tests/build.
-- Aun asi, revisar `git diff --stat` y el diff final antes de commitear.
-
 Notas:
+
 - `npm run check` ejecuta `tsc --noEmit`.
 - `npm run build` genera `dist/smart-area-card.js`.
 - `npm run test:run` ejecuta Vitest una vez.
+- Si falla `check`, arreglar tipos antes de seguir.
+- Si falla `build`, no desplegar ni entregar como terminado.
+- Si falla `test:run`, distinguir si es fallo nuevo o preexistente y no ocultarlo.
 
-## Mapa Rapido de Archivos
+Para cambios solo de documentacion:
 
-- `src/smart-area-card.ts`: componente de la card final. Render principal, header, alertas, automations, popup de sensores, grid de dispositivos y acciones.
-- `src/smart-area-card-editor.ts`: editor visual de la card. Gestiona secciones de Card setup, Header, Sensors, Devices, previews y actualizacion de config.
-- `src/styles.ts`: estilos de la card final.
-- `src/editor/editor-styles.ts`: estilos del editor visual y previews.
-- `src/helpers/types.ts`: tipos principales de configuracion.
-- `src/helpers/compute-render-model.ts`: transforma config + estado de Home Assistant en modelo renderizable.
-- `src/helpers/room-model.ts`: sensores del header, alertas de sensores, badges y helpers de area.
-- `src/helpers/device-model.ts`: estado calculado de dispositivos, badges, alertas, imagenes y acciones.
-- `src/helpers/config-helpers.ts`: imagenes, storage keys y helpers de config.
-- `src/helpers/validate-config.ts`: warnings de config en runtime.
-- `src/editor/*`: helpers especificos del editor visual.
-- `src/**/__tests__/*`: tests unitarios.
-- `dist/`: salida generada por build.
+- No es obligatorio ejecutar `check/build/test`.
+- Revisar `git diff --stat` y el diff final antes de commit.
+- No desplegar por SSH si solo cambio documentacion y `dist/` no cambio.
 
-## Arquitectura Mental
+## Deploy A Home Assistant
 
-Flujo de la card final:
+Si el cambio toca codigo, estilos o cualquier cosa que requiera `npm run build`, y `check`, `build` y `test:run` pasan, desplegar `dist/` por SSH antes de responder.
 
-1. `setConfig()` normaliza defaults y restaura estado persistido.
-2. Cuando cambia `hass`, se calcula un `RenderModel`.
-3. `computeRenderModel()` resuelve dispositivos, sensores, alertas, automatizaciones e imagen de fondo.
-4. `render()` pinta `ha-card`.
-5. `_renderHeader()` muestra nombre opcional, icono opcional, badges y sensores.
-6. `_renderAlertPanels()`, `_renderAutomationPanel()` y `_renderExpander()` completan el contenido.
+Comando obligatorio de deploy:
 
-Flujo del editor visual:
+```powershell
+C:\Windows\System32\OpenSSH\ssh.exe -i ~/.ssh/id_rsa_servidor1 yow@192.168.1.13 "mkdir -p /home/yow/docker/homeassistant/config/www/smart-area-card && find /home/yow/docker/homeassistant/config/www/smart-area-card -mindepth 1 -maxdepth 1 -exec rm -rf {} +" ; if ($LASTEXITCODE -eq 0) { C:\Windows\System32\OpenSSH\scp.exe -i ~/.ssh/id_rsa_servidor1 -r .\dist\* yow@192.168.1.13:/home/yow/docker/homeassistant/config/www/smart-area-card/ }
+```
 
-1. `setConfig()` clona la config y aplica fallback.
-2. Las secciones del editor escriben cambios con `_patch()`, `_setRoot()`, `_setUi()`, `_setSensor()`, `_setDevice()`, etc.
-3. Cada cambio dispara `config-changed`.
-4. Los previews deben reflejar la card final lo maximo posible, pero sin depender de fondos reales cuando se haya decidido usar previews neutros.
+Reglas:
 
-## Reglas de Edicion
+- Ejecutar deploy solo despues de validacion OK.
+- Borrar antes el contenido remoto con el `find` del comando.
+- Si falla el deploy, reportarlo con claridad y no decir que quedo desplegado.
+- Si solo se modifico documentacion, no hacer deploy.
 
-- Usar `apply_patch` para editar archivos manualmente.
-- No reordenar grandes bloques si el cambio pedido es pequeno.
-- Mantener cambios acotados al comportamiento solicitado.
-- Preferir helpers existentes a nuevos patrones.
-- No introducir dependencias nuevas salvo necesidad clara.
-- Evitar cambios cosmeticos no solicitados.
-- Los textos visibles de la card y del editor deben estar siempre en ingles, con tono preciso y personal.
-- Si se modifica una estructura de config, actualizar tambien:
-  - `SmartRoomCardConfig` en `src/helpers/types.ts`
-  - defaults en card/editor si aplica
-  - render final
-  - editor visual
-  - tests cuando haya logica observable
+## Git Obligatorio
 
-## Puntos Delicados
+Despues de cualquier modificacion de archivos:
 
-- Header:
-  - `room`/Area name es opcional. Si esta vacio, no debe mostrarse texto de nombre en el header.
-  - Los badges deben seguir mostrandose aunque no haya nombre.
-  - Sensores del header dependen de `ui.header_sensors_enabled`.
-  - Click de sensores depende de `ui.header_climate_more_info`.
+1. Revisar cambios:
 
-- Imagen de fondo:
-  - La imagen de fondo se renderiza por CSS mediante `buildRoomBackgroundImage()`.
-  - El shadow superior negro debe proteger la lectura del header sin oscurecer paneles inferiores.
-  - Dark mode no debe cambiar de `<img>` a CSS: mantener una ruta unificada CSS.
+```powershell
+git diff --stat
+git diff
+```
 
-- Editor visual:
-  - Header preview y devices preview usan fondo neutro/degradado, no la imagen real de background.
-  - Card setup mantiene su preview de background bajo el selector de area.
-  - Si se cambia una opcion visible en la card final, revisar si el preview debe imitarla.
+2. Comprobar si hay cambios:
 
-- Sensors:
-  - `Show sensors` controla si aparece la tira de sensores y su configuracion debajo.
-  - `Click despliega detalles` solo aparece si `Show sensors` esta activo.
-  - Sensores con alerta activa deben aparecer en rojo en el header.
-  - Mensajes de alarma de sensores usan formato `Sensorname: Sensorvalue`.
+```powershell
+git diff --quiet
+```
 
-- Automations:
-  - `automation_badge_enabled` controla visibilidad del badge.
-  - `automation_badge_click_details` controla click/CTA/panel.
-  - La animacion CTA del badge y la de sensores en preview deben permanecer coordinadas.
+3. Si hay cambios, anadir todo:
 
-- Devices:
-  - El slider de tamano del grid debe estar encima del preview del grid en el editor.
-  - Cambios de tipo/preset pueden afectar defaults, estados, alertas e imagenes.
+```powershell
+git add -A
+```
 
-## Criterios de Finalizacion
+4. Crear commit:
 
-Antes de responder:
+```powershell
+git commit -m "Codex: breve descripcion"
+```
 
-1. Revisar `git diff --stat`.
-2. Ejecutar validacion adecuada.
-3. Confirmar si tests/build/check pasaron o explicar cualquier fallo.
-4. Hacer commit y push si hubo cambios.
-5. Responder breve, en espanol, indicando:
-   - Que se cambio.
-   - Que comandos se ejecutaron.
-   - Commit subido.
-   - El comando para desplegar `./dist/*` en Home Assistant, borrando antes el contenido remoto:
+5. Subir:
 
-     ```powershell
-     C:\Windows\System32\OpenSSH\ssh.exe -i ~/.ssh/id_rsa_servidor1 yow@192.168.1.13 "mkdir -p /home/yow/docker/homeassistant/config/www/smart-area-card && find /home/yow/docker/homeassistant/config/www/smart-area-card -mindepth 1 -maxdepth 1 -exec rm -rf {} +" ; if ($LASTEXITCODE -eq 0) { C:\Windows\System32\OpenSSH\scp.exe -i ~/.ssh/id_rsa_servidor1 -r .\dist\* yow@192.168.1.13:/home/yow/docker/homeassistant/config/www/smart-area-card/ }
-     ```
+```powershell
+git push origin HEAD
+```
 
-   - Como refrescar la prueba en Home Assistant: recargar recurso/dashboard o limpiar cache fuerte del navegador si sigue apareciendo codigo viejo.
+Reglas:
 
-## Si Algo Falla
+- No pedir confirmacion para commit/push.
+- No hacer commit/push si no hay cambios.
+- Si `AGENTS.md` aparece modificado antes de empezar, tratarlo como cambio del usuario y no revertirlo.
+- Si git falla por permisos o `index.lock` en Windows, reintentar con permisos escalados si la herramienta lo requiere.
 
-- Si falla `npm run check`, arreglar tipos antes de commitear.
-- Si falla `npm run build`, no entregar como terminado.
-- Si falla `npm run test:run`, distinguir entre fallo nuevo y fallo preexistente. No ocultarlo.
-- Si hay cache de Home Assistant/browser, comprobar primero que el texto/codigo viejo no exista en `src` ni `dist`.
+## Cierre De Tarea
 
+Antes de responder al usuario:
 
+1. Confirmar `git diff --stat`.
+2. Confirmar validacion ejecutada o explicar por que no aplica.
+3. Confirmar commit y push si hubo cambios.
+4. Confirmar deploy SSH si hubo build de `dist/`.
+5. Responder breve, en espanol, con:
+   - que se cambio;
+   - comandos ejecutados;
+   - commit subido;
+   - si se desplego o no;
+   - recordatorio de refrescar Home Assistant si ve codigo viejo.
 
-<claude-mem-context>
-# Memory Context
+Para refrescar Home Assistant:
 
-# [smart-area] recent context, 2026-05-15 1:06am GMT+2
+- Recargar el recurso/dashboard.
+- Si sigue apareciendo codigo viejo, hacer limpieza fuerte de cache del navegador.
+- Si aun persiste, comprobar que el texto/codigo viejo no exista en `src` ni en `dist`.
 
-Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
-Format: ID TIME TYPE TITLE
-Fetch details: get_observations([IDs]) | Search: mem-search skill
+## Fallos Conocidos Y Criterio
 
-Stats: 39 obs (15.430t read) | 2.237.046t work | 99% savings
-
-### May 2, 2026
-1 10:25p 🔵 smart-area-card: Project Structure and Toolchain
-2 " 🔵 smart-area-card: Source File Map and Responsibilities
-3 " 🔵 smart-area-card: Main Card Execution Flow
-4 " 🔵 smart-area-card: Device Model and State Computation
-5 " 🔵 smart-area-card: SmartRoomCardConfig — Full Type System
-6 " 🔵 smart-area-card: Visual Editor Architecture
-7 " 🔵 smart-area-card: Fragile Zones and Technical Debt
-8 " 🟣 Sensors Section UI: Show Toggle + Open Details Checkbox
-9 11:24p 🟣 New `header_sensors_enabled` Config Flag with Sensors Panel in Editor
-10 " 🔄 Sensor Click Target Merged Into Sensor Strip Element
-11 " 🔵 Pre-existing Failing Test: evaluateClimateAlert Room Name
-12 11:40p 🔄 Sensor "Primary" tip moved inside sensor card header row
-13 11:41p 🟣 Primary sensor tip relocated inside sensor card header — deployed to main
-14 11:43p 🔵 Persistent patch-not-sticking issue: same primaryTip change attempted 3+ times
-15 11:44p ✅ CTA animations slowed from ~1.5s to 3.2s in editor preview
-17 11:45p 🔴 evaluateClimateAlert reason now includes sensor value and unit via formatSensorAlertReason helper
-18 11:47p ⚖️ CSS gradient shadow constraint: extend only to 50% of sensors section
-16 11:48p 🔵 evaluateClimateAlert signature accepts roomName but doesn't use it in reason string
-### May 3, 2026
-19 12:12a 🔵 Header shadow gradient architecture: two-layer system in config-helpers.ts and styles.ts
-20 " 🔴 Shorten header shadow gradient to stop at ~118px instead of 240px
-### May 6, 2026
-21 10:08p 🟣 smart-area-card: Performance Mode System Added
-22 " 🟣 smart-area-card: Editor Lazy-Loaded via Dynamic Import
-23 " 🟣 smart-area-card: Incremental Device Model Recompute
-24 " 🔄 smart-area-card: Lit repeat() Directives Replace .map() in All Lists
-25 " 🔵 smart-area-card: Git Commit Blocked by index.lock Permission Error
-26 10:31p 🟣 Card Performance Maximization — 11 Files Changed, Committed and Pushed
-### May 14, 2026
-27 11:47p 🟣 Smart Area Card Performance Optimization — Full Pass Completed
-28 11:57p 🟣 AGENTS.md Created for Agent Optimization
-### May 15, 2026
-29 12:40a 🔵 smart-area-card Project Architecture Mapped
-30 " ✅ AGENTS.md Rewritten as Comprehensive Agent Guide
-31 " 🔵 Git index.lock Permission Denied on Windows
-32 12:44a 🔵 Git Operations Require Escalated Sandbox Permissions on This Machine
-33 12:55a 🟣 Editor Preview Scaling System — Stage/Frame Architecture Added
-34 12:57a 🔴 Device Grid Preview Refactored to Use Final-Card Stage Scaling
-35 " 🟣 CSS Stage/Frame Classes Added to editor-styles.ts for Scaled Previews
-36 12:58a 🔴 Device Grid Preview Tile Styles Aligned to Final Card
-37 12:59a 🔵 TypeScript Check Passes; Build/Test Blocked by Windows EPERM on esbuild
-38 1:00a ✅ Preview Scaling Fix Built and Deployed to dist/
-39 " ✅ Editor Preview Scaling Fix Committed and Pushed to GitHub
-
-Access 2237k tokens of past work via get_observations([IDs]) or mem-search skill.
-</claude-mem-context>
+- Si aparece `EPERM` con esbuild/Vitest en Windows, comprobar si es bloqueo del entorno. No ocultarlo.
+- Si tests fallan, buscar si el fallo ya era preexistente antes de atribuirlo al cambio.
+- Si el navegador/Home Assistant muestra cache vieja, verificar primero `src`, luego `dist`, luego deploy remoto.
+- Si una tarea pide algo ambiguo, hacer la interpretacion mas conservadora y compatible con el sistema actual.
