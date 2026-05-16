@@ -80,12 +80,6 @@ const DEVICE_TILE_HEIGHT_OPTIONS = [
   { label: "Tall", value: 140 },
 ] as const;
 
-function closestTileOption(value: number, options: readonly { value: number }[]): number {
-  return options.reduce((closest, option) => (
-    Math.abs(option.value - value) < Math.abs(closest - value) ? option.value : closest
-  ), options[0].value);
-}
-
 export class SmartAreaCardEditor extends LitElement {
   static styles = calvoRoomCardEditorStyles;
 
@@ -1137,12 +1131,8 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderDevices(config: SmartRoomCardConfig) {
-    const tileWidth = closestTileOption(config.ui?.device_tile_width ?? config.ui?.device_tile_size ?? 110, DEVICE_TILE_WIDTH_OPTIONS);
-    const tileHeight = closestTileOption(config.ui?.device_tile_height ?? config.ui?.device_tile_size ?? 110, DEVICE_TILE_HEIGHT_OPTIONS);
-    const GAP = 10;
-    const editorW = this.offsetWidth > 0 ? this.offsetWidth : window.innerWidth;
-    const cardGridEst = Math.max(200, editorW - 44); // editor padding 16×2 + ha-card 14×2 ≈ 44px delta
-    const cardCols = Math.max(1, Math.min(8, Math.floor((cardGridEst + GAP) / (tileWidth + GAP))));
+    const tileWidth = config.ui?.device_tile_width ?? config.ui?.device_tile_size ?? 110;
+    const tileHeight = config.ui?.device_tile_height ?? config.ui?.device_tile_size ?? 110;
     return html`
       <section class="section">
         <div class="devices-header">
@@ -1191,11 +1181,11 @@ export class SmartAreaCardEditor extends LitElement {
             </div>
           </div>
           <div class="tile-size-values">
-            <span>${cardCols} per row</span>
+            <span>Card grid</span>
             <span>${tileWidth} x ${tileHeight}px</span>
           </div>
         </div>
-        ${this._renderDeviceGridPreview(config, cardCols)}
+        ${this._renderDeviceGridPreview(config)}
         <div class="panel">
           <div class="panel-title">Battery alerts</div>
           <div class="row single">
@@ -1221,11 +1211,11 @@ export class SmartAreaCardEditor extends LitElement {
     `;
   }
 
-  private _renderDeviceGridPreview(config: SmartRoomCardConfig, cardCols: number) {
+  private _renderDeviceGridPreview(config: SmartRoomCardConfig) {
     const devices = config.devices ?? [];
     const tileWidth = config.ui?.device_tile_width ?? config.ui?.device_tile_size ?? 110;
     const tileHeight = config.ui?.device_tile_height ?? config.ui?.device_tile_size ?? 110;
-    const gridStyle = `grid-template-columns: repeat(${cardCols}, minmax(${tileWidth}px, 1fr)); --sr-tile-width: ${tileWidth}px; --sr-tile-height: ${tileHeight}px; --sr-tile-size: ${tileHeight}px`;
+    const gridStyle = `grid-template-columns: repeat(auto-fill, minmax(${tileWidth}px, 1fr)); --sr-tile-width: ${tileWidth}px; --sr-tile-height: ${tileHeight}px; --sr-tile-size: ${tileHeight}px`;
     return html`
       <div class="dg-preview">
         <div class="dg-preview-grid" style=${gridStyle}>
