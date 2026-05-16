@@ -68,11 +68,23 @@ const SENSOR_ACCENT: Record<string, string> = {
 
 const CUSTOM_SENSOR_COLORS = ["#6366f1", "#22d3ee", "#f43f5e", "#84cc16", "#d946ef", "#fb923c", "#2dd4bf", "#a78bfa"];
 
-const DEVICE_TILE_WIDTH_MIN = 80;
-const DEVICE_TILE_WIDTH_MAX = 170;
-const DEVICE_TILE_HEIGHT_MIN = 80;
-const DEVICE_TILE_HEIGHT_MAX = 140;
-const DEVICE_TILE_STEP = 30;
+const DEVICE_TILE_WIDTH_OPTIONS = [
+  { label: "Small", value: 80 },
+  { label: "Default", value: 110 },
+  { label: "Wide", value: 140 },
+  { label: "Large", value: 170 },
+] as const;
+const DEVICE_TILE_HEIGHT_OPTIONS = [
+  { label: "Low", value: 80 },
+  { label: "Default", value: 110 },
+  { label: "Tall", value: 140 },
+] as const;
+
+function closestTileOption(value: number, options: readonly { value: number }[]): number {
+  return options.reduce((closest, option) => (
+    Math.abs(option.value - value) < Math.abs(closest - value) ? option.value : closest
+  ), options[0].value);
+}
 
 export class SmartAreaCardEditor extends LitElement {
   static styles = calvoRoomCardEditorStyles;
@@ -1125,10 +1137,8 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderDevices(config: SmartRoomCardConfig) {
-    const tileWidth = config.ui?.device_tile_width ?? config.ui?.device_tile_size ?? 110;
-    const tileHeight = config.ui?.device_tile_height ?? config.ui?.device_tile_size ?? 110;
-    const widthPct = Math.round(((tileWidth - DEVICE_TILE_WIDTH_MIN) / (DEVICE_TILE_WIDTH_MAX - DEVICE_TILE_WIDTH_MIN)) * 100);
-    const heightPct = Math.round(((tileHeight - DEVICE_TILE_HEIGHT_MIN) / (DEVICE_TILE_HEIGHT_MAX - DEVICE_TILE_HEIGHT_MIN)) * 100);
+    const tileWidth = closestTileOption(config.ui?.device_tile_width ?? config.ui?.device_tile_size ?? 110, DEVICE_TILE_WIDTH_OPTIONS);
+    const tileHeight = closestTileOption(config.ui?.device_tile_height ?? config.ui?.device_tile_size ?? 110, DEVICE_TILE_HEIGHT_OPTIONS);
     const GAP = 10;
     const editorW = this.offsetWidth > 0 ? this.offsetWidth : window.innerWidth;
     const cardGridEst = Math.max(200, editorW - 44); // editor padding 16×2 + ha-card 14×2 ≈ 44px delta
@@ -1147,10 +1157,18 @@ export class SmartAreaCardEditor extends LitElement {
               <span>Tile width</span>
               <span>Controls how many devices fit per row.</span>
             </div>
-            <div class="tile-size-range-wrap" style="--range-pct: ${widthPct}%">
-              <input class="tile-size-range" type="range" min=${String(DEVICE_TILE_WIDTH_MIN)} max=${String(DEVICE_TILE_WIDTH_MAX)} step=${String(DEVICE_TILE_STEP)}
-                     .value=${String(tileWidth)}
-                     @input=${(e: InputEvent) => this._setUi("device_tile_width", Number((e.target as HTMLInputElement).value))} />
+            <div class="tile-size-options tile-size-options--width">
+              ${DEVICE_TILE_WIDTH_OPTIONS.map((option) => html`
+                <button
+                  class="tile-size-option ${tileWidth === option.value ? "tile-size-option--active" : ""}"
+                  type="button"
+                  aria-pressed=${String(tileWidth === option.value)}
+                  @click=${() => this._setUi("device_tile_width", option.value)}
+                >
+                  <span>${option.label}</span>
+                  <strong>${option.value}px</strong>
+                </button>
+              `)}
             </div>
           </div>
           <div class="tile-size-slider">
@@ -1158,10 +1176,18 @@ export class SmartAreaCardEditor extends LitElement {
               <span>Tile height</span>
               <span>Controls the vertical space inside each device.</span>
             </div>
-            <div class="tile-size-range-wrap" style="--range-pct: ${heightPct}%">
-              <input class="tile-size-range" type="range" min=${String(DEVICE_TILE_HEIGHT_MIN)} max=${String(DEVICE_TILE_HEIGHT_MAX)} step=${String(DEVICE_TILE_STEP)}
-                     .value=${String(tileHeight)}
-                     @input=${(e: InputEvent) => this._setUi("device_tile_height", Number((e.target as HTMLInputElement).value))} />
+            <div class="tile-size-options tile-size-options--height">
+              ${DEVICE_TILE_HEIGHT_OPTIONS.map((option) => html`
+                <button
+                  class="tile-size-option ${tileHeight === option.value ? "tile-size-option--active" : ""}"
+                  type="button"
+                  aria-pressed=${String(tileHeight === option.value)}
+                  @click=${() => this._setUi("device_tile_height", option.value)}
+                >
+                  <span>${option.label}</span>
+                  <strong>${option.value}px</strong>
+                </button>
+              `)}
             </div>
           </div>
           <div class="tile-size-values">

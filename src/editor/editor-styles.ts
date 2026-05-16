@@ -953,6 +953,64 @@ export const calvoRoomCardEditorStyles = css`
     text-align: right;
   }
 
+  .tile-size-options {
+    display: grid;
+    gap: 6px;
+  }
+
+  .tile-size-options--width {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .tile-size-options--height {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .tile-size-option {
+    appearance: none;
+    -webkit-appearance: none;
+    min-width: 0;
+    min-height: 46px;
+    display: grid;
+    place-items: center;
+    gap: 2px;
+    padding: 7px 6px;
+    border: 1px solid var(--editor-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.055);
+    color: var(--editor-muted);
+    font: inherit;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+  }
+
+  .tile-size-option:hover {
+    border-color: color-mix(in srgb, var(--editor-accent) 52%, transparent);
+    background: color-mix(in srgb, var(--editor-accent) 11%, rgba(255, 255, 255, 0.055));
+    color: var(--editor-text);
+  }
+
+  .tile-size-option--active {
+    border-color: color-mix(in srgb, var(--editor-accent) 78%, transparent);
+    background: color-mix(in srgb, var(--editor-accent) 22%, rgba(255, 255, 255, 0.055));
+    color: var(--editor-text);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--editor-accent) 24%, transparent);
+  }
+
+  .tile-size-option span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .tile-size-option strong {
+    font-size: 0.82rem;
+    line-height: 1;
+  }
+
   .tile-size-range-wrap {
     position: relative;
     display: flex;
