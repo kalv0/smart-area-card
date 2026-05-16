@@ -770,7 +770,6 @@ export const smartRoomCardStyles = css`
   }
 
   .sensor-popup-item-row {
-    position: relative;
     display: flex;
     align-items: center;
     gap: 14px;
@@ -849,19 +848,19 @@ export const smartRoomCardStyles = css`
   }
 
   .sensor-popup-alert-flags {
-    position: absolute;
-    top: 10px;
-    right: 44px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
-    max-width: 46%;
+    width: clamp(92px, 30%, 138px);
+    max-width: 138px;
     padding: 7px 9px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.09);
     border: 1px solid rgba(255, 255, 255, 0.16);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+    align-self: center;
+    flex-shrink: 0;
     pointer-events: none;
   }
 
@@ -894,6 +893,7 @@ export const smartRoomCardStyles = css`
   .sensor-popup-item-arrow {
     --mdc-icon-size: 22px;
     color: rgba(255, 255, 255, 0.66);
+    align-self: center;
     flex-shrink: 0;
   }
 
