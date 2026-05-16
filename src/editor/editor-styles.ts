@@ -2919,7 +2919,30 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .sensor-battery-card .compact-check {
-    padding-top: 3px;
+    align-items: center;
+    gap: 7px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 2px 0 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .sensor-battery-card .compact-check input {
+    margin-top: 0;
+    cursor: pointer;
+  }
+
+  .sensor-battery-card .compact-check-copy {
+    display: block;
+  }
+
+  .sensor-battery-card .compact-check-title {
+    color: var(--editor-text);
+    line-height: 1.15;
   }
 
   .sensor-battery-card .compact-check-desc {

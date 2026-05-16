@@ -1149,7 +1149,7 @@ export class SmartAreaCardEditor extends LitElement {
         </div>
         ${this._renderSmartEntityPicker(trimmed, onEntity, ["sensor"], ["battery"], restrictToRoom, this._config?.room_id, onToggleShowAll, false, onClear)}
         ${trimmed ? html`
-          <span class="hint">${this._isEntityValid(trimmed) ? "Valid battery entity." : "Battery entity is not valid yet."}</span>
+          ${!this._isEntityValid(trimmed) ? html`<span class="hint">Battery entity is not valid yet.</span>` : nothing}
           ${this._renderCompactCheckField(`Enable battery alert (<= ${threshold}%)`, "Uses the card-level battery threshold for this header sensor.", alertEnabled, onAlertEnabled)}
         ` : html`<span class="hint">Optional. Auto-filled from the selected sensor when Home Assistant exposes a battery sensor on the same device.</span>`}
       </div>
@@ -1366,7 +1366,7 @@ export class SmartAreaCardEditor extends LitElement {
           <div class="field-title">Battery entity</div>
           <span class="hint">Battery source.</span>
           ${this._renderSmartEntityPicker(device.battery ?? "", (value) => this._setDevice(index, "battery", value), ["sensor"], ["battery"], batteryRestrict, roomId, (showAll) => this._setDeviceSelector(index, "battery", { ...(device.entity_selectors?.["battery"] ?? {}), restrict_to_room_area: !showAll, domains: ["sensor"] }))}
-          ${device.battery?.trim() ? html`<span class="hint">${this._isEntityValid(device.battery) ? "Valid battery entity." : "Battery entity is not valid yet."}</span>${this._renderCompactCheckField("Show battery level", "Shows the battery icon and percentage on the device tile.", device.show_battery !== false, (checked) => this._setDevice(index, "show_battery", checked))}${this._renderCompactCheckField(`Enable battery alert (<= ${this._config?.ui?.battery_threshold ?? 20}%)`, "Derives a low battery alert using the card-level battery alert settings.", device.battery_alert_enabled !== false, (checked) => this._setDevice(index, "battery_alert_enabled", checked))}` : html`<span class="hint">Optional. Creates a low battery alert and shows battery level on the tile.</span>`}
+          ${device.battery?.trim() ? html`${!this._isEntityValid(device.battery) ? html`<span class="hint">Battery entity is not valid yet.</span>` : nothing}${this._renderCompactCheckField("Show battery level", "Shows the battery icon and percentage on the device tile.", device.show_battery !== false, (checked) => this._setDevice(index, "show_battery", checked))}${this._renderCompactCheckField(`Enable battery alert (<= ${this._config?.ui?.battery_threshold ?? 20}%)`, "Derives a low battery alert using the card-level battery alert settings.", device.battery_alert_enabled !== false, (checked) => this._setDevice(index, "battery_alert_enabled", checked))}` : html`<span class="hint">Optional. Creates a low battery alert and shows battery level on the tile.</span>`}
         </div>
         <div></div>
       </div>
