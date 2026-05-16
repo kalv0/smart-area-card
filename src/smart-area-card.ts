@@ -660,16 +660,16 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                       <ha-icon icon=${item.icon}></ha-icon>
                     </span>
                     <span class="sensor-popup-item-meta">
-                      ${entityId ? html`<span class="sensor-popup-item-updated">Updated ${this._relativeTime(this.hass.states[entityId]?.last_updated)}</span>` : nothing}
                       <span class="sensor-popup-item-label">${meta.label}</span>
                       <span class="sensor-popup-item-value">${item.value}</span>
+                      ${entityId ? html`<span class="sensor-popup-item-updated">${this._relativeTime(this.hass.states[entityId]?.last_updated)}</span>` : nothing}
                       ${entityId ? html`<span class="sensor-popup-item-entity">${entityId}</span>` : nothing}
-                      ${alertFlags.length ? html`
-                        <span class="sensor-popup-alert-flags">
-                          ${alertFlags.map((flag) => html`<span class="sensor-popup-alert-flag">${flag}</span>`)}
-                        </span>
-                      ` : nothing}
                     </span>
+                    ${alertFlags.length ? html`
+                      <span class="sensor-popup-alert-flags">
+                        ${alertFlags.map((flag) => html`<span class="sensor-popup-alert-flag">${flag}</span>`)}
+                      </span>
+                    ` : nothing}
                     ${entityId ? html`<ha-icon class="sensor-popup-item-arrow" icon=${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>` : nothing}
                   </button>
                   ${entityId && expanded ? html`

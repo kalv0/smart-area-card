@@ -760,11 +760,12 @@ export const smartRoomCardStyles = css`
   }
 
   .sensor-popup-item-row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 14px;
     width: 100%;
-    padding: 14px 14px 8px;
+    padding: 14px 14px 10px;
     border: 0;
     background: transparent;
     color: inherit;
@@ -806,15 +807,16 @@ export const smartRoomCardStyles = css`
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
   }
 
   .sensor-popup-item-label {
-    font-size: 0.76rem;
-    color: rgba(255, 255, 255, 0.45);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    max-width: calc(100% - 92px);
+    font-size: 0.92rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: 0;
   }
 
   .sensor-popup-item-value {
@@ -832,29 +834,33 @@ export const smartRoomCardStyles = css`
   }
 
   .sensor-popup-item-updated {
-    font-size: 0.76rem;
-    color: rgba(255, 255, 255, 0.48);
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.52);
     line-height: 1.25;
   }
 
   .sensor-popup-alert-flags {
+    position: absolute;
+    top: 10px;
+    right: 44px;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
-    margin-top: 5px;
+    justify-content: flex-end;
+    max-width: 42%;
   }
 
   .sensor-popup-alert-flag {
     display: inline-flex;
     align-items: center;
     min-height: 19px;
-    padding: 2px 7px;
+    padding: 2px 6px;
     border-radius: var(--sr-radius-full);
-    background: rgba(255, 59, 48, 0.2);
-    border: 1px solid rgba(255, 59, 48, 0.45);
-    color: #ffd8d3;
-    font-size: 0.68rem;
-    font-weight: 800;
+    background: rgba(255, 59, 48, 0.11);
+    border: 1px solid rgba(255, 59, 48, 0.26);
+    color: rgba(255, 216, 211, 0.82);
+    font-size: 0.64rem;
+    font-weight: 750;
     line-height: 1;
   }
 
