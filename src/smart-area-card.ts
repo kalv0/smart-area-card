@@ -35,6 +35,9 @@ declare global {
 
   interface Window {
     customCards?: Array<Record<string, unknown>>;
+    loadCardHelpers?: () => Promise<{
+      createCardElement?: (config: unknown) => HTMLElement | Promise<HTMLElement>;
+    }>;
   }
 }
 
@@ -129,6 +132,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _changedEntityIds?: Set<string>;
   private _lastEntityRegistry?: HomeAssistantExtended["entities"];
   private _previousScrollLock?: { bodyOverflow: string; documentOverflow: string };
+  private _chartBuildVersion = 0;
 
   private readonly _press = new PressController(this);
   private readonly _imageFit = new ImageFitController(this);
@@ -207,7 +211,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       const chartContainers = this.shadowRoot?.querySelectorAll(".sensor-popup-chart");
       const missingChart = Array.from(chartContainers ?? []).some((el) => !el.firstElementChild);
       if (changedProps.has("_showClimateHistory") || changedProps.has("_config") || changedProps.has("_expandedSensorChartKeys") || missingChart) {
-        this._buildPopupCharts();
+        void this._buildPopupCharts();
       } else if (changedProps.has("hass")) {
         this.shadowRoot?.querySelectorAll(".sensor-popup-chart > *").forEach((el) => {
           (el as HTMLElement & { hass: HomeAssistant }).hass = this.hass;
@@ -221,26 +225,42 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._setPageScrollLocked(false);
   }
 
-  private _buildPopupCharts(): void {
+  private async _buildPopupCharts(): Promise<void> {
     this._destroyPopupCharts();
+    const buildVersion = this._chartBuildVersion;
     const items = this._renderModel?.climateItems ?? [];
-    const HistoryCard = customElements.get("hui-history-graph-card") as (new () => HTMLElement) | undefined;
-    if (!HistoryCard) return;
     for (const item of items) {
       if (!this._expandedSensorChartKeys.has(item.key)) continue;
       const entityId = this._entityIdForKey(item.key);
       if (!entityId) continue;
       const container = this.shadowRoot?.querySelector<HTMLElement>(`.sensor-popup-chart[data-key="${item.key}"]`);
       if (!container) continue;
-      container.innerHTML = "";
-      const card = new HistoryCard() as HTMLElement & { hass: HomeAssistant; setConfig(c: unknown): void };
-      card.hass = this.hass;
-      card.setConfig({ type: "history-graph", entities: [{ entity: entityId }], hours_to_show: 24 });
+      const card = await this._createHistoryGraphCard(entityId);
+      if (!card || buildVersion !== this._chartBuildVersion || !this._showClimateHistory) return;
+      container.replaceChildren();
       container.appendChild(card);
     }
   }
 
+  private async _createHistoryGraphCard(entityId: string): Promise<HTMLElement | undefined> {
+    const config = { type: "history-graph", entities: [{ entity: entityId }], hours_to_show: 24 };
+    const helpers = await window.loadCardHelpers?.().catch(() => undefined);
+    if (helpers?.createCardElement) {
+      const card = await helpers.createCardElement(config) as HTMLElement & { hass?: HomeAssistant };
+      card.hass = this.hass;
+      return card;
+    }
+
+    const HistoryCard = customElements.get("hui-history-graph-card") as (new () => HTMLElement) | undefined;
+    if (!HistoryCard) return undefined;
+    const card = new HistoryCard() as HTMLElement & { hass: HomeAssistant; setConfig(c: unknown): void };
+    card.hass = this.hass;
+    card.setConfig(config);
+    return card;
+  }
+
   private _destroyPopupCharts(): void {
+    this._chartBuildVersion += 1;
     this.shadowRoot?.querySelectorAll(".sensor-popup-chart").forEach((container) => {
       container.replaceChildren();
     });

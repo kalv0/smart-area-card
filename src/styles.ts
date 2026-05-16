@@ -765,6 +765,10 @@ export const smartRoomCardStyles = css`
       0 0 24px rgba(255, 69, 58, 0.16);
   }
 
+  .sensor-popup-item--alert:hover {
+    border-color: rgba(255, 69, 58, 0.86);
+  }
+
   .sensor-popup-item-row {
     position: relative;
     display: flex;
