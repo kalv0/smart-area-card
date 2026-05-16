@@ -2881,6 +2881,11 @@ export const calvoRoomCardEditorStyles = css`
     flex: 0 0 auto;
   }
 
+  .show-all-check.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+  }
+
   /* entity picker inside sensor-row body */
   .sensor-row-body ha-entity-picker,
   .sensor-row-body ha-selector,

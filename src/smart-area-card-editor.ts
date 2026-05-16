@@ -1622,19 +1622,25 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   ) {
     const hasRoom = Boolean(areaId?.trim());
     const areaLabel = areaId ? (this._areaName(areaId) || areaId) : "";
+    const normalizedValue = value.trim();
+    const areaEntityIds = hasRoom
+      ? this._areaEntityIdsFiltered(areaId, domains, deviceClasses)
+      : [];
+    const canRestrictToArea = !normalizedValue || areaEntityIds.includes(normalizedValue);
+    const effectiveRestrictToArea = restrictToArea && canRestrictToArea;
     const selectorRestricted = this._entitySelectorFiltered(domains, true, areaId, deviceClasses);
     const selectorAll = this._entitySelectorFiltered(domains, false, areaId, deviceClasses);
     const clear = onClear ?? (() => onChange(""));
     return html`
-      <div class="entity-field-wrap" style=${restrictToArea ? "" : "display:none"}>
+      <div class="entity-field-wrap" style=${effectiveRestrictToArea ? "" : "display:none"}>
         ${this._renderEntityPicker(value, onChange, disabled, selectorRestricted)}
         ${this._renderEntityClearButton(clear, disabled)}
       </div>
-      <div class="entity-field-wrap" style=${!restrictToArea ? "" : "display:none"}>
+      <div class="entity-field-wrap" style=${!effectiveRestrictToArea ? "" : "display:none"}>
         ${this._renderEntityPicker(value, onChange, disabled, selectorAll)}
         ${this._renderEntityClearButton(clear, disabled)}
       </div>
-      ${hasRoom && !disabled ? html`<label class="show-all-check"><input type="checkbox" .checked=${restrictToArea} @change=${(e: Event) => onToggleShowAll(!(e.target as HTMLInputElement).checked)} /><span>Show entities from ${areaLabel}</span></label>` : nothing}
+      ${hasRoom && !disabled ? html`<label class="show-all-check ${canRestrictToArea ? "" : "is-disabled"}"><input type="checkbox" .checked=${effectiveRestrictToArea} ?disabled=${!canRestrictToArea} @change=${(e: Event) => onToggleShowAll(!(e.target as HTMLInputElement).checked)} /><span>Show entities from ${areaLabel}</span></label>` : nothing}
     `;
   }
 
