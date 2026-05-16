@@ -375,7 +375,6 @@ export const smartRoomCardStyles = css`
 
   :host([performance-lite]) .glass,
   :host([performance-lite]) .integration-banner,
-  :host([performance-lite]) .alert-toggle,
   :host([performance-lite]) .alert-bar,
   :host([performance-lite]) .sensor-popup-overlay,
   :host([performance-lite]) .automation-panel {
@@ -385,7 +384,6 @@ export const smartRoomCardStyles = css`
 
   :host([no-blur]) .glass,
   :host([no-blur]) .integration-banner,
-  :host([no-blur]) .alert-toggle,
   :host([no-blur]) .alert-bar,
   :host([no-blur]) .sensor-popup-overlay,
   :host([no-blur]) .sensor-popup-item,
@@ -400,7 +398,6 @@ export const smartRoomCardStyles = css`
   :host([performance-lite]) .tile.outlined,
   :host([performance-lite]) .tile.alert,
   :host([performance-lite]) .tile.tile-error,
-  :host([performance-lite]) .alert-toggle,
   :host([performance-lite]) .alert-bar,
   :host([performance-lite]) .automation-panel,
   :host([performance-lite]) .sensor-popup {
@@ -609,57 +606,6 @@ export const smartRoomCardStyles = css`
 
   .tile-footer .badge ha-icon {
     --mdc-icon-size: 12px;
-  }
-
-  .alert-stack {
-    display: grid;
-    gap: var(--sr-space-2);
-    justify-items: start;
-  }
-
-  .alert-toggle {
-    appearance: none;
-    -webkit-appearance: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 28px;
-    padding: 0 9px;
-    border-radius: var(--sr-radius-md);
-    border: 1px solid rgba(255, 59, 48, 0.42);
-    background: rgba(255, 59, 48, 0.2);
-    color: #fff7f5;
-    backdrop-filter: blur(10px) saturate(120%);
-    -webkit-backdrop-filter: blur(10px) saturate(120%);
-    font: inherit;
-    font-size: 0.78rem;
-    font-weight: 700;
-    line-height: 1;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-    cursor: pointer;
-    transition: opacity 140ms ease, transform 140ms ease;
-  }
-
-  .alert-toggle:hover {
-    opacity: 0.86;
-    transform: translateY(-1px);
-  }
-
-  .alert-toggle ha-icon {
-    --mdc-icon-size: 16px;
-  }
-
-  .alert-toggle-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 16px;
-    height: 16px;
-    padding: 0 4px;
-    border-radius: var(--sr-radius-full);
-    background: rgba(255, 255, 255, 0.18);
-    font-size: var(--sr-text-xs);
-    line-height: 1;
   }
 
   .alert-bar {

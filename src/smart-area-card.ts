@@ -123,7 +123,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   @state() private _everExpanded = false;
   @state() private _showAutomationPanel = false;
   @state() private _showClimateHistory = false;
-  @state() private _alertsHidden = false;
   @state() private _expandedSensorChartKeys = new Set<string>();
 
   private _renderModel?: RenderModel;
@@ -136,7 +135,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _lastEntityRegistry?: HomeAssistantExtended["entities"];
   private _previousScrollLock?: { bodyOverflow: string; documentOverflow: string };
   private _chartBuildVersion = 0;
-  private _lastAlertSignature = "";
 
   private readonly _press = new PressController(this);
   private readonly _imageFit = new ImageFitController(this);
@@ -198,8 +196,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._changedEntityIds = undefined;
     this._restoreExpanded();
     this._restoreAutomationPanel();
-    this._restoreAlertPanels();
-    this._lastAlertSignature = "";
   }
 
   public getCardSize(): number {
@@ -321,7 +317,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
           });
           this._deviceByKey = new Map(this._renderModel.devices.map((device) => [device.key, device]));
           this._syncTrackedEntityRefs();
-          this._syncAlertPanelVisibility();
         } catch (err) {
           console.error("[smart-area-card] computeRenderModel failed:", err);
         }
@@ -340,8 +335,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       changedProps.has("_expanded") ||
       changedProps.has("_showAutomationPanel") ||
       changedProps.has("_showClimateHistory") ||
-      changedProps.has("_expandedSensorChartKeys") ||
-      changedProps.has("_alertsHidden")
+      changedProps.has("_expandedSensorChartKeys")
     ) {
       return true;
     }
@@ -417,28 +411,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const climateTotal = (this._renderModel?.climateAlertBadges ?? [])
       .reduce((sum, b) => sum + b.messages.length, 0);
     return badgeTotal + climateTotal;
-  }
-
-  private _alertSignature(): string {
-    const parts: string[] = [];
-    const alertsByBadge = this._renderModel?.alertsByBadge ?? {};
-    (Object.entries(alertsByBadge) as [SmartRoomHeaderBadge, string[]][])
-      .filter(([, messages]) => messages.length > 0)
-      .forEach(([badge, messages]) => messages.forEach((message) => parts.push(`${badge}:${message}`)));
-
-    (this._renderModel?.climateAlertBadges ?? [])
-      .filter((badge) => badge.messages.length > 0)
-      .forEach((badge) => badge.messages.forEach((message) => parts.push(`${badge.key}:${message}`)));
-
-    return parts.join("|");
-  }
-
-  private _syncAlertPanelVisibility(): void {
-    const signature = this._alertSignature();
-    if (signature !== this._lastAlertSignature) {
-      this._alertsHidden = false;
-      this._lastAlertSignature = signature;
-    }
   }
 
   private _reduceVisualEffects(): boolean {
@@ -534,37 +506,13 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
     if (!flatPanels.length) return nothing;
 
-    const label = this._alertsHidden ? "Show alert details" : "Hide alert details";
-    const countLabel = flatPanels.length > 1 ? html`<span class="alert-toggle-count">${flatPanels.length}</span>` : nothing;
-
-    return html`
-      <div class="alert-stack">
-        <button
-          class="alert-toggle"
-          aria-label=${label}
-          aria-expanded=${String(!this._alertsHidden)}
-          title=${label}
-          @click=${this._handleAlertToggleClick}
-        >
-          <span>Alerts</span>
-          ${countLabel}
-          <ha-icon icon=${this._alertsHidden ? "mdi:chevron-down" : "mdi:chevron-up"}></ha-icon>
-        </button>
-        ${this._alertsHidden ? nothing : repeat(flatPanels, ({ icon, message }, index) => `${index}:${icon}:${message}`, ({ icon, message }) => html`
-          <section class="alert-bar">
-            <ha-icon icon=${icon}></ha-icon>
-            <div class="alert-lines"><div>${message}</div></div>
-          </section>
-        `)}
-      </div>
-    `;
+    return html`${repeat(flatPanels, ({ icon, message }, index) => `${index}:${icon}:${message}`, ({ icon, message }) => html`
+      <section class="alert-bar">
+        <ha-icon icon=${icon}></ha-icon>
+        <div class="alert-lines"><div>${message}</div></div>
+      </section>
+    `)}`;
   }
-
-  private _handleAlertToggleClick = (event: Event): void => {
-    event.stopPropagation();
-    this._alertsHidden = !this._alertsHidden;
-    this._persistAlertPanels();
-  };
 
   private _renderAutomationBadge(): TemplateResult | typeof nothing {
     if (!this._config?.ui?.automation_badge_enabled) return nothing;
@@ -1196,14 +1144,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _persistAutomationPanel(): void {
     if (!this._config || this._config.expander?.persist_state === false) return;
     window.localStorage.setItem(storageKey(this._config, "automation-panel"), String(this._showAutomationPanel));
-  }
-
-  private _restoreAlertPanels(): void {
-    this._alertsHidden = false;
-  }
-
-  private _persistAlertPanels(): void {
-    // Alert detail cards are intentionally session-only so active alerts reopen with their details visible.
   }
 
   private _getInitialExpandedState(): boolean {
