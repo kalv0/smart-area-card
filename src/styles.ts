@@ -847,12 +847,12 @@ export const smartRoomCardStyles = css`
   }
 
   .sensor-popup-alert-flags {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    display: inline-grid;
+    grid-auto-columns: max-content;
+    justify-items: start;
     gap: 6px;
-    width: max-content;
-    max-width: min(42%, 168px);
+    width: fit-content;
+    max-width: none;
     margin-left: auto;
     padding: 7px 9px;
     border-radius: 12px;
@@ -860,7 +860,7 @@ export const smartRoomCardStyles = css`
     border: 1px solid rgba(255, 255, 255, 0.16);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
     align-self: center;
-    flex-shrink: 0;
+    flex: 0 0 auto;
     pointer-events: none;
   }
 
@@ -883,7 +883,7 @@ export const smartRoomCardStyles = css`
     font-weight: 750;
     line-height: 1.2;
     text-align: left;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
   }
 
   .sensor-popup-alert-flag--active {
