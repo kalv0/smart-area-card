@@ -477,7 +477,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
             ${room && this._config?.ui?.show_area_icon && model.areaIcon ? html`<ha-icon icon=${model.areaIcon}></ha-icon>` : nothing}
             ${room ? html`<span>${room}</span>` : nothing}
             <div class="header-states">
-              ${this._renderAlertToggle()}
               ${this._renderAutomationBadge()}
               ${this._renderHeaderBadge("door_closed")}
               ${this._renderHeaderBadge("lock_closed")}
@@ -495,26 +494,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
             : nothing}
         </div>
       </section>
-    `;
-  }
-
-  private _renderAlertToggle(): TemplateResult | typeof nothing {
-    const totalAlerts = this._totalAlertCount();
-    if (!totalAlerts) return nothing;
-
-    const countLabel = totalAlerts > 1 ? html`<span class="badge-count">${totalAlerts}</span>` : nothing;
-    const label = this._alertsHidden ? "Show alert details" : "Hide alert details";
-    return html`
-      <button
-        class="header-pill header-pill-red header-pill-button header-pill-clickable"
-        aria-label=${label}
-        aria-expanded=${String(!this._alertsHidden)}
-        title=${label}
-        @click=${this._handleAlertBadgeClick}
-      >
-        <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
-        ${countLabel}
-      </button>
     `;
   }
 
@@ -553,17 +532,35 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       .filter((b) => b.messages.length > 0)
       .forEach((b) => b.messages.forEach((message) => flatPanels.push({ icon: b.icon, message })));
 
-    if (!flatPanels.length || this._alertsHidden) return nothing;
+    if (!flatPanels.length) return nothing;
 
-    return html`${repeat(flatPanels, ({ icon, message }, index) => `${index}:${icon}:${message}`, ({ icon, message }) => html`
-      <section class="alert-bar">
-        <ha-icon icon=${icon}></ha-icon>
-        <div class="alert-lines"><div>${message}</div></div>
-      </section>
-    `)}`;
+    const label = this._alertsHidden ? "Show alert details" : "Hide alert details";
+    const countLabel = flatPanels.length > 1 ? html`<span class="alert-toggle-count">${flatPanels.length}</span>` : nothing;
+
+    return html`
+      <div class="alert-stack">
+        <button
+          class="alert-toggle"
+          aria-label=${label}
+          aria-expanded=${String(!this._alertsHidden)}
+          title=${label}
+          @click=${this._handleAlertToggleClick}
+        >
+          <span>Alerts</span>
+          ${countLabel}
+          <ha-icon icon=${this._alertsHidden ? "mdi:chevron-down" : "mdi:chevron-up"}></ha-icon>
+        </button>
+        ${this._alertsHidden ? nothing : repeat(flatPanels, ({ icon, message }, index) => `${index}:${icon}:${message}`, ({ icon, message }) => html`
+          <section class="alert-bar">
+            <ha-icon icon=${icon}></ha-icon>
+            <div class="alert-lines"><div>${message}</div></div>
+          </section>
+        `)}
+      </div>
+    `;
   }
 
-  private _handleAlertBadgeClick = (event: Event): void => {
+  private _handleAlertToggleClick = (event: Event): void => {
     event.stopPropagation();
     this._alertsHidden = !this._alertsHidden;
     this._persistAlertPanels();
