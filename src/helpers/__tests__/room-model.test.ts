@@ -170,49 +170,49 @@ describe("evaluateClimateAlert", () => {
     return makeEntity("sensor.temp", state, unit ? { unit_of_measurement: unit } : {});
   }
 
-  it("returns undefined when alert is disabled", () => {
+  it("returns undefined when alert has no conditions", () => {
     const entity = makeClimateEntity("25");
-    expect(evaluateClimateAlert("temperature", entity, { enabled: false, min: 30 }, "Temperature", "mdi:thermometer")).toBeUndefined();
+    expect(evaluateClimateAlert("temperature", entity, {}, "Temperature", "mdi:thermometer")).toBeUndefined();
   });
 
   it("returns undefined when entity is undefined", () => {
-    expect(evaluateClimateAlert("temperature", undefined, { enabled: true, min: 30 }, "Temperature", "mdi:thermometer")).toBeUndefined();
+    expect(evaluateClimateAlert("temperature", undefined, { min: 30 }, "Temperature", "mdi:thermometer")).toBeUndefined();
   });
 
   it("triggers on min threshold breach", () => {
-    const alert = evaluateClimateAlert("temperature", makeClimateEntity("15"), { enabled: true, min: 18 }, "Temperature", "mdi:thermometer");
+    const alert = evaluateClimateAlert("temperature", makeClimateEntity("15"), { min: 18 }, "Temperature", "mdi:thermometer");
     expect(alert).toBeDefined();
     expect(alert?.key).toBe("temperature");
   });
 
   it("does not trigger when value is above min", () => {
-    expect(evaluateClimateAlert("temperature", makeClimateEntity("22"), { enabled: true, min: 18 }, "Temperature", "mdi:thermometer")).toBeUndefined();
+    expect(evaluateClimateAlert("temperature", makeClimateEntity("22"), { min: 18 }, "Temperature", "mdi:thermometer")).toBeUndefined();
   });
 
   it("triggers on max threshold breach", () => {
-    const alert = evaluateClimateAlert("temperature", makeClimateEntity("35"), { enabled: true, max: 28 }, "Temperature", "mdi:thermometer");
+    const alert = evaluateClimateAlert("temperature", makeClimateEntity("35"), { max: 28 }, "Temperature", "mdi:thermometer");
     expect(alert).toBeDefined();
   });
 
   it("triggers on eq string match (presence)", () => {
     const entity = makeClimateEntity("on");
-    const alert = evaluateClimateAlert("presence", entity, { enabled: true, eq: "on" }, "Presence", "mdi:motion-sensor");
+    const alert = evaluateClimateAlert("presence", entity, { eq: "on" }, "Presence", "mdi:motion-sensor");
     expect(alert).toBeDefined();
     expect(alert?.key).toBe("presence");
   });
 
   it("does not trigger on eq string mismatch", () => {
     const entity = makeClimateEntity("off");
-    expect(evaluateClimateAlert("presence", entity, { enabled: true, eq: "on" }, "Presence", "mdi:motion-sensor")).toBeUndefined();
+    expect(evaluateClimateAlert("presence", entity, { eq: "on" }, "Presence", "mdi:motion-sensor")).toBeUndefined();
   });
 
   it("returns undefined when state is not numeric for numeric alert", () => {
     const entity = makeClimateEntity("unavailable");
-    expect(evaluateClimateAlert("temperature", entity, { enabled: true, min: 18 }, "Temperature", "mdi:thermometer")).toBeUndefined();
+    expect(evaluateClimateAlert("temperature", entity, { min: 18 }, "Temperature", "mdi:thermometer")).toBeUndefined();
   });
 
   it("includes sensor name and value in reason", () => {
-    const alert = evaluateClimateAlert("temperature", makeClimateEntity("15", "°C"), { enabled: true, min: 18 }, "Temperature", "mdi:thermometer");
+    const alert = evaluateClimateAlert("temperature", makeClimateEntity("15", "°C"), { min: 18 }, "Temperature", "mdi:thermometer");
     expect(alert?.reason).toBe("Temperature: 15 °C");
   });
 });

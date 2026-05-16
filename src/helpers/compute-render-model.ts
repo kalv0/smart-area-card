@@ -161,8 +161,9 @@ export function computeRenderModel(
     entity: getEntity(states, sc.entity),
   }));
   customSensorEntries.forEach(({ config: sc, entity }, i) => {
-    if (!sc.alert?.enabled || !entity || isUnavailable(entity)) return;
+    if (!sc.alert || !entity || isUnavailable(entity)) return;
     const { min, max, text_eq, text_neq } = sc.alert;
+    if (min === undefined && max === undefined && text_eq === undefined && text_neq === undefined) return;
     const state = entity.state;
     let triggered = false;
     if (text_eq !== undefined && state === text_eq) triggered = true;

@@ -156,7 +156,14 @@ export function evaluateClimateAlert(
   label: string,
   icon: string,
 ): ClimateAlert | undefined {
-  if (!alertConfig?.enabled || !entity || isUnavailable(entity)) {
+  const hasCondition = alertConfig
+    && (alertConfig.min !== undefined
+      || alertConfig.max !== undefined
+      || alertConfig.eq !== undefined
+      || alertConfig.neq !== undefined
+      || alertConfig.text_eq !== undefined
+      || alertConfig.text_neq !== undefined);
+  if (!hasCondition || !entity || isUnavailable(entity)) {
     return undefined;
   }
 

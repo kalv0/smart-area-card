@@ -2926,38 +2926,6 @@ export const calvoRoomCardEditorStyles = css`
     display: none;
   }
 
-  .sensor-battery-condition,
-  .battery-alert-condition-summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    width: fit-content;
-    max-width: 100%;
-    padding: 6px 8px;
-    border-radius: 10px;
-    background: rgba(255, 59, 48, 0.13);
-    border: 1px solid rgba(255, 59, 48, 0.32);
-    color: #ffb4aa;
-    font-size: 0.76rem;
-    font-weight: 750;
-    overflow-wrap: anywhere;
-  }
-
-  .sensor-battery-condition ha-icon,
-  .battery-alert-condition-summary ha-icon {
-    --mdc-icon-size: 15px;
-    flex: 0 0 auto;
-  }
-
-  .sr-alert-group--battery {
-    border-color: rgba(255, 59, 48, 0.26);
-    background: color-mix(in srgb, var(--editor-danger) 9%, transparent);
-  }
-
-  .battery-alert-summary {
-    gap: 8px;
-  }
-
   /* entity in custom sensor row (inline flex item) */
   .sensor-row-entity {
     flex: 1 1 180px;
@@ -3276,63 +3244,12 @@ export const calvoRoomCardEditorStyles = css`
     flex-shrink: 0;
   }
 
-  .sr-alert-control {
-    display: grid;
-    justify-items: center;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .sr-alert-control-label {
-    max-width: 64px;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.58rem;
-    font-weight: 800;
-    line-height: 1.05;
-    text-align: center;
-    text-transform: uppercase;
-  }
-
   .sr-primary-star {
     font-size: 0.8rem;
     color: #f59e0b;
     line-height: 1;
     user-select: none;
     -webkit-user-select: none;
-  }
-
-  .sr-alert-toggle {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    padding: 4px 6px;
-    border-radius: 8px;
-    color: rgba(255, 255, 255, 0.45);
-    --mdc-icon-size: 14px;
-    transition: color 0.14s, background 0.14s;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .sr-alert-toggle:hover {
-    color: rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.07);
-  }
-
-  .sr-alert-toggle--active {
-    color: #fb923c;
-  }
-
-  .sr-alert-toggle--active:hover {
-    color: #fdba74;
-  }
-
-  .sr-alert-toggle .ios-toggle {
-    padding: 0;
-    border: none;
-    background: transparent;
   }
 
   .sr-body {
