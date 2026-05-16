@@ -23,7 +23,7 @@ import { DEVICE_ENTITY_PLACEHOLDER, EXTRA_FIELD_PLACEHOLDERS } from "./editor/ed
 import { BUILTIN_TYPE_DEFINITIONS } from "./editor/builtin-types";
 import { INITIAL_STATES, OPERATORS, COLOR_OPTIONS, HEADER_BADGE_OPTIONS, ALERT_HEADER_BADGE_OPTIONS } from "./editor/editor-constants";
 import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUndefined, valueFromEvent } from "./editor/editor-utils";
-import { normalizeAssetPath } from "./helpers";
+import { DEVICE_TILE_SIZE_PRESETS, normalizeAssetPath, resolveDeviceTileSize } from "./helpers";
 import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
 import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
 import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered, relatedBatteryEntityId } from "./editor/registry-helpers";
@@ -67,18 +67,6 @@ const SENSOR_ACCENT: Record<string, string> = {
 };
 
 const CUSTOM_SENSOR_COLORS = ["#6366f1", "#22d3ee", "#f43f5e", "#84cc16", "#d946ef", "#fb923c", "#2dd4bf", "#a78bfa"];
-
-const DEVICE_TILE_WIDTH_OPTIONS = [
-  { label: "Small", value: 80 },
-  { label: "Default", value: 110 },
-  { label: "Wide", value: 140 },
-  { label: "Large", value: 170 },
-] as const;
-const DEVICE_TILE_HEIGHT_OPTIONS = [
-  { label: "Low", value: 80 },
-  { label: "Default", value: 110 },
-  { label: "Tall", value: 140 },
-] as const;
 
 export class SmartAreaCardEditor extends LitElement {
   static styles = calvoRoomCardEditorStyles;
@@ -1131,8 +1119,8 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderDevices(config: SmartRoomCardConfig) {
-    const tileWidth = config.ui?.device_tile_width ?? config.ui?.device_tile_size ?? 110;
-    const tileHeight = config.ui?.device_tile_height ?? config.ui?.device_tile_size ?? 110;
+    const tilePreset = resolveDeviceTileSize(config.ui);
+    const setTilePreset = (width: number, height: number) => this._patch({ ui: { ...(this._config?.ui ?? {}), device_tile_width: width, device_tile_height: height } });
     return html`
       <section class="section">
         <div class="devices-header">
@@ -1144,45 +1132,23 @@ export class SmartAreaCardEditor extends LitElement {
         <div class="tile-size-control">
           <div class="tile-size-slider">
             <div class="tile-size-label">
-              <span>Tile width</span>
-              <span>Controls how many devices fit per row.</span>
+              <span>Tile size</span>
+              <span>Applies width and height together.</span>
             </div>
-            <div class="tile-size-options tile-size-options--width">
-              ${DEVICE_TILE_WIDTH_OPTIONS.map((option) => html`
+            <div class="tile-size-options tile-size-options--preset">
+              ${DEVICE_TILE_SIZE_PRESETS.map((option) => {
+                const active = tilePreset.label === option.label;
+                return html`
                 <button
-                  class="tile-size-option ${tileWidth === option.value ? "tile-size-option--active" : ""}"
+                  class="tile-size-option ${active ? "tile-size-option--active" : ""}"
                   type="button"
-                  aria-pressed=${String(tileWidth === option.value)}
-                  @click=${() => this._setUi("device_tile_width", option.value)}
+                  aria-pressed=${String(active)}
+                  @click=${() => setTilePreset(option.width, option.height)}
                 >
                   <span>${option.label}</span>
-                  <strong>${option.value}px</strong>
                 </button>
-              `)}
+              `})}
             </div>
-          </div>
-          <div class="tile-size-slider">
-            <div class="tile-size-label">
-              <span>Tile height</span>
-              <span>Controls the vertical space inside each device.</span>
-            </div>
-            <div class="tile-size-options tile-size-options--height">
-              ${DEVICE_TILE_HEIGHT_OPTIONS.map((option) => html`
-                <button
-                  class="tile-size-option ${tileHeight === option.value ? "tile-size-option--active" : ""}"
-                  type="button"
-                  aria-pressed=${String(tileHeight === option.value)}
-                  @click=${() => this._setUi("device_tile_height", option.value)}
-                >
-                  <span>${option.label}</span>
-                  <strong>${option.value}px</strong>
-                </button>
-              `)}
-            </div>
-          </div>
-          <div class="tile-size-values">
-            <span>Card grid</span>
-            <span>${tileWidth} x ${tileHeight}px</span>
           </div>
         </div>
         ${this._renderDeviceGridPreview(config)}
@@ -1213,8 +1179,7 @@ export class SmartAreaCardEditor extends LitElement {
 
   private _renderDeviceGridPreview(config: SmartRoomCardConfig) {
     const devices = config.devices ?? [];
-    const tileWidth = config.ui?.device_tile_width ?? config.ui?.device_tile_size ?? 110;
-    const tileHeight = config.ui?.device_tile_height ?? config.ui?.device_tile_size ?? 110;
+    const { width: tileWidth, height: tileHeight } = resolveDeviceTileSize(config.ui);
     const gridStyle = `grid-template-columns: repeat(auto-fill, minmax(${tileWidth}px, 1fr)); --sr-tile-width: ${tileWidth}px; --sr-tile-height: ${tileHeight}px; --sr-tile-size: ${tileHeight}px`;
     return html`
       <div class="dg-preview">

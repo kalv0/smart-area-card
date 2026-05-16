@@ -11,6 +11,7 @@ import {
   evaluateCondition,
   getBatteryColor,
   getBatteryIcon,
+  resolveDeviceTileSize,
   storageKey,
   type ComputedDeviceModel,
   type PopupConfig,
@@ -770,8 +771,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   private _renderGrid(): TemplateResult {
-    const tileWidth = this._config?.ui?.device_tile_width ?? this._config?.ui?.device_tile_size ?? 110;
-    const tileHeight = this._config?.ui?.device_tile_height ?? this._config?.ui?.device_tile_size ?? 110;
+    const { width: tileWidth, height: tileHeight } = resolveDeviceTileSize(this._config?.ui);
     return html`
       <section class="device-zone">
         <div class="device-grid" style="grid-template-columns: repeat(auto-fill, minmax(${tileWidth}px, 1fr)); --sr-tile-width: ${tileWidth}px; --sr-tile-height: ${tileHeight}px; --sr-tile-size: ${tileHeight}px">

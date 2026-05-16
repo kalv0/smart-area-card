@@ -958,11 +958,7 @@ export const calvoRoomCardEditorStyles = css`
     gap: 6px;
   }
 
-  .tile-size-options--width {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .tile-size-options--height {
+  .tile-size-options--preset {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -1004,11 +1000,6 @@ export const calvoRoomCardEditorStyles = css`
     white-space: nowrap;
     font-size: 0.72rem;
     font-weight: 700;
-  }
-
-  .tile-size-option strong {
-    font-size: 0.82rem;
-    line-height: 1;
   }
 
   .tile-size-range-wrap {
@@ -1085,13 +1076,6 @@ export const calvoRoomCardEditorStyles = css`
     border: none;
     cursor: pointer;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.28);
-  }
-
-  .tile-size-values {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.78rem;
-    color: var(--editor-muted);
   }
 
   .bg-crop-control {
