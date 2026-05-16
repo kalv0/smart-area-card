@@ -80,3 +80,26 @@ export function buildEntitySelectorFiltered(
   }
   return { entity: entitySpec };
 }
+
+export function relatedBatteryEntityId(
+  entityRegistry: EntityRegistryEntry[],
+  states: Record<string, { attributes?: Record<string, unknown> }>,
+  entityId?: string,
+): string | undefined {
+  const normalizedEntityId = (entityId ?? "").trim();
+  if (!normalizedEntityId) return undefined;
+
+  const source = entityRegistry.find((entry) => entry.entity_id === normalizedEntityId);
+  const deviceId = source?.device_id?.trim();
+  if (!deviceId) return undefined;
+
+  return entityRegistry
+    .filter((entry) => {
+      if (entry.entity_id === normalizedEntityId) return false;
+      if (entry.device_id !== deviceId) return false;
+      if (!entry.entity_id.startsWith("sensor.")) return false;
+      return states[entry.entity_id]?.attributes?.device_class === "battery";
+    })
+    .map((entry) => entry.entity_id)
+    .sort((a, b) => a.localeCompare(b))[0];
+}

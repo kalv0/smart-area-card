@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered } from "../registry-helpers";
+import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered, relatedBatteryEntityId } from "../registry-helpers";
 import type { EntityRegistryEntry, DeviceRegistryEntry } from "../../types/ha-extensions";
 
 // --- normalizeDomains ---
@@ -170,5 +170,33 @@ describe("buildEntitySelectorFiltered", () => {
   it("sets device_class as array when multiple classes and no includeEntities", () => {
     const result = buildEntitySelectorFiltered([], undefined, ["motion", "door"]);
     expect(result).toEqual({ entity: { device_class: ["motion", "door"] } });
+  });
+});
+
+// --- relatedBatteryEntityId ---
+
+describe("relatedBatteryEntityId", () => {
+  const entities: EntityRegistryEntry[] = [
+    makeEntity("light.desk", undefined, "dev1"),
+    makeEntity("sensor.desk_battery", undefined, "dev1"),
+    makeEntity("sensor.desk_signal", undefined, "dev1"),
+    makeEntity("sensor.other_battery", undefined, "dev2"),
+  ];
+  const states: Record<string, { attributes?: Record<string, unknown> }> = {
+    "sensor.desk_battery": { attributes: { device_class: "battery" } },
+    "sensor.desk_signal": { attributes: { device_class: "signal_strength" } },
+    "sensor.other_battery": { attributes: { device_class: "battery" } },
+  };
+
+  it("finds the battery sensor on the same device", () => {
+    expect(relatedBatteryEntityId(entities, states, "light.desk")).toBe("sensor.desk_battery");
+  });
+
+  it("ignores battery sensors from other devices", () => {
+    expect(relatedBatteryEntityId(entities, states, "sensor.other_battery")).toBeUndefined();
+  });
+
+  it("returns undefined when the entity is not in the registry", () => {
+    expect(relatedBatteryEntityId(entities, states, "light.missing")).toBeUndefined();
   });
 });

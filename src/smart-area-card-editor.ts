@@ -26,7 +26,7 @@ import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUnd
 import { normalizeAssetPath } from "./helpers";
 import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
 import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
-import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered } from "./editor/registry-helpers";
+import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered, relatedBatteryEntityId } from "./editor/registry-helpers";
 import { patchSensor, patchSensorIcon, patchSensorFilter, patchSensorAlert, addCustomSensor, removeCustomSensor, updateCustomSensor, updateCustomSensorAlert, getNormalizedSensorOrder, moveSensorInOrder, reorderSensorsInOrder, bubbleSensorAboveEmpty, sinkSensorBelowFilled } from "./editor/sensor-config";
 import { addNamedState, removeNamedState, updateNamedState, resetPresetState, resetPresetAlert, resetPresetOffline, addNamedAlert, removeNamedAlert, updateNamedAlert } from "./editor/named-item-config";
 
@@ -2273,7 +2273,16 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
 
     if (key === "entity") {
       const nextEntity = String(value ?? "");
-      devices[index] = this._syncDeviceWithEntity({ ...current, entity: nextEntity }, current.entity, nextEntity);
+      const previousBattery = this._relatedBatteryEntityId(current.entity);
+      const nextBattery = this._relatedBatteryEntityId(nextEntity);
+      const currentBattery = current.battery?.trim() ?? "";
+      const shouldSyncBattery = !currentBattery || (Boolean(previousBattery) && currentBattery === previousBattery);
+      const nextDevice = {
+        ...current,
+        entity: nextEntity,
+        ...(shouldSyncBattery ? { battery: nextBattery } : {}),
+      };
+      devices[index] = this._syncDeviceWithEntity(nextDevice, current.entity, nextEntity);
       this._patch({ devices });
       return;
     }
@@ -2340,6 +2349,9 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   }
   private _syncDeviceWithEntity(device: SmartRoomDeviceConfig, previousEntity: string, nextEntity: string): SmartRoomDeviceConfig {
     return syncDeviceWithEntity(this._typeDefinitions, device, previousEntity, nextEntity, this._config?.ui?.battery_threshold ?? 20, this._config?.ui);
+  }
+  private _relatedBatteryEntityId(entityId?: string): string | undefined {
+    return relatedBatteryEntityId(this._entityRegistry, this.hass?.states ?? {}, entityId);
   }
   private _buildPreset(type: SmartRoomDeviceConfig["type"], entity: string, device?: SmartRoomDeviceConfig): SmartRoomDeviceConfig {
     return buildPreset(this._typeDefinitions, type, entity, device);
