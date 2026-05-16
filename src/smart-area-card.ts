@@ -567,6 +567,24 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     if (entityId) this._openEntityHistory(entityId);
   };
 
+  private _sensorAlertFlags(key: string): string[] {
+    const sensors = this._config?.sensors;
+    if (!sensors) return [];
+    const alert = key.startsWith("custom_")
+      ? sensors.custom?.[Number(key.slice(7))]?.alert
+      : sensors.alerts?.[key as keyof NonNullable<typeof sensors.alerts>];
+    if (!alert?.enabled) return [];
+
+    const flags: string[] = [];
+    if ("min" in alert && alert.min !== undefined) flags.push(`Min ${alert.min}`);
+    if ("max" in alert && alert.max !== undefined) flags.push(`Max ${alert.max}`);
+    if ("eq" in alert && alert.eq !== undefined) flags.push(`= ${alert.eq}`);
+    if ("neq" in alert && alert.neq !== undefined) flags.push(`!= ${alert.neq}`);
+    if ("text_eq" in alert && alert.text_eq !== undefined) flags.push(`Text = ${alert.text_eq}`);
+    if ("text_neq" in alert && alert.text_neq !== undefined) flags.push(`Text != ${alert.text_neq}`);
+    return flags.length ? flags : ["Alert"];
+  }
+
   private _renderSensorPopup(): TemplateResult | typeof nothing {
     if (this._config?.ui?.header_sensors_enabled === false) return nothing;
     const items = this._renderModel?.climateItems ?? [];
@@ -626,8 +644,10 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                 ? { label: this._config?.sensors?.custom?.[Number(item.key.slice(7))]?.name ?? item.key, color: "#94a3b8" }
                 : (POPUP_META[item.key] ?? { label: item.key, color: "#94a3b8" });
               const expanded = this._expandedSensorChartKeys.has(item.key);
+              const alertFlags = this._sensorAlertFlags(item.key);
+              const isAlert = item.className.includes("alert");
               return html`
-                <div class="sensor-popup-item ${this._blurEnabled() ? "glass" : ""}">
+                <div class="sensor-popup-item ${this._blurEnabled() ? "glass" : ""} ${isAlert ? "sensor-popup-item--alert" : ""}">
                   <button
                     class="sensor-popup-item-row ${entityId ? "sensor-popup-item-row--toggle" : ""}"
                     type="button"
@@ -640,10 +660,15 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                       <ha-icon icon=${item.icon}></ha-icon>
                     </span>
                     <span class="sensor-popup-item-meta">
+                      ${entityId ? html`<span class="sensor-popup-item-updated">Updated ${this._relativeTime(this.hass.states[entityId]?.last_updated)}</span>` : nothing}
                       <span class="sensor-popup-item-label">${meta.label}</span>
                       <span class="sensor-popup-item-value">${item.value}</span>
                       ${entityId ? html`<span class="sensor-popup-item-entity">${entityId}</span>` : nothing}
-                      ${entityId ? html`<span class="sensor-popup-item-updated">Updated ${this._relativeTime(this.hass.states[entityId]?.last_updated)}</span>` : nothing}
+                      ${alertFlags.length ? html`
+                        <span class="sensor-popup-alert-flags">
+                          ${alertFlags.map((flag) => html`<span class="sensor-popup-alert-flag">${flag}</span>`)}
+                        </span>
+                      ` : nothing}
                     </span>
                     ${entityId ? html`<ha-icon class="sensor-popup-item-arrow" icon=${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>` : nothing}
                   </button>
