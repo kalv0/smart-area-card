@@ -2927,7 +2927,8 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .entity-field-wrap ha-selector,
-  .entity-field-wrap ha-entity-picker {
+  .entity-field-wrap ha-entity-picker,
+  .entity-field-wrap input {
     display: block;
     width: 100%;
   }

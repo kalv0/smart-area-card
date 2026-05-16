@@ -564,11 +564,13 @@ export class SmartAreaCardEditor extends LitElement {
               ${darkCond === "lux" ? html`
                 <div class="row single">
                   <label>Lux sensor</label>
-                  <ha-selector .hass=${this.hass}
-                    .selector=${{ entity: { domain: "sensor", device_class: "illuminance" } }}
-                    .value=${images.dark_mode_lux_entity ?? ""}
-                    @value-changed=${(e: CustomEvent) => this._setImageKey("dark_mode_lux_entity", e.detail?.value || undefined)}
-                  ></ha-selector>
+                  ${this._renderClearableEntityPicker(
+                    images.dark_mode_lux_entity ?? "",
+                    (value) => this._setImageKey("dark_mode_lux_entity", value || undefined),
+                    false,
+                    { entity: { domain: "sensor", device_class: "illuminance" } },
+                    () => this._setImageKey("dark_mode_lux_entity", undefined),
+                  )}
                 </div>
                 <div class="row single">
                   <label>Threshold (lux)
@@ -1442,10 +1444,34 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     nativePicker = false,
   ) {
     return nativePicker
-      ? html`<div class="field-card"><div class="field-title">${label}</div><span class="hint">${hint}</span>${this._renderEntityPicker(value, onChange)}${example ? html`<span class="hint">${example}</span>` : nothing}</div>`
+      ? html`<div class="field-card"><div class="field-title">${label}</div><span class="hint">${hint}</span>${this._renderClearableEntityPicker(value, onChange)}${example ? html`<span class="hint">${example}</span>` : nothing}</div>`
       : html`<label>${label}<span class="hint">${hint}</span>${options?.length
       ? html`<select .value=${value} @change=${(e: Event) => onChange(valueFromEvent(e))}>${options.map((option) => html`<option value=${option}>${option}</option>`)}</select>`
       : html`<input .value=${value} @input=${(e: InputEvent) => onChange(valueFromEvent(e))} />`}${example ? html`<span class="hint">${example}</span>` : nothing}</label>`;
+  }
+
+  private _renderEntityClearButton(onClear: () => void, disabled = false) {
+    if (disabled) return nothing;
+    return html`
+      <button type="button" class="entity-clear-x" aria-label="Clear entity" @click=${(e: Event) => { e.stopPropagation(); onClear(); }}>
+        <ha-icon icon="mdi:close"></ha-icon>
+      </button>
+    `;
+  }
+
+  private _renderClearableEntityPicker(
+    value: string,
+    onChange: (value: string) => void,
+    disabled = false,
+    selector: Record<string, unknown> = { entity: {} },
+    onClear: () => void = () => onChange(""),
+  ) {
+    return html`
+      <div class="entity-field-wrap">
+        ${this._renderEntityPicker(value, onChange, disabled, selector)}
+        ${this._renderEntityClearButton(onClear, disabled)}
+      </div>
+    `;
   }
 
   private _renderEntityPicker(
@@ -1517,17 +1543,15 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     const areaLabel = areaId ? (this._areaName(areaId) || areaId) : "";
     const selectorRestricted = this._entitySelectorFiltered(domains, true, areaId, deviceClasses);
     const selectorAll = this._entitySelectorFiltered(domains, false, areaId, deviceClasses);
-    const clearBtn = onClear
-      ? html`<button type="button" class="entity-clear-x" aria-label="Clear entity" @click=${(e: Event) => { e.stopPropagation(); onClear(); }}><ha-icon icon="mdi:close"></ha-icon></button>`
-      : nothing;
+    const clear = onClear ?? (() => onChange(""));
     return html`
       <div class="entity-field-wrap" style=${restrictToArea ? "" : "display:none"}>
         ${this._renderEntityPicker(value, onChange, disabled, selectorRestricted)}
-        ${clearBtn}
+        ${this._renderEntityClearButton(clear, disabled)}
       </div>
       <div class="entity-field-wrap" style=${!restrictToArea ? "" : "display:none"}>
         ${this._renderEntityPicker(value, onChange, disabled, selectorAll)}
-        ${clearBtn}
+        ${this._renderEntityClearButton(clear, disabled)}
       </div>
       ${hasRoom && !disabled ? html`<label class="show-all-check"><input type="checkbox" .checked=${restrictToArea} @change=${(e: Event) => onToggleShowAll(!(e.target as HTMLInputElement).checked)} /><span>Show entities from ${areaLabel}</span></label>` : nothing}
     `;
