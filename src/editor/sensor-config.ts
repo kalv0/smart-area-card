@@ -4,6 +4,7 @@ type Sensors = SmartRoomCardConfig["sensors"];
 type SensorAlertKey = "temperature" | "humidity" | "co2" | "voc" | "pm25" | "pm10" | "aqi" | "presence" | "noise" | "illuminance" | "power" | "energy" | "carbon_monoxide" | "radon" | "moisture";
 type SensorFilterKey = SensorAlertKey;
 type AlertField = "enabled" | "min" | "max" | "eq" | "neq" | "text_eq" | "text_neq";
+type BatteryField = "entity" | "alert_enabled" | "restrict_to_room_area";
 
 export const DEFAULT_SENSOR_ORDER: string[] = ["temperature", "humidity", "presence", "co2", "illuminance", "voc", "pm25", "pm10", "aqi", "noise", "power", "energy", "carbon_monoxide", "radon", "moisture"];
 
@@ -131,6 +132,21 @@ export function patchSensorAlert(
     alerts: {
       ...(sensors?.alerts ?? {}),
       [key]: { ...(sensors?.alerts?.[key] ?? {}), [field]: value },
+    },
+  };
+}
+
+export function patchSensorBattery(
+  sensors: Sensors,
+  key: SensorAlertKey,
+  field: BatteryField,
+  value: string | boolean | undefined,
+): Sensors {
+  return {
+    ...(sensors ?? {}),
+    batteries: {
+      ...(sensors?.batteries ?? {}),
+      [key]: { ...(sensors?.batteries?.[key] ?? {}), [field]: value },
     },
   };
 }

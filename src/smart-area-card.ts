@@ -10,6 +10,7 @@ import {
   canToggle,
   evaluateCondition,
   getBatteryColor,
+  getBatteryLevel,
   getBatteryIcon,
   resolveDeviceTileSize,
   storageKey,
@@ -595,20 +596,31 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const alert = key.startsWith("custom_")
       ? sensors.custom?.[Number(key.slice(7))]?.alert
       : sensors.alerts?.[key as keyof NonNullable<typeof sensors.alerts>];
-    if (!alert?.enabled) return [];
-
     const entity = entityId ? this.hass?.states?.[entityId] : undefined;
     const state = entity?.state;
     const value = Number(state);
     const unit = entity?.attributes?.unit_of_measurement ? String(entity.attributes.unit_of_measurement) : "";
     const formatNumber = (n: number): string => `${n}${unit}`;
     const flags: SensorPopupAlertFlag[] = [];
-    if ("min" in alert && alert.min !== undefined) flags.push({ label: `Min.${formatNumber(alert.min)}`, active: Number.isFinite(value) && value < alert.min });
-    if ("max" in alert && alert.max !== undefined) flags.push({ label: `Max.${formatNumber(alert.max)}`, active: Number.isFinite(value) && value > alert.max });
-    if ("eq" in alert && alert.eq !== undefined) flags.push({ label: `= ${typeof alert.eq === "number" ? formatNumber(alert.eq) : alert.eq}`, active: state === String(alert.eq) });
-    if ("neq" in alert && alert.neq !== undefined) flags.push({ label: `!= ${alert.neq}`, active: state !== undefined && state !== alert.neq });
-    if ("text_eq" in alert && alert.text_eq !== undefined) flags.push({ label: `Text = ${alert.text_eq}`, active: state === alert.text_eq });
-    if ("text_neq" in alert && alert.text_neq !== undefined) flags.push({ label: `Text != ${alert.text_neq}`, active: state !== undefined && state !== alert.text_neq });
+    if (alert?.enabled) {
+      if ("min" in alert && alert.min !== undefined) flags.push({ label: `Min.${formatNumber(alert.min)}`, active: Number.isFinite(value) && value < alert.min });
+      if ("max" in alert && alert.max !== undefined) flags.push({ label: `Max.${formatNumber(alert.max)}`, active: Number.isFinite(value) && value > alert.max });
+      if ("eq" in alert && alert.eq !== undefined) flags.push({ label: `= ${typeof alert.eq === "number" ? formatNumber(alert.eq) : alert.eq}`, active: state === String(alert.eq) });
+      if ("neq" in alert && alert.neq !== undefined) flags.push({ label: `!= ${alert.neq}`, active: state !== undefined && state !== alert.neq });
+      if ("text_eq" in alert && alert.text_eq !== undefined) flags.push({ label: `Text = ${alert.text_eq}`, active: state === alert.text_eq });
+      if ("text_neq" in alert && alert.text_neq !== undefined) flags.push({ label: `Text != ${alert.text_neq}`, active: state !== undefined && state !== alert.text_neq });
+    }
+    const batteryConfig = key.startsWith("custom_")
+      ? {
+          entity: sensors.custom?.[Number(key.slice(7))]?.battery,
+          alert_enabled: sensors.custom?.[Number(key.slice(7))]?.battery_alert_enabled,
+        }
+      : sensors.batteries?.[key as keyof NonNullable<typeof sensors.batteries>];
+    if (batteryConfig?.entity && batteryConfig.alert_enabled !== false && this._config?.ui?.battery_alerts_enabled !== false) {
+      const threshold = this._config?.ui?.battery_threshold ?? 20;
+      const batteryLevel = getBatteryLevel(this.hass?.states?.[batteryConfig.entity]);
+      flags.push({ label: `Battery <= ${threshold}%`, active: batteryLevel !== undefined && batteryLevel <= threshold });
+    }
     return flags.length ? flags : [{ label: "Alert", active: false }];
   }
 

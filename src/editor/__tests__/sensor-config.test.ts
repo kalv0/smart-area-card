@@ -4,6 +4,7 @@ import {
   patchSensorIcon,
   patchSensorFilter,
   patchSensorAlert,
+  patchSensorBattery,
   addCustomSensor,
   removeCustomSensor,
   updateCustomSensor,
@@ -18,6 +19,7 @@ const base = (): Sensors => ({
   icons: { temperature: "mdi:thermometer" },
   filters: { temperature: { restrict_to_room_area: true } },
   alerts: { temperature: { enabled: true, min: 18, max: 26 } },
+  batteries: { temperature: { entity: "sensor.temp_battery", alert_enabled: true } },
   custom: [{ name: "CO2", icon: "mdi:molecule-co2", entity: "sensor.co2" }],
 });
 
@@ -116,6 +118,32 @@ describe("patchSensorAlert", () => {
   it("works on undefined sensors", () => {
     const result = patchSensorAlert(undefined, "co2", "min", 800);
     expect(result?.alerts?.co2?.min).toBe(800);
+  });
+});
+
+// --- patchSensorBattery ---
+
+describe("patchSensorBattery", () => {
+  it("sets a battery entity", () => {
+    const result = patchSensorBattery(base(), "humidity", "entity", "sensor.hum_battery");
+    expect(result?.batteries?.humidity?.entity).toBe("sensor.hum_battery");
+  });
+
+  it("sets enabled to false", () => {
+    const result = patchSensorBattery(base(), "temperature", "alert_enabled", false);
+    expect(result?.batteries?.temperature?.alert_enabled).toBe(false);
+  });
+
+  it("preserves other battery fields", () => {
+    const result = patchSensorBattery(base(), "temperature", "restrict_to_room_area", true);
+    expect(result?.batteries?.temperature?.entity).toBe("sensor.temp_battery");
+    expect(result?.batteries?.temperature?.alert_enabled).toBe(true);
+    expect(result?.batteries?.temperature?.restrict_to_room_area).toBe(true);
+  });
+
+  it("works on undefined sensors", () => {
+    const result = patchSensorBattery(undefined, "co2", "entity", "sensor.co2_battery");
+    expect(result?.batteries?.co2?.entity).toBe("sensor.co2_battery");
   });
 });
 

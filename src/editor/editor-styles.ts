@@ -2888,6 +2888,39 @@ export const calvoRoomCardEditorStyles = css`
     width: 100%;
   }
 
+  .sensor-battery-card {
+    display: grid;
+    gap: 5px;
+    margin-top: 4px;
+    padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--sr-accent, var(--editor-accent)) 28%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--sr-accent, var(--editor-accent)) 8%, var(--editor-field));
+    min-width: 0;
+  }
+
+  .sensor-battery-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--editor-text);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .sensor-battery-title ha-icon {
+    color: var(--sr-accent, var(--editor-accent));
+    --mdc-icon-size: 15px;
+  }
+
+  .sensor-battery-card .compact-check {
+    padding-top: 3px;
+  }
+
+  .sensor-battery-card .compact-check-desc {
+    display: none;
+  }
+
   /* entity in custom sensor row (inline flex item) */
   .sensor-row-entity {
     flex: 1 1 180px;

@@ -46,4 +46,42 @@ describe("computeRenderModel", () => {
     expect(second.devices[0]).not.toBe(first.devices[0]);
     expect(second.devices[1]).toBe(first.devices[1]);
   });
+
+  it("marks header sensors as alerting when their battery is low", () => {
+    const config: SmartRoomCardConfig = {
+      type: "custom:smart-area-card",
+      sensors: {
+        temperature: "sensor.temp",
+        batteries: { temperature: { entity: "sensor.temp_battery" } },
+      },
+      ui: { battery_threshold: 20 },
+    };
+
+    const model = computeRenderModel(config, makeHass({
+      "sensor.temp": makeEntity("sensor.temp", "22"),
+      "sensor.temp_battery": makeEntity("sensor.temp_battery", "12"),
+    }));
+
+    expect(model.climateItems[0]?.className).toContain("alert");
+    expect(model.climateAlertBadges.some((badge) => badge.messages.includes("Temperature battery: 12%"))).toBe(true);
+  });
+
+  it("respects disabled header sensor battery alerts", () => {
+    const config: SmartRoomCardConfig = {
+      type: "custom:smart-area-card",
+      sensors: {
+        temperature: "sensor.temp",
+        batteries: { temperature: { entity: "sensor.temp_battery", alert_enabled: false } },
+      },
+      ui: { battery_threshold: 20 },
+    };
+
+    const model = computeRenderModel(config, makeHass({
+      "sensor.temp": makeEntity("sensor.temp", "22"),
+      "sensor.temp_battery": makeEntity("sensor.temp_battery", "12"),
+    }));
+
+    expect(model.climateItems[0]?.className).not.toContain("alert");
+    expect(model.climateAlertBadges).toHaveLength(0);
+  });
 });

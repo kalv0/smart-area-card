@@ -49,6 +49,14 @@ describe("warnOnInvalidConfig", () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("battery entity is still a placeholder"));
   });
 
+  it("warns when sensor battery entity is a placeholder", () => {
+    warnOnInvalidConfig(makeConfig({
+      sensors: { temperature: "sensor.temp", batteries: { temperature: { entity: "field.battery" } } },
+    }));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("sensors.temperature"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("battery entity is still a placeholder"));
+  });
+
   it("warns when offline.enabled is true but conditions is empty", () => {
     warnOnInvalidConfig(makeConfig({
       devices: [{ entity: "light.test", type: "light", offline: { enabled: true, conditions: [] } }],
@@ -96,5 +104,13 @@ describe("warnOnInvalidConfig", () => {
       sensors: { custom: [{ name: "CO2", entity: "" }] },
     }));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("sensors.custom[0]"));
+  });
+
+  it("warns when custom sensor battery entity is a placeholder", () => {
+    warnOnInvalidConfig(makeConfig({
+      sensors: { custom: [{ name: "CO2", entity: "sensor.co2", battery: "field.battery" }] },
+    }));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("sensors.custom[0]"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("battery entity is still a placeholder"));
   });
 });

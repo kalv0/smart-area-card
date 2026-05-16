@@ -1,6 +1,6 @@
 import type { HomeAssistant } from "custom-card-helpers";
 import { computeDeviceModel, getDeviceTrackedEntityIds } from "./device-model";
-import { getEntity, isUnavailable } from "./entity-helpers";
+import { getBatteryLevel, getEntity, isUnavailable } from "./entity-helpers";
 import { normalizeAssetPath } from "./config-helpers";
 import {
   getClimateEntities,
@@ -91,6 +91,26 @@ export function computeRenderModel(
   const alertsConfig = config.sensors?.alerts;
   const customIcons = config.sensors?.icons ?? {};
   const resolveIcon = (key: string) => customIcons[key as keyof typeof customIcons] || CLIMATE_DEFAULT_ICONS[key] || "mdi:gauge";
+  const batteryThreshold = config.ui?.battery_threshold ?? 20;
+  const sensorBatteryAlertsEnabled = config.ui?.battery_alerts_enabled !== false;
+  const evaluateSensorBatteryAlert = (
+    key: string,
+    label: string,
+    batteryEntityId?: string,
+    alertEnabled = true,
+  ): ClimateAlert | undefined => {
+    if (!sensorBatteryAlertsEnabled || alertEnabled === false || !batteryEntityId) return undefined;
+    const batteryEntity = getEntity(states, batteryEntityId);
+    if (!batteryEntity || isUnavailable(batteryEntity)) return undefined;
+    const batteryLevel = getBatteryLevel(batteryEntity);
+    if (batteryLevel === undefined || batteryLevel > batteryThreshold) return undefined;
+    return {
+      key,
+      label,
+      reason: `${label} battery: ${batteryLevel}%`,
+      icon: "mdi:battery-alert-variant-outline",
+    };
+  };
 
   const climateAlerts = [
     evaluateClimateAlert("temperature", temp, alertsConfig?.temperature, "Temperature", resolveIcon("temperature")),
@@ -110,12 +130,31 @@ export function computeRenderModel(
     evaluateClimateAlert("moisture", moisture, alertsConfig?.moisture, "Moisture", resolveIcon("moisture")),
   ].filter((item): item is ClimateAlert => Boolean(item));
 
-  const climateAlertBadges = climateAlerts.map((alert) => ({
+  const sensorBatteries = config.sensors?.batteries;
+  const sensorBatteryAlerts = [
+    evaluateSensorBatteryAlert("temperature", "Temperature", sensorBatteries?.temperature?.entity, sensorBatteries?.temperature?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("humidity", "Humidity", sensorBatteries?.humidity?.entity, sensorBatteries?.humidity?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("co2", "CO₂", sensorBatteries?.co2?.entity, sensorBatteries?.co2?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("voc", "VOC", sensorBatteries?.voc?.entity, sensorBatteries?.voc?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("pm25", "PM2.5", sensorBatteries?.pm25?.entity, sensorBatteries?.pm25?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("pm10", "PM10", sensorBatteries?.pm10?.entity, sensorBatteries?.pm10?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("aqi", "AQI", sensorBatteries?.aqi?.entity, sensorBatteries?.aqi?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("presence", "Presence", sensorBatteries?.presence?.entity, sensorBatteries?.presence?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("noise", "Noise", sensorBatteries?.noise?.entity, sensorBatteries?.noise?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("illuminance", "Illuminance", sensorBatteries?.illuminance?.entity, sensorBatteries?.illuminance?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("power", "Power", sensorBatteries?.power?.entity, sensorBatteries?.power?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("energy", "Energy", sensorBatteries?.energy?.entity, sensorBatteries?.energy?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("carbon_monoxide", "CO", sensorBatteries?.carbon_monoxide?.entity, sensorBatteries?.carbon_monoxide?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("radon", "Radon", sensorBatteries?.radon?.entity, sensorBatteries?.radon?.alert_enabled !== false),
+    evaluateSensorBatteryAlert("moisture", "Moisture", sensorBatteries?.moisture?.entity, sensorBatteries?.moisture?.alert_enabled !== false),
+  ].filter((item): item is ClimateAlert => Boolean(item));
+
+  const climateAlertBadges = [...climateAlerts, ...sensorBatteryAlerts].map((alert) => ({
     key: `climate_${alert.key}`,
     icon: alert.icon,
     messages: [alert.reason],
   }));
-  const climateAlertKeys = new Set(climateAlerts.map((alert) => alert.key));
+  const climateAlertKeys = new Set([...climateAlerts, ...sensorBatteryAlerts].map((alert) => alert.key));
 
   const customSensorEntries = (config.sensors?.custom ?? []).map((sc) => ({
     config: sc,
@@ -141,6 +180,15 @@ export function computeRenderModel(
         key: `custom_${i}`,
         icon: sc.icon || "mdi:gauge",
         messages: [formatSensorAlertReason(sc.name, entity)],
+      });
+    }
+    const batteryAlert = evaluateSensorBatteryAlert(`custom_${i}`, sc.name || `Custom sensor ${i + 1}`, sc.battery, sc.battery_alert_enabled !== false);
+    if (batteryAlert) {
+      climateAlertKeys.add(`custom_${i}`);
+      climateAlertBadges.push({
+        key: `custom_${i}_battery`,
+        icon: batteryAlert.icon,
+        messages: [batteryAlert.reason],
       });
     }
   });
@@ -181,6 +229,7 @@ export function computeRenderModel(
         device.alertMessages.length ? device.alertMessages : [`${device.label} alert`],
       ),
       ...climateAlerts.map((item) => item.reason),
+      ...sensorBatteryAlerts.map((item) => item.reason),
     ],
     climateItems: buildClimateItems(
       { temp, humidity, co2, voc, pm25, pm10, aqi, presence, noise, illuminance, power, energy, carbon_monoxide, radon, moisture },

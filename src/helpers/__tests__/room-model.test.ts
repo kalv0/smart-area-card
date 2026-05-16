@@ -239,6 +239,17 @@ describe("getClimateEntities", () => {
     const entities = getClimateEntities(sensors);
     expect(entities).toContain("sensor.co2");
   });
+
+  it("includes header sensor battery entities", () => {
+    const sensors: SmartRoomCardConfig["sensors"] = {
+      temperature: "sensor.temp",
+      batteries: { temperature: { entity: "sensor.temp_battery" } },
+      custom: [{ name: "CO2", entity: "sensor.co2", battery: "sensor.co2_battery" }],
+    };
+    const entities = getClimateEntities(sensors);
+    expect(entities).toContain("sensor.temp_battery");
+    expect(entities).toContain("sensor.co2_battery");
+  });
 });
 
 describe("buildClimateItems", () => {

@@ -166,11 +166,20 @@ export interface SmartRoomPresenceSensorAlert {
   neq?: string;
 }
 
+export interface SmartRoomSensorBatteryConfig {
+  entity?: string;
+  alert_enabled?: boolean;
+  restrict_to_room_area?: boolean;
+}
+
 export interface SmartRoomCustomSensor {
   name: string;
   icon?: string;
   entity: string;
   restrict_to_room_area?: boolean;
+  battery?: string;
+  battery_alert_enabled?: boolean;
+  battery_restrict_to_room_area?: boolean;
   alert?: SmartRoomNumericSensorAlert;
 }
 
@@ -212,6 +221,23 @@ export interface SmartRoomCardConfig {
       carbon_monoxide?: { restrict_to_room_area?: boolean };
       radon?: { restrict_to_room_area?: boolean };
       moisture?: { restrict_to_room_area?: boolean };
+    };
+    batteries?: {
+      temperature?: SmartRoomSensorBatteryConfig;
+      humidity?: SmartRoomSensorBatteryConfig;
+      co2?: SmartRoomSensorBatteryConfig;
+      voc?: SmartRoomSensorBatteryConfig;
+      pm25?: SmartRoomSensorBatteryConfig;
+      pm10?: SmartRoomSensorBatteryConfig;
+      aqi?: SmartRoomSensorBatteryConfig;
+      presence?: SmartRoomSensorBatteryConfig;
+      noise?: SmartRoomSensorBatteryConfig;
+      illuminance?: SmartRoomSensorBatteryConfig;
+      power?: SmartRoomSensorBatteryConfig;
+      energy?: SmartRoomSensorBatteryConfig;
+      carbon_monoxide?: SmartRoomSensorBatteryConfig;
+      radon?: SmartRoomSensorBatteryConfig;
+      moisture?: SmartRoomSensorBatteryConfig;
     };
     alerts?: {
       temperature?: SmartRoomNumericSensorAlert;

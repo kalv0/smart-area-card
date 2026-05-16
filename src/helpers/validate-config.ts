@@ -47,11 +47,15 @@ export function warnOnInvalidConfig(config: SmartRoomCardConfig): void {
 
   const sensors = config.sensors;
   if (sensors) {
-    const presetKeys = ["temperature", "humidity", "co2", "voc", "pm25", "aqi", "presence", "noise"] as const;
+    const presetKeys = ["temperature", "humidity", "co2", "voc", "pm25", "pm10", "aqi", "presence", "noise", "illuminance", "power", "energy", "carbon_monoxide", "radon", "moisture"] as const;
     presetKeys.forEach((key) => {
       const entityId = sensors[key];
       if (entityId && isPlaceholder(entityId)) {
         warn(`sensors.${key}`, `entity is still a placeholder: "${entityId}"`);
+      }
+      const batteryEntityId = sensors.batteries?.[key]?.entity;
+      if (batteryEntityId && isPlaceholder(batteryEntityId)) {
+        warn(`sensors.${key}`, `battery entity is still a placeholder: "${batteryEntityId}"`);
       }
       const alert = sensors.alerts?.[key];
       if (alert?.enabled && !entityId?.trim()) {
@@ -62,6 +66,9 @@ export function warnOnInvalidConfig(config: SmartRoomCardConfig): void {
     (sensors.custom ?? []).forEach((sensor, i) => {
       if (!sensor.entity?.trim()) {
         warn(`sensors.custom[${i}]`, `entity is empty for sensor "${sensor.name ?? i}"`);
+      }
+      if (sensor.battery && isPlaceholder(sensor.battery)) {
+        warn(`sensors.custom[${i}]`, `battery entity is still a placeholder: "${sensor.battery}"`);
       }
     });
   }

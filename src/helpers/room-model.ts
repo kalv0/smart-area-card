@@ -135,8 +135,12 @@ export function getClimateEntities(sensors: SmartRoomCardConfig["sensors"]): str
     sensors.illuminance, sensors.power, sensors.energy,
     sensors.carbon_monoxide, sensors.radon, sensors.moisture,
   ].filter((value): value is string => Boolean(value));
+  const presetBatteries = Object.values(sensors.batteries ?? {})
+    .map((battery) => battery?.entity)
+    .filter((value): value is string => Boolean(value));
   const custom = (sensors.custom ?? []).map((s) => s.entity).filter(Boolean);
-  return [...presets, ...custom];
+  const customBatteries = (sensors.custom ?? []).map((s) => s.battery).filter((value): value is string => Boolean(value));
+  return [...presets, ...presetBatteries, ...custom, ...customBatteries];
 }
 
 export function formatSensorAlertReason(label: string, entity: HassEntity): string {
