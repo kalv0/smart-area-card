@@ -807,16 +807,15 @@ export const smartRoomCardStyles = css`
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
   }
 
   .sensor-popup-item-label {
-    max-width: calc(100% - 92px);
-    font-size: 0.92rem;
-    color: rgba(255, 255, 255, 0.9);
-    font-weight: 800;
-    line-height: 1.15;
-    letter-spacing: 0;
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 
   .sensor-popup-item-value {
@@ -834,8 +833,8 @@ export const smartRoomCardStyles = css`
   }
 
   .sensor-popup-item-updated {
-    font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.52);
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.48);
     line-height: 1.25;
   }
 
@@ -844,24 +843,41 @@ export const smartRoomCardStyles = css`
     top: 10px;
     right: 44px;
     display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    justify-content: flex-end;
-    max-width: 42%;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    max-width: 46%;
+    pointer-events: none;
+  }
+
+  .sensor-popup-alert-title {
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    text-transform: uppercase;
   }
 
   .sensor-popup-alert-flag {
     display: inline-flex;
     align-items: center;
-    min-height: 19px;
-    padding: 2px 6px;
+    justify-content: flex-end;
+    min-height: 17px;
+    padding: 1px 6px;
     border-radius: var(--sr-radius-full);
-    background: rgba(255, 59, 48, 0.11);
-    border: 1px solid rgba(255, 59, 48, 0.26);
-    color: rgba(255, 216, 211, 0.82);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.66);
     font-size: 0.64rem;
     font-weight: 750;
     line-height: 1;
+  }
+
+  .sensor-popup-alert-flag--active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 59, 48, 0.52);
+    color: #ffd8d3;
   }
 
   .sensor-popup-item-arrow {

@@ -39,6 +39,7 @@ declare global {
 }
 
 type EntityRegistry = NonNullable<HomeAssistantExtended["entities"]>;
+type SensorPopupAlertFlag = { label: string; active: boolean };
 
 const BADGE_CONFIG: Partial<Record<SmartRoomHeaderBadge, { pillClass: string; icon: string }>> = {
   alert_generic: { pillClass: "header-pill header-pill-red",    icon: "mdi:alert-circle-outline" },
@@ -567,7 +568,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     if (entityId) this._openEntityHistory(entityId);
   };
 
-  private _sensorAlertFlags(key: string): string[] {
+  private _sensorAlertFlags(key: string, entityId?: string): SensorPopupAlertFlag[] {
     const sensors = this._config?.sensors;
     if (!sensors) return [];
     const alert = key.startsWith("custom_")
@@ -575,14 +576,19 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       : sensors.alerts?.[key as keyof NonNullable<typeof sensors.alerts>];
     if (!alert?.enabled) return [];
 
-    const flags: string[] = [];
-    if ("min" in alert && alert.min !== undefined) flags.push(`Min ${alert.min}`);
-    if ("max" in alert && alert.max !== undefined) flags.push(`Max ${alert.max}`);
-    if ("eq" in alert && alert.eq !== undefined) flags.push(`= ${alert.eq}`);
-    if ("neq" in alert && alert.neq !== undefined) flags.push(`!= ${alert.neq}`);
-    if ("text_eq" in alert && alert.text_eq !== undefined) flags.push(`Text = ${alert.text_eq}`);
-    if ("text_neq" in alert && alert.text_neq !== undefined) flags.push(`Text != ${alert.text_neq}`);
-    return flags.length ? flags : ["Alert"];
+    const entity = entityId ? this.hass?.states?.[entityId] : undefined;
+    const state = entity?.state;
+    const value = Number(state);
+    const unit = entity?.attributes?.unit_of_measurement ? String(entity.attributes.unit_of_measurement) : "";
+    const formatNumber = (n: number): string => `${n}${unit ? ` ${unit}` : ""}`;
+    const flags: SensorPopupAlertFlag[] = [];
+    if ("min" in alert && alert.min !== undefined) flags.push({ label: `Min. ${formatNumber(alert.min)}`, active: Number.isFinite(value) && value < alert.min });
+    if ("max" in alert && alert.max !== undefined) flags.push({ label: `Max. ${formatNumber(alert.max)}`, active: Number.isFinite(value) && value > alert.max });
+    if ("eq" in alert && alert.eq !== undefined) flags.push({ label: `= ${typeof alert.eq === "number" ? formatNumber(alert.eq) : alert.eq}`, active: state === String(alert.eq) });
+    if ("neq" in alert && alert.neq !== undefined) flags.push({ label: `!= ${alert.neq}`, active: state !== undefined && state !== alert.neq });
+    if ("text_eq" in alert && alert.text_eq !== undefined) flags.push({ label: `Text = ${alert.text_eq}`, active: state === alert.text_eq });
+    if ("text_neq" in alert && alert.text_neq !== undefined) flags.push({ label: `Text != ${alert.text_neq}`, active: state !== undefined && state !== alert.text_neq });
+    return flags.length ? flags : [{ label: "Alert", active: false }];
   }
 
   private _renderSensorPopup(): TemplateResult | typeof nothing {
@@ -644,7 +650,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                 ? { label: this._config?.sensors?.custom?.[Number(item.key.slice(7))]?.name ?? item.key, color: "#94a3b8" }
                 : (POPUP_META[item.key] ?? { label: item.key, color: "#94a3b8" });
               const expanded = this._expandedSensorChartKeys.has(item.key);
-              const alertFlags = this._sensorAlertFlags(item.key);
+              const alertFlags = this._sensorAlertFlags(item.key, entityId);
               const isAlert = item.className.includes("alert");
               return html`
                 <div class="sensor-popup-item ${this._blurEnabled() ? "glass" : ""} ${isAlert ? "sensor-popup-item--alert" : ""}">
@@ -667,7 +673,8 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                     </span>
                     ${alertFlags.length ? html`
                       <span class="sensor-popup-alert-flags">
-                        ${alertFlags.map((flag) => html`<span class="sensor-popup-alert-flag">${flag}</span>`)}
+                        <span class="sensor-popup-alert-title">Alerts</span>
+                        ${alertFlags.map((flag) => html`<span class="sensor-popup-alert-flag ${flag.active ? "sensor-popup-alert-flag--active" : ""}">${flag.label}</span>`)}
                       </span>
                     ` : nothing}
                     ${entityId ? html`<ha-icon class="sensor-popup-item-arrow" icon=${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>` : nothing}
