@@ -838,6 +838,36 @@ export const smartRoomCardStyles = css`
     line-height: 1.25;
   }
 
+  .sensor-popup-side {
+    display: inline-grid;
+    justify-items: end;
+    gap: 6px;
+    margin-left: auto;
+    align-self: center;
+    flex: 0 0 auto;
+  }
+
+  .sensor-popup-battery-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    padding: 4px 7px;
+    border-radius: var(--sr-radius-full);
+    color: var(--battery-color, rgba(255, 255, 255, 0.76));
+    background: color-mix(in srgb, var(--battery-color, rgba(255, 255, 255, 0.76)) 16%, rgba(255, 255, 255, 0.08));
+    border: 1px solid color-mix(in srgb, var(--battery-color, rgba(255, 255, 255, 0.76)) 28%, rgba(255, 255, 255, 0.12));
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .sensor-popup-battery-tag ha-icon {
+    --mdc-icon-size: 13px;
+  }
+
   .sensor-popup-alert-flags {
     display: inline-grid;
     grid-auto-columns: max-content;
@@ -845,14 +875,11 @@ export const smartRoomCardStyles = css`
     gap: 6px;
     width: fit-content;
     max-width: none;
-    margin-left: auto;
     padding: 7px 9px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.09);
     border: 1px solid rgba(255, 255, 255, 0.16);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
-    align-self: center;
-    flex: 0 0 auto;
     pointer-events: none;
   }
 

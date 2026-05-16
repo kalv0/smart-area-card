@@ -80,6 +80,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _sensorDragIndex?: number;
   @state() private _sensorDropIndex?: number;
   @state() private _expandedSensors: string[] = [];
+  @state() private _expandedBatteryAlertDevices: number[] = [];
   @state() private _showAddTypePicker = false;
   @state() private _showAdvancedCardSetup = false;
   @state() private _showAdvancedBattery = false;
@@ -362,6 +363,7 @@ export class SmartAreaCardEditor extends LitElement {
     }
     const deviceCount = this._config?.devices?.length ?? 0;
     this._expandedDevices = this._expandedDevices.filter((index) => index < deviceCount);
+    this._expandedBatteryAlertDevices = this._expandedBatteryAlertDevices.filter((index) => index < deviceCount);
     if (!this._sectionsInitialized) {
       this._sectionsInitialized = true;
       const hasDevices = deviceCount > 0;
@@ -602,6 +604,19 @@ export class SmartAreaCardEditor extends LitElement {
         </div>
 
         <div class="panel">
+          <div class="panel-title">Battery alerts</div>
+          <div class="row single">
+            <label>Threshold %
+              <span class="hint">Alert fires when battery level falls below this value.</span>
+              <input type="number" min="0" max="100"
+                .value=${String(config.ui?.battery_threshold ?? 20)}
+                @input=${(e: InputEvent) => this._setUi("battery_threshold", Number(valueFromEvent(e)))}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div class="panel">
           <div class="panel-title">Performance</div>
           <div class="row single">
             <label>Mode
@@ -690,7 +705,8 @@ export class SmartAreaCardEditor extends LitElement {
         if (!sensor) return nothing;
         const hasEntity = Boolean(sensor.entity);
         const isExpanded = !hasEntity || this._expandedSensors.includes(key);
-        const alertEnabled = sensor.alert?.enabled === true;
+        const batteryAlertEnabled = Boolean(sensor.battery?.trim()) && sensor.battery_alert_enabled !== false;
+        const alertEnabled = sensor.alert?.enabled === true || batteryAlertEnabled;
         const entityLabel = sensor.entity ? (this.hass?.states[sensor.entity]?.attributes?.friendly_name as string | undefined ?? sensor.entity) : "";
         return html`
           <div class="sr-card ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
@@ -729,7 +745,7 @@ export class SmartAreaCardEditor extends LitElement {
                 ${hasEntity ? html`
                   <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert"
                          @click=${(e: Event) => e.stopPropagation()}>
-                    ${this._renderInlineToggle(alertEnabled, (v) => { this._updateCustomSensorAlert(i, "enabled", v); if (v) this._expandSensor(key); })}
+                    ${this._renderInlineToggle(alertEnabled, (v) => this._setCustomSensorAlertEnabled(i, v))}
                     <ha-icon icon="mdi:alert-outline"></ha-icon>
                   </label>
                 ` : nothing}
@@ -739,18 +755,20 @@ export class SmartAreaCardEditor extends LitElement {
                 </button>
               </div>
             </div>
-            ${isExpanded ? this._renderCustomSensor(sensor, i, config, accent, alertEnabled) : nothing}
+            ${isExpanded ? this._renderCustomSensor(sensor, i, config, accent, alertEnabled, batteryAlertEnabled) : nothing}
           </div>`;
       }
 
       const meta = PRESET_META[key];
       if (!meta) return nothing;
       const alertConfig = config.sensors?.alerts?.[key as keyof typeof config.sensors.alerts];
-      const alertEnabled = alertConfig?.enabled === true;
       const entityId = (config.sensors as Record<string, string | undefined>)?.[key] ?? "";
+      const sAlertKey = key as "temperature";
+      const batteryConfig = config.sensors?.batteries?.[sAlertKey];
+      const batteryAlertEnabled = Boolean(batteryConfig?.entity?.trim()) && batteryConfig?.alert_enabled !== false;
+      const alertEnabled = alertConfig?.enabled === true || batteryAlertEnabled;
       const hasEntity = Boolean(entityId);
       const isExpanded = !hasEntity || this._expandedSensors.includes(key);
-      const sAlertKey = key as "temperature";
       return html`
         <div class="sr-card ${isFirstFilled ? "sr-card--primary" : ""} ${isDragging ? "dragging" : ""} ${isDropTarget ? "drop-target" : ""}"
              data-sensor-index=${String(idx)} data-sensor-key=${key}
@@ -782,13 +800,13 @@ export class SmartAreaCardEditor extends LitElement {
               ${hasEntity ? html`
                 <label class="sr-alert-toggle ${alertEnabled ? "sr-alert-toggle--active" : ""}" title="Alert"
                        @click=${(e: Event) => e.stopPropagation()}>
-                  ${this._renderInlineToggle(alertEnabled, (v) => { this._setSensorAlert(sAlertKey, "enabled", v); if (v) this._expandSensor(key); })}
+                  ${this._renderInlineToggle(alertEnabled, (v) => this._setPresetSensorAlertEnabled(sAlertKey, v))}
                   <ha-icon icon="mdi:alert-outline"></ha-icon>
                 </label>
               ` : nothing}
             </div>
           </div>
-          ${isExpanded ? this._renderPresetSensor(key as string & keyof typeof SENSOR_ACCENT, meta.label, meta.icon, config, meta.domains, accent, alertEnabled, alertConfig) : nothing}
+          ${isExpanded ? this._renderPresetSensor(key as string & keyof typeof SENSOR_ACCENT, meta.label, meta.icon, config, meta.domains, accent, alertEnabled, alertConfig, batteryAlertEnabled) : nothing}
         </div>`;
     };
 
@@ -1060,6 +1078,7 @@ export class SmartAreaCardEditor extends LitElement {
     _accent = "#9aa7b6",
     alertEnabled = false,
     alertConfig?: { enabled?: boolean; min?: number; max?: number; eq?: number | string },
+    batteryAlertEnabled = false,
   ) {
     const entityId = (config.sensors as Record<string, string | undefined>)?.[key] ?? "";
     const hasRoomId = Boolean(this._config?.room_id?.trim());
@@ -1083,7 +1102,7 @@ export class SmartAreaCardEditor extends LitElement {
           batteryConfig?.alert_enabled !== false,
           batteryRestrict,
           (value) => this._setSensorBattery(sAlertKey, "entity", value || undefined),
-          (checked) => this._setSensorBattery(sAlertKey, "alert_enabled", checked),
+          (checked) => this._setPresetSensorBatteryAlertEnabled(sAlertKey, checked),
           (showAll) => this._setSensorBattery(sAlertKey, "restrict_to_room_area", !showAll),
           () => this._setSensorBattery(sAlertKey, "entity", undefined),
         )}
@@ -1101,11 +1120,12 @@ export class SmartAreaCardEditor extends LitElement {
             </div>
           </div>
         ` : nothing}
+        ${batteryAlertEnabled ? this._renderSensorBatteryAlertPreview(batteryConfig?.entity) : nothing}
       </div>
     `;
   }
 
-  private _renderCustomSensor(sensor: import("./helpers").SmartRoomCustomSensor, i: number, _config: SmartRoomCardConfig, _accent = "#9aa7b6", alertEnabled = false) {
+  private _renderCustomSensor(sensor: import("./helpers").SmartRoomCustomSensor, i: number, _config: SmartRoomCardConfig, _accent = "#9aa7b6", alertEnabled = false, batteryAlertEnabled = false) {
     const hasRoomId = Boolean(this._config?.room_id?.trim());
     const restrictToRoom = hasRoomId && sensor.restrict_to_room_area === true;
     const batteryRestrict = hasRoomId && sensor.battery_restrict_to_room_area !== false;
@@ -1119,10 +1139,10 @@ export class SmartAreaCardEditor extends LitElement {
           sensor.battery ?? "",
           sensor.battery_alert_enabled !== false,
           batteryRestrict,
-          (value) => this._updateCustomSensor(i, { battery: value || undefined }),
-          (checked) => this._updateCustomSensor(i, { battery_alert_enabled: checked }),
+          (value) => this._setCustomSensorBattery(i, value),
+          (checked) => this._setCustomSensorBatteryAlertEnabled(i, checked),
           (showAll) => this._updateCustomSensor(i, { battery_restrict_to_room_area: !showAll }),
-          () => this._updateCustomSensor(i, { battery: undefined }),
+          () => this._setCustomSensorBattery(i, ""),
         )}
         ${alertEnabled ? html`
           <div class="sr-alert-group">
@@ -1135,6 +1155,20 @@ export class SmartAreaCardEditor extends LitElement {
             </div>
           </div>
         ` : nothing}
+        ${batteryAlertEnabled ? this._renderSensorBatteryAlertPreview(sensor.battery) : nothing}
+      </div>
+    `;
+  }
+
+  private _renderSensorBatteryAlertPreview(batteryEntity?: string) {
+    const threshold = this._config?.ui?.battery_threshold ?? 20;
+    return html`
+      <div class="sr-alert-group sr-alert-group--battery">
+        <div class="sr-alert-group-label">Battery alert</div>
+        <div class="sensor-battery-condition">
+          <ha-icon icon="mdi:battery-alert-variant-outline"></ha-icon>
+          <span>${batteryEntity || "Battery entity"} <= ${threshold}%</span>
+        </div>
       </div>
     `;
   }
@@ -1198,18 +1232,6 @@ export class SmartAreaCardEditor extends LitElement {
           </div>
         </div>
         ${this._renderDeviceGridPreview(config)}
-        <div class="panel">
-          <div class="panel-title">Battery alerts</div>
-          <div class="row single">
-            <label>Threshold %
-              <span class="hint">Alert fires when battery level falls below this value.</span>
-              <input type="number" min="0" max="100"
-                .value=${String(config.ui?.battery_threshold ?? 20)}
-                @input=${(e: InputEvent) => this._setUi("battery_threshold", Number(valueFromEvent(e)))}
-              />
-            </label>
-          </div>
-        </div>
         <div class="devices-list">
           ${(config.devices ?? []).map((device, index) => this._renderDevice(device, index))}
         </div>
@@ -1754,22 +1776,43 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       })}
       <button type="button" class="secondary" @click=${() => this._addNamedAlert(index)}>Add alert</button>
       ${batteryAlert ? html`
-        <div class="subsection">
+        <div class="subsection battery-alert-summary">
           <div class="subsection-title">Battery alert</div>
           <div class="hint">Auto-generated from the battery entity and card-level threshold. Conditions are managed by the card. You can customize the appearance below.</div>
-          ${this._renderSharedNamedAlertCard(batteryAlert, {
+          ${this._renderBatteryAlertConditionSummary(batteryAlert)}
+          <button type="button" class="secondary" @click=${() => this._toggleBatteryAlertConfig(index)}>
+            ${this._expandedBatteryAlertDevices.includes(index) ? "Hide alert configuration" : "Show alert configuration"}
+          </button>
+          ${this._expandedBatteryAlertDevices.includes(index) ? this._renderSharedNamedAlertCard(batteryAlert, {
             onUpdate: (key, value) => this._updateNamedAlert(index, batteryAlertIndex, key, value),
             onConditions: () => {},
             onRemove: undefined,
-            onReset: undefined,
+            onReset: () => this._resetBatteryAlert(index),
             lockMode: "all",
             batteryLocked: false,
             allowPresetNameEdit: false,
             selectorDefaults: { restrict_to_room_area: device ? this._deviceRestrictsToRoomArea(device) : false, domains: ["*"] },
-          })}
+          }) : nothing}
         </div>
       ` : nothing}
     `;
+  }
+
+  private _renderBatteryAlertConditionSummary(alert: SmartRoomNamedAlertConfig) {
+    const condition = alert.conditions?.[0];
+    if (!condition) return nothing;
+    return html`
+      <div class="battery-alert-condition-summary">
+        <ha-icon icon="mdi:battery-alert-variant-outline"></ha-icon>
+        <span>${condition.entity} <= ${conditionValueToText(condition.value)}%</span>
+      </div>
+    `;
+  }
+
+  private _toggleBatteryAlertConfig(index: number): void {
+    this._expandedBatteryAlertDevices = this._expandedBatteryAlertDevices.includes(index)
+      ? this._expandedBatteryAlertDevices.filter((item) => item !== index)
+      : [...this._expandedBatteryAlertDevices, index];
   }
 
   private _renderActionsPanel(device: SmartRoomDeviceConfig, index: number) {
@@ -2307,6 +2350,10 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     let newSensors = patchSensor(this._config?.sensors, key, value);
     if (shouldSyncBattery) {
       newSensors = patchSensorBattery(newSensors, key as "temperature", "entity", nextBattery);
+      if (nextBattery) {
+        newSensors = patchSensorBattery(newSensors, key as "temperature", "alert_enabled", true);
+        newSensors = patchSensorAlert(newSensors, key as "temperature", "enabled", true);
+      }
     }
     if (value && !hadEntity) {
       newSensors = bubbleSensorAboveEmpty(newSensors, key);
@@ -2325,7 +2372,32 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     this._patch({ sensors: patchSensorAlert(this._config?.sensors, key as "temperature", field, value) });
   }
   private _setSensorBattery(key: string, field: "entity" | "alert_enabled" | "restrict_to_room_area", value: string | boolean | undefined) {
-    this._patch({ sensors: patchSensorBattery(this._config?.sensors, key as "temperature", field, value) });
+    let sensors = patchSensorBattery(this._config?.sensors, key as "temperature", field, value);
+    if (field === "entity" && typeof value === "string" && value.trim()) {
+      sensors = patchSensorBattery(sensors, key as "temperature", "alert_enabled", true);
+      sensors = patchSensorAlert(sensors, key as "temperature", "enabled", true);
+      this._expandSensor(key);
+    } else if (field === "entity" && !value) {
+      sensors = patchSensorBattery(sensors, key as "temperature", "alert_enabled", false);
+    }
+    this._patch({ sensors });
+  }
+  private _setPresetSensorAlertEnabled(key: string, enabled: boolean) {
+    let sensors = patchSensorAlert(this._config?.sensors, key as "temperature", "enabled", enabled);
+    if (!enabled) {
+      sensors = patchSensorBattery(sensors, key as "temperature", "alert_enabled", false);
+    } else {
+      this._expandSensor(key);
+    }
+    this._patch({ sensors });
+  }
+  private _setPresetSensorBatteryAlertEnabled(key: string, enabled: boolean) {
+    let sensors = patchSensorBattery(this._config?.sensors, key as "temperature", "alert_enabled", enabled);
+    if (enabled) {
+      sensors = patchSensorAlert(sensors, key as "temperature", "enabled", true);
+      this._expandSensor(key);
+    }
+    this._patch({ sensors });
   }
   private _addCustomSensor() { this._patch({ sensors: addCustomSensor(this._config?.sensors) }); }
   private _removeCustomSensor(i: number) { this._patch({ sensors: removeCustomSensor(this._config?.sensors, i) }); }
@@ -2334,6 +2406,35 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   }
   private _updateCustomSensorAlert(i: number, field: "enabled" | "min" | "max" | "eq" | "neq" | "text_eq" | "text_neq", value: boolean | number | string | undefined) {
     this._patch({ sensors: updateCustomSensorAlert(this._config?.sensors, i, field, value) });
+  }
+  private _setCustomSensorAlertEnabled(i: number, enabled: boolean) {
+    let sensors = updateCustomSensorAlert(this._config?.sensors, i, "enabled", enabled);
+    if (!enabled) {
+      sensors = updateCustomSensor(sensors, i, { battery_alert_enabled: false });
+    } else {
+      this._expandSensor(`custom_${i}`);
+    }
+    this._patch({ sensors });
+  }
+  private _setCustomSensorBatteryAlertEnabled(i: number, enabled: boolean) {
+    let sensors = updateCustomSensor(this._config?.sensors, i, { battery_alert_enabled: enabled });
+    if (enabled) {
+      sensors = updateCustomSensorAlert(sensors, i, "enabled", true);
+      this._expandSensor(`custom_${i}`);
+    }
+    this._patch({ sensors });
+  }
+  private _setCustomSensorBattery(i: number, value: string) {
+    const normalized = value || undefined;
+    let sensors = updateCustomSensor(this._config?.sensors, i, {
+      battery: normalized,
+      ...(normalized ? { battery_alert_enabled: true } : { battery_alert_enabled: false }),
+    });
+    if (normalized) {
+      sensors = updateCustomSensorAlert(sensors, i, "enabled", true);
+      this._expandSensor(`custom_${i}`);
+    }
+    this._patch({ sensors });
   }
   private _setCustomSensorEntity(i: number, value: string) {
     const current = this._config?.sensors?.custom?.[i];
@@ -2345,7 +2446,11 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     let newSensors = updateCustomSensor(this._config?.sensors, i, {
       entity: value,
       ...(shouldSyncBattery ? { battery: nextBattery } : {}),
+      ...(shouldSyncBattery && nextBattery ? { battery_alert_enabled: true } : {}),
     });
+    if (shouldSyncBattery && nextBattery) {
+      newSensors = updateCustomSensorAlert(newSensors, i, "enabled", true);
+    }
     if (value && !hadEntity) {
       newSensors = bubbleSensorAboveEmpty(newSensors, `custom_${i}`);
       this._patch({ sensors: newSensors });
@@ -2479,6 +2584,20 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     const next = resetPresetAlert(device, alertIndex, this._buildResolvedPresetDevice(device));
     if (!next) return;
     devices[index] = next;
+    this._patch({ devices });
+  }
+  private _resetBatteryAlert(index: number) {
+    const devices = [...(this._config?.devices ?? [])];
+    const device = devices[index];
+    if (!device) return;
+    const withoutBatteryAlert = {
+      ...device,
+      states: {
+        ...(device.states ?? {}),
+        alerts: (device.states?.alerts ?? []).filter((item) => item.preset_source !== "battery"),
+      },
+    };
+    devices[index] = this._applyDerivedBatteryAlert(withoutBatteryAlert, this._config?.ui?.battery_threshold ?? 20);
     this._patch({ devices });
   }
   private _resetPresetOffline(index: number) {

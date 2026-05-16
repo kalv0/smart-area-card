@@ -2921,6 +2921,38 @@ export const calvoRoomCardEditorStyles = css`
     display: none;
   }
 
+  .sensor-battery-condition,
+  .battery-alert-condition-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(255, 59, 48, 0.13);
+    border: 1px solid rgba(255, 59, 48, 0.32);
+    color: #ffb4aa;
+    font-size: 0.76rem;
+    font-weight: 750;
+    overflow-wrap: anywhere;
+  }
+
+  .sensor-battery-condition ha-icon,
+  .battery-alert-condition-summary ha-icon {
+    --mdc-icon-size: 15px;
+    flex: 0 0 auto;
+  }
+
+  .sr-alert-group--battery {
+    border-color: rgba(255, 59, 48, 0.26);
+    background: color-mix(in srgb, var(--editor-danger) 9%, transparent);
+  }
+
+  .battery-alert-summary {
+    gap: 8px;
+  }
+
   /* entity in custom sensor row (inline flex item) */
   .sensor-row-entity {
     flex: 1 1 180px;

@@ -80,6 +80,7 @@ describe("applyDerivedBatteryAlertWithUi", () => {
     const batteryAlert = result.states?.alerts?.find((a) => a.preset_source === "battery");
     expect(batteryAlert).toBeDefined();
     expect(batteryAlert?.name).toBe("Low battery");
+    expect(batteryAlert?.conditions?.[0].operator).toBe("lte");
     expect(batteryAlert?.conditions?.[0].value).toBe(20);
   });
 

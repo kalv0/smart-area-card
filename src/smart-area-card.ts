@@ -45,6 +45,7 @@ declare global {
 
 type EntityRegistry = NonNullable<HomeAssistantExtended["entities"]>;
 type SensorPopupAlertFlag = { label: string; active: boolean };
+type SensorBatteryInfo = { entityId: string; level?: number; alertEnabled: boolean };
 
 const BADGE_CONFIG: Partial<Record<SmartRoomHeaderBadge, { pillClass: string; icon: string }>> = {
   alert_generic: { pillClass: "header-pill header-pill-red",    icon: "mdi:alert-circle-outline" },
@@ -631,13 +632,14 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     const alert = key.startsWith("custom_")
       ? sensors.custom?.[Number(key.slice(7))]?.alert
       : sensors.alerts?.[key as keyof NonNullable<typeof sensors.alerts>];
+    const hasConfiguredAlert = alert?.enabled === true;
     const entity = entityId ? this.hass?.states?.[entityId] : undefined;
     const state = entity?.state;
     const value = Number(state);
     const unit = entity?.attributes?.unit_of_measurement ? String(entity.attributes.unit_of_measurement) : "";
     const formatNumber = (n: number): string => `${n}${unit}`;
     const flags: SensorPopupAlertFlag[] = [];
-    if (alert?.enabled) {
+    if (hasConfiguredAlert) {
       if ("min" in alert && alert.min !== undefined) flags.push({ label: `Min.${formatNumber(alert.min)}`, active: Number.isFinite(value) && value < alert.min });
       if ("max" in alert && alert.max !== undefined) flags.push({ label: `Max.${formatNumber(alert.max)}`, active: Number.isFinite(value) && value > alert.max });
       if ("eq" in alert && alert.eq !== undefined) flags.push({ label: `= ${typeof alert.eq === "number" ? formatNumber(alert.eq) : alert.eq}`, active: state === String(alert.eq) });
@@ -656,7 +658,25 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       const batteryLevel = getBatteryLevel(this.hass?.states?.[batteryConfig.entity]);
       flags.push({ label: `Battery <= ${threshold}%`, active: batteryLevel !== undefined && batteryLevel <= threshold });
     }
-    return flags.length ? flags : [{ label: "Alert", active: false }];
+    return flags.length ? flags : hasConfiguredAlert ? [{ label: "Alert", active: false }] : [];
+  }
+
+  private _sensorBatteryInfo(key: string): SensorBatteryInfo | undefined {
+    const sensors = this._config?.sensors;
+    if (!sensors) return undefined;
+    const batteryConfig = key.startsWith("custom_")
+      ? {
+          entity: sensors.custom?.[Number(key.slice(7))]?.battery,
+          alert_enabled: sensors.custom?.[Number(key.slice(7))]?.battery_alert_enabled,
+        }
+      : sensors.batteries?.[key as keyof NonNullable<typeof sensors.batteries>];
+    const entityId = batteryConfig?.entity?.trim();
+    if (!entityId) return undefined;
+    return {
+      entityId,
+      level: getBatteryLevel(this.hass?.states?.[entityId]),
+      alertEnabled: batteryConfig?.alert_enabled !== false && this._config?.ui?.battery_alerts_enabled !== false,
+    };
   }
 
   private _renderSensorPopup(): TemplateResult | typeof nothing {
@@ -719,6 +739,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                 : (POPUP_META[item.key] ?? { label: item.key, color: "#94a3b8" });
               const expanded = this._expandedSensorChartKeys.has(item.key);
               const alertFlags = this._sensorAlertFlags(item.key, entityId);
+              const batteryInfo = this._sensorBatteryInfo(item.key);
               const isAlert = item.className.includes("alert");
               return html`
                 <div class="sensor-popup-item ${this._blurEnabled() ? "glass" : ""} ${isAlert ? "sensor-popup-item--alert" : ""}">
@@ -740,10 +761,20 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
                       ${entityId ? html`<span class="sensor-popup-item-entity">${entityId}</span>` : nothing}
                     </span>
                     ${entityId ? html`<ha-icon class="sensor-popup-item-arrow" icon=${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>` : nothing}
-                    ${alertFlags.length ? html`
-                      <span class="sensor-popup-alert-flags">
-                        <span class="sensor-popup-alert-title">Alerts</span>
-                        ${alertFlags.map((flag) => html`<span class="sensor-popup-alert-flag ${flag.active ? "sensor-popup-alert-flag--active" : ""}">${flag.label}</span>`)}
+                    ${alertFlags.length || batteryInfo ? html`
+                      <span class="sensor-popup-side">
+                        ${batteryInfo ? html`
+                          <span class="sensor-popup-battery-tag" style=${`--battery-color:${getBatteryColor(batteryInfo.level)}`}>
+                            <ha-icon icon=${getBatteryIcon(batteryInfo.level)}></ha-icon>
+                            ${batteryInfo.level !== undefined ? `${batteryInfo.level}%` : "Battery"}
+                          </span>
+                        ` : nothing}
+                        ${alertFlags.length ? html`
+                          <span class="sensor-popup-alert-flags">
+                            <span class="sensor-popup-alert-title">Alerts</span>
+                            ${alertFlags.map((flag) => html`<span class="sensor-popup-alert-flag ${flag.active ? "sensor-popup-alert-flag--active" : ""}">${flag.label}</span>`)}
+                          </span>
+                        ` : nothing}
                       </span>
                     ` : nothing}
                   </button>
