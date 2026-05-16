@@ -214,14 +214,6 @@ export const smartRoomCardStyles = css`
     min-width: 0;
   }
 
-  .header-alerts {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 3px;
-    flex-shrink: 0;
-  }
-
   .header-states {
     display: flex;
     flex-wrap: wrap;

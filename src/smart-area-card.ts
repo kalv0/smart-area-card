@@ -135,6 +135,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _lastEntityRegistry?: HomeAssistantExtended["entities"];
   private _previousScrollLock?: { bodyOverflow: string; documentOverflow: string };
   private _chartBuildVersion = 0;
+  private _lastAlertSignature = "";
 
   private readonly _press = new PressController(this);
   private readonly _imageFit = new ImageFitController(this);
@@ -197,6 +198,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._restoreExpanded();
     this._restoreAutomationPanel();
     this._restoreAlertPanels();
+    this._lastAlertSignature = "";
   }
 
   public getCardSize(): number {
@@ -318,11 +320,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
           });
           this._deviceByKey = new Map(this._renderModel.devices.map((device) => [device.key, device]));
           this._syncTrackedEntityRefs();
-          // Auto-reset hidden flag when all alerts clear so next alert always shows.
-          if (this._alertsHidden && this._totalAlertCount() === 0) {
-            this._alertsHidden = false;
-            this._persistAlertPanels();
-          }
+          this._syncAlertPanelVisibility();
         } catch (err) {
           console.error("[smart-area-card] computeRenderModel failed:", err);
         }
@@ -420,6 +418,28 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     return badgeTotal + climateTotal;
   }
 
+  private _alertSignature(): string {
+    const parts: string[] = [];
+    const alertsByBadge = this._renderModel?.alertsByBadge ?? {};
+    (Object.entries(alertsByBadge) as [SmartRoomHeaderBadge, string[]][])
+      .filter(([, messages]) => messages.length > 0)
+      .forEach(([badge, messages]) => messages.forEach((message) => parts.push(`${badge}:${message}`)));
+
+    (this._renderModel?.climateAlertBadges ?? [])
+      .filter((badge) => badge.messages.length > 0)
+      .forEach((badge) => badge.messages.forEach((message) => parts.push(`${badge.key}:${message}`)));
+
+    return parts.join("|");
+  }
+
+  private _syncAlertPanelVisibility(): void {
+    const signature = this._alertSignature();
+    if (signature !== this._lastAlertSignature) {
+      this._alertsHidden = false;
+      this._lastAlertSignature = signature;
+    }
+  }
+
   private _reduceVisualEffects(): boolean {
     const performance = this._config?.ui?.performance;
     return performance?.reduce_effects === true || performance?.mode === "maximum";
@@ -449,19 +469,14 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
       </div>
     `);
 
-    const totalAlerts = this._totalAlertCount();
-    const alertBadge = totalAlerts > 0
-      ? html`<div class="header-alerts"><button class="header-pill header-pill-red header-pill-button header-pill-clickable" @click=${this._handleAlertBadgeClick}><ha-icon icon="mdi:alert-circle-outline"></ha-icon>${totalAlerts > 1 ? html`<span class="badge-count">${totalAlerts}</span>` : nothing}</button></div>`
-      : nothing;
-
     return html`
       <section class="header">
         <div class="header-top">
           <div class="title-line">
-            ${alertBadge}
             ${room && this._config?.ui?.show_area_icon && model.areaIcon ? html`<ha-icon icon=${model.areaIcon}></ha-icon>` : nothing}
             ${room ? html`<span>${room}</span>` : nothing}
             <div class="header-states">
+              ${this._renderAlertToggle()}
               ${this._renderAutomationBadge()}
               ${this._renderHeaderBadge("door_closed")}
               ${this._renderHeaderBadge("lock_closed")}
@@ -479,6 +494,26 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
             : nothing}
         </div>
       </section>
+    `;
+  }
+
+  private _renderAlertToggle(): TemplateResult | typeof nothing {
+    const totalAlerts = this._totalAlertCount();
+    if (!totalAlerts) return nothing;
+
+    const countLabel = totalAlerts > 1 ? html`<span class="badge-count">${totalAlerts}</span>` : nothing;
+    const label = this._alertsHidden ? "Show alert details" : "Hide alert details";
+    return html`
+      <button
+        class="header-pill header-pill-red header-pill-button header-pill-clickable"
+        aria-label=${label}
+        aria-expanded=${String(!this._alertsHidden)}
+        title=${label}
+        @click=${this._handleAlertBadgeClick}
+      >
+        <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
+        ${countLabel}
+      </button>
     `;
   }
 
@@ -1136,17 +1171,11 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   private _restoreAlertPanels(): void {
-    if (!this._config) return;
-    if (this._config.expander?.persist_state === false) {
-      this._alertsHidden = false;
-      return;
-    }
-    this._alertsHidden = window.localStorage.getItem(storageKey(this._config, "alerts-closed")) === "true";
+    this._alertsHidden = false;
   }
 
   private _persistAlertPanels(): void {
-    if (!this._config || this._config.expander?.persist_state === false) return;
-    window.localStorage.setItem(storageKey(this._config, "alerts-closed"), String(this._alertsHidden));
+    // Alert detail cards are intentionally session-only so active alerts reopen with their details visible.
   }
 
   private _getInitialExpandedState(): boolean {
