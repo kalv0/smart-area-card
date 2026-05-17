@@ -4,22 +4,22 @@ export const calvoRoomCardEditorStyles = css`
   :host {
     /* — editor color tokens — */
     --editor-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --editor-canvas: #0e1013;
-    --editor-panel: #f7f8fa;
-    --editor-panel-2: #ffffff;
-    --editor-panel-3: #eef1f5;
-    --editor-border: rgba(15, 23, 42, 0.12);
-    --editor-text: #17191c;
-    --editor-muted: #667085;
-    --editor-accent: #007aff;
+    --editor-canvas: #080a0e;
+    --editor-panel: #11161d;
+    --editor-panel-2: #171d26;
+    --editor-panel-3: #1d2530;
+    --editor-border: rgba(255, 255, 255, 0.12);
+    --editor-text: #f6f8fb;
+    --editor-muted: #9ca8b8;
+    --editor-accent: #4f9cff;
     --editor-light: #f5c84c;
     --editor-camera: #ff6b6b;
-    --editor-media: #8e99a8;
+    --editor-media: #d7dde6;
     --editor-lock: #ff9f43;
     --editor-custom: #34c7b8;
-    --editor-input: #ffffff;
-    --editor-field: #ffffff;
-    --editor-danger: #b42323;
+    --editor-input: #0d1219;
+    --editor-field: #141a23;
+    --editor-danger: #ef4444;
     --editor-danger-text: #fff4f1;
     --editor-required: #ff7272;
     --editor-success: #34c759;
@@ -40,8 +40,9 @@ export const calvoRoomCardEditorStyles = css`
     font-family: var(--editor-font);
     letter-spacing: 0;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(241, 244, 248, 0.94)),
-      var(--editor-canvas);
+      radial-gradient(circle at 12% 0%, rgba(79, 156, 255, 0.12), transparent 30%),
+      radial-gradient(circle at 92% 8%, rgba(52, 199, 184, 0.08), transparent 28%),
+      linear-gradient(180deg, #080a0e 0%, #0d1117 100%);
     overflow: hidden;
     box-sizing: border-box;
     contain: layout paint style;
@@ -467,11 +468,13 @@ export const calvoRoomCardEditorStyles = css`
     min-height: 154px;
     background:
       radial-gradient(circle at 18% 4%, rgba(255, 255, 255, 0.18), transparent 26%),
-      linear-gradient(135deg, #1f242a 0%, #3b424b 54%, #d5dae2 100%);
+      linear-gradient(135deg, #10151d 0%, #1f2833 54%, #4c5665 100%);
     background-size: cover;
     background-position: top center;
-    border: 1px solid rgba(15, 23, 42, 0.12);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 10px 26px rgba(0, 0, 0, 0.2);
   }
 
   .ehp-bg {
@@ -780,12 +783,16 @@ export const calvoRoomCardEditorStyles = css`
     max-width: 100%;
     width: 100%;
     box-sizing: border-box;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 10px 28px rgba(0, 0, 0, 0.18);
   }
 
   .panel,
   .condition-card {
-    background: var(--editor-panel-3);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01)),
+      var(--editor-panel-3);
     border-radius: var(--editor-radius-lg);
     padding: 12px;
   }
@@ -793,7 +800,7 @@ export const calvoRoomCardEditorStyles = css`
   .condition-card {
     background: var(--editor-panel-2);
     border-color: var(--editor-border);
-    box-shadow: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   }
 
   .device-card {
@@ -801,34 +808,46 @@ export const calvoRoomCardEditorStyles = css`
     display: flex;
     flex-direction: column;
     border-left: 4px solid var(--editor-custom);
-    background: color-mix(in srgb, var(--editor-custom) 10%, var(--editor-panel-2));
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--editor-custom) 16%, transparent), transparent 34%),
+      color-mix(in srgb, var(--editor-custom) 8%, var(--editor-panel-2));
     padding: 0;
     overflow: hidden;
     border-color: color-mix(in srgb, var(--editor-custom) 36%, transparent);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 8px 22px rgba(0, 0, 0, 0.18);
   }
 
   .device-card[data-type="light"] {
     border-left-color: var(--editor-light);
-    background: color-mix(in srgb, var(--editor-light) 12%, var(--editor-panel-2));
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--editor-light) 18%, transparent), transparent 34%),
+      color-mix(in srgb, var(--editor-light) 9%, var(--editor-panel-2));
     border-color: color-mix(in srgb, var(--editor-light) 35%, transparent);
   }
 
   .device-card[data-type="camera"] {
     border-left-color: var(--editor-camera);
-    background: color-mix(in srgb, var(--editor-camera) 10%, var(--editor-panel-2));
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--editor-camera) 18%, transparent), transparent 34%),
+      color-mix(in srgb, var(--editor-camera) 9%, var(--editor-panel-2));
     border-color: color-mix(in srgb, var(--editor-camera) 35%, transparent);
   }
 
   .device-card[data-type="media_player"] {
     border-left-color: var(--editor-media);
-    background: color-mix(in srgb, var(--editor-media) 8%, var(--editor-panel-2));
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--editor-media) 14%, transparent), transparent 34%),
+      color-mix(in srgb, var(--editor-media) 7%, var(--editor-panel-2));
     border-color: color-mix(in srgb, var(--editor-media) 28%, transparent);
   }
 
   .device-card[data-type="lock"] {
     border-left-color: var(--editor-lock);
-    background: color-mix(in srgb, var(--editor-lock) 10%, var(--editor-panel-2));
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--editor-lock) 18%, transparent), transparent 34%),
+      color-mix(in srgb, var(--editor-lock) 9%, var(--editor-panel-2));
     border-color: color-mix(in srgb, var(--editor-lock) 35%, transparent);
   }
 
@@ -847,11 +866,12 @@ export const calvoRoomCardEditorStyles = css`
     border-radius: var(--editor-radius-lg);
     overflow: hidden;
     background:
-      radial-gradient(circle at 20% 0%, rgba(0, 122, 255, 0.18), transparent 34%),
-      linear-gradient(135deg, #1c1f24 0%, #2f343b 52%, #d7dde6 100%);
+      radial-gradient(circle at 20% 0%, rgba(79, 156, 255, 0.22), transparent 34%),
+      linear-gradient(135deg, #111720 0%, #1e2732 52%, #3a4452 100%);
     background-size: cover;
     background-position: center;
-    outline: 1px solid rgba(15, 23, 42, 0.1);
+    outline: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   }
 
   .dg-preview-grid {
@@ -1480,50 +1500,60 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .panel-type-light {
-    background: rgba(245, 200, 76, 0.28);
+    background:
+      linear-gradient(90deg, rgba(245, 200, 76, 0.16), rgba(245, 200, 76, 0.04)),
+      var(--editor-panel-2);
     border-color: rgba(245, 200, 76, 0.58);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 
   .panel-type-camera {
-    background: rgba(255, 107, 107, 0.28);
+    background:
+      linear-gradient(90deg, rgba(255, 107, 107, 0.16), rgba(255, 107, 107, 0.04)),
+      var(--editor-panel-2);
     border-color: rgba(255, 107, 107, 0.58);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 
   .panel-type-media_player {
-    background: rgba(215, 221, 230, 0.24);
+    background:
+      linear-gradient(90deg, rgba(215, 221, 230, 0.12), rgba(215, 221, 230, 0.035)),
+      var(--editor-panel-2);
     border-color: rgba(215, 221, 230, 0.5);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 
   .panel-type-lock {
-    background: rgba(255, 159, 67, 0.28);
+    background:
+      linear-gradient(90deg, rgba(255, 159, 67, 0.16), rgba(255, 159, 67, 0.04)),
+      var(--editor-panel-2);
     border-color: rgba(255, 159, 67, 0.58);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 
   .panel-type-custom {
-    background: rgba(76, 201, 240, 0.24);
+    background:
+      linear-gradient(90deg, rgba(76, 201, 240, 0.14), rgba(76, 201, 240, 0.035)),
+      var(--editor-panel-2);
     border-color: rgba(76, 201, 240, 0.5);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 
   .panel-subgroup-offline {
-    background: #4b5563;
-    border-color: #94a3b8;
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0.14), rgba(148, 163, 184, 0.04)), var(--editor-panel-2);
+    border-color: rgba(148, 163, 184, 0.46);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   }
 
   .panel-subgroup-states {
-    background: #1d4ed8;
-    border-color: #60a5fa;
+    background: linear-gradient(90deg, rgba(96, 165, 250, 0.16), rgba(96, 165, 250, 0.04)), var(--editor-panel-2);
+    border-color: rgba(96, 165, 250, 0.48);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   }
 
   .panel-subgroup-alerts {
-    background: #b91c1c;
-    border-color: #f87171;
+    background: linear-gradient(90deg, rgba(248, 113, 113, 0.16), rgba(248, 113, 113, 0.04)), var(--editor-panel-2);
+    border-color: rgba(248, 113, 113, 0.5);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   }
 
@@ -1574,11 +1604,13 @@ export const calvoRoomCardEditorStyles = css`
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     min-height: 34px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   }
 
   .section-collapse-btn {
-    background: rgba(15, 23, 42, 0.06);
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 6px;
     cursor: pointer;
     color: var(--editor-muted);
@@ -1623,7 +1655,7 @@ export const calvoRoomCardEditorStyles = css`
     min-height: 0;
     overflow: hidden;
     display: grid;
-    gap: 10px;
+    gap: 12px;
   }
 
   .device-header {
@@ -1706,6 +1738,14 @@ export const calvoRoomCardEditorStyles = css`
     letter-spacing: 0;
   }
 
+  .section-title {
+    color: #ffffff;
+  }
+
+  .panel-title {
+    color: #edf3fb;
+  }
+
   .device-title {
     color: var(--editor-text);
     min-width: 0;
@@ -1771,6 +1811,7 @@ export const calvoRoomCardEditorStyles = css`
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
   }
 
   ha-entity-picker,
@@ -1801,6 +1842,17 @@ export const calvoRoomCardEditorStyles = css`
     border: 1px solid var(--editor-border);
     background: var(--editor-input);
     color: var(--editor-text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--editor-accent) 70%, transparent);
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--editor-accent) 18%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.025);
   }
 
   textarea {
@@ -1881,8 +1933,9 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   button.secondary {
-    background: #e5e9f0;
+    background: #26303d;
     color: var(--editor-text);
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   button.danger {
@@ -3168,16 +3221,21 @@ export const calvoRoomCardEditorStyles = css`
     position: relative;
     display: flex;
     flex-direction: column;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--editor-radius-lg);
+    border: 1px solid color-mix(in srgb, var(--sr-accent, #9aa7b6) 30%, rgba(255, 255, 255, 0.08));
     border-left: 4px solid var(--sr-accent, #9aa7b6);
-    background: color-mix(in srgb, var(--sr-accent, #9aa7b6) 8%, #1a2028);
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--sr-accent, #9aa7b6) 16%, transparent), transparent 36%),
+      color-mix(in srgb, var(--sr-accent, #9aa7b6) 8%, var(--editor-panel-2));
     overflow: hidden;
     transition: box-shadow 0.15s, opacity 0.15s;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 8px 20px rgba(0, 0, 0, 0.14);
   }
 
   .sr-card--primary {
-    border-color: rgba(255, 255, 255, 0.14);
+    border-color: color-mix(in srgb, var(--sr-accent, #9aa7b6) 56%, rgba(255, 255, 255, 0.12));
     border-left-color: var(--sr-accent, #9aa7b6);
   }
 
@@ -3320,9 +3378,9 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .sr-body {
-    padding: 0 10px 8px;
+    padding: 0 10px 10px;
     display: grid;
-    gap: 6px;
+    gap: 8px;
   }
 
   .sr-alert-group {
