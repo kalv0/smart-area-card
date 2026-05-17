@@ -129,10 +129,19 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   protected updated(changedProps: Map<string, unknown>): void {
+    if (changedProps.has("hass")) {
+      this._syncEditorColorScheme();
+    }
     if (changedProps.has("hass") && this.hass && !this._bgGalleryLoaded) {
       this._bgGalleryLoaded = true;
       this._loadBgGallery();
     }
+  }
+
+  private _syncEditorColorScheme(): void {
+    const haDarkMode = (this.hass as unknown as { themes?: { darkMode?: boolean } })?.themes?.darkMode;
+    const browserDarkMode = typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+    this.toggleAttribute("data-editor-theme-dark", haDarkMode ?? browserDarkMode);
   }
 
   private async _loadBgGallery(): Promise<void> {
