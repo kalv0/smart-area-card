@@ -91,6 +91,8 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _bgPreviewError = false;
   @state() private _cardSetupCollapsed = false;
   @state() private _headerCollapsed = false;
+  @state() private _automationsCollapsed = false;
+  @state() private _sensorsCollapsed = false;
   @state() private _showHeaderAutomationDetails = false;
   @state() private _showHeaderSensorPreviewPopup = false;
   @state() private _imgPickerMode: "library" | "path" = "library";
@@ -102,6 +104,7 @@ export class SmartAreaCardEditor extends LitElement {
 
   private static readonly _DEV_GALLERY_KEY = "smart-area:device-gallery";
   private static readonly _BG_GALLERY_HA_KEY = "smart_area_bg_gallery";
+  private static readonly _EDITOR_SECTIONS_SEEN_KEY = "smart-area:editor-sections-seen";
   private _bgGalleryLoaded = false;
 
   private readonly _typeDefinitions: SmartRoomTypeDefinition[] = [...BUILTIN_TYPE_DEFINITIONS];
@@ -366,9 +369,15 @@ export class SmartAreaCardEditor extends LitElement {
     this._expandedPresetItems = this._expandedPresetItems.filter((key) => Number(key.split(":")[1]) < deviceCount);
     if (!this._sectionsInitialized) {
       this._sectionsInitialized = true;
-      const hasDevices = deviceCount > 0;
-      this._cardSetupCollapsed = hasDevices;
-      this._headerCollapsed = hasDevices;
+      let collapseSections = false;
+      try {
+        collapseSections = localStorage.getItem(SmartAreaCardEditor._EDITOR_SECTIONS_SEEN_KEY) === "true";
+        localStorage.setItem(SmartAreaCardEditor._EDITOR_SECTIONS_SEEN_KEY, "true");
+      } catch { /* ignore */ }
+      this._cardSetupCollapsed = collapseSections;
+      this._headerCollapsed = collapseSections;
+      this._automationsCollapsed = collapseSections;
+      this._sensorsCollapsed = collapseSections;
     }
     // Registry is loaded once in firstUpdated. Do not re-fetch on every config change.
   }
@@ -381,6 +390,8 @@ export class SmartAreaCardEditor extends LitElement {
       return html`<div class="editor-shell"><div class="stack">
         ${this._renderGeneral(config, hasArea)}
         ${hasArea ? this._renderHeaderSection(config) : nothing}
+        ${hasArea ? this._renderAutomationsSection(config) : nothing}
+        ${hasArea ? this._renderSensorsSection(config) : nothing}
         ${hasArea ? this._renderDevices(config) : nothing}
       </div></div>`;
     } catch {
@@ -424,226 +435,91 @@ export class SmartAreaCardEditor extends LitElement {
 
   private _renderGeneral(config: SmartRoomCardConfig, hasArea: boolean) {
     const areaName = this._areaName(config.room_id);
-    const images = config.ui?.images ?? {};
-    const darkEnabled = images.dark_mode_enabled !== false;
-    const darkCond = images.dark_mode_condition ?? "always";
-    const bgOn = images.background_on ?? "";
-    const bgPosY = images.background_position_y ?? 50;
     const performance = config.ui?.performance ?? {};
     const performanceMode = performance.mode ?? "balanced";
     const reduceEffects = performance.reduce_effects === true || performanceMode === "maximum";
     const unloadCollapsedGrid = performance.unload_collapsed_grid ?? true;
-    const backgroundPreview = bgOn ? html`
-      <div class="bg-preview bg-preview--${darkEnabled ? "split" : "banner"}"
-           style=${this._bgPreviewValid ? "" : "display:none"}>
-        <img class="bg-preview-img" src=${bgOn} alt=""
-          style="object-position: center ${bgPosY}%"
-          @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
-          @error=${() => { this._bgPreviewValid = false; this._bgPreviewError = true; }}
-        />
-        ${darkEnabled ? html`
-          <img class="bg-preview-img bg-preview-img--dark" src=${bgOn} alt=""
-            style="object-position: center ${bgPosY}%" />
-          <span class="bg-preview-tag bg-preview-tag--left">ON</span>
-          <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
-        ` : nothing}
-      </div>
-      ${!this._bgPreviewValid ? html`
-        <img style="display:none;position:absolute" src=${bgOn} alt=""
-          @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
-        />
-      ` : nothing}
-    ` : nothing;
+    const areaCollapsed = hasArea && this._cardSetupCollapsed;
 
     return html`
       <section class="section">
         <div class="section-header" @click=${() => { this._cardSetupCollapsed = !this._cardSetupCollapsed; }}>
           <div>
-            <div class="section-title">Card setup</div>
-            <div class="section-subtitle">Area, background and card behaviour.</div>
+            <div class="section-title">Area</div>
+            <div class="section-subtitle">${hasArea ? areaName || "Area selected" : "Choose an area"}</div>
           </div>
           <button class="section-collapse-btn" @click=${(e: Event) => e.stopPropagation()}>
-            <ha-icon icon=${this._cardSetupCollapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
+            <ha-icon icon=${areaCollapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
           </button>
         </div>
-        <div class="area-picker-block">
-          <div class="area-picker-label req-label ${hasArea ? "" : "req-label--invalid"}">
-            Area${!hasArea ? this._reqBadge() : nothing}
-          </div>
-          <ha-area-picker
-            class=${!hasArea ? "req-outline" : ""}
-            .hass=${this.hass}
-            .value=${config.room_id ?? ""}
-            @value-changed=${(e: CustomEvent) => this._setAreaId(String(e.detail?.value ?? ""))}
-          ></ha-area-picker>
-        </div>
-        ${backgroundPreview}
 
-        <div class="section-collapsible ${this._cardSetupCollapsed ? "section-collapsible--collapsed" : ""}">
+        <div class="section-collapsible ${areaCollapsed ? "section-collapsible--collapsed" : ""}">
         <div class="section-collapsible-inner">
-
-        ${!hasArea ? nothing : html`
-
-        <div class="panel">
-          <div class="panel-title">Background</div>
-          <div class="img-picker-tabs">
-            <button type="button" class="img-tab ${this._imgPickerMode === "library" ? "img-tab--active" : ""}"
-                    @click=${() => { this._imgPickerMode = "library"; }}>
-              <ha-icon icon="mdi:image-multiple-outline"></ha-icon>Library
-            </button>
-            <button type="button" class="img-tab ${this._imgPickerMode === "path" ? "img-tab--active" : ""}"
-                    @click=${() => { this._imgPickerMode = "path"; }}>
-              <ha-icon icon="mdi:link-variant"></ha-icon>Path
-            </button>
+          <div class="area-picker-block">
+            <div class="area-picker-label req-label ${hasArea ? "" : "req-label--invalid"}">
+              Area${!hasArea ? this._reqBadge() : nothing}
+            </div>
+            <ha-area-picker
+              class=${!hasArea ? "req-outline" : ""}
+              .hass=${this.hass}
+              .value=${config.room_id ?? ""}
+              @value-changed=${(e: CustomEvent) => this._setAreaId(String(e.detail?.value ?? ""))}
+            ></ha-area-picker>
+            <button type="button" class="autofill-button autofill-button--full" ?disabled=${!hasArea} @click=${this._handleRoomAutofill}>Autofill devices from area</button>
           </div>
-          ${this._imgPickerMode === "path" ? html`
-            <div class="row single">
-              <label>
-                <span class="hint">We recommend a horizontal photo of the nicest corner of ${areaName || "your area"}.</span>
-                <input type="text" .value=${bgOn.startsWith("data:") ? "" : bgOn} placeholder="/local/img/areas/bedroom.png"
-                  @input=${(e: InputEvent) => {
-                    const val = valueFromEvent(e);
-                    this._bgPreviewValid = false;
-                    this._bgPreviewError = false;
-                    if (val && !bgOn && images.dark_mode_enabled === undefined) {
-                      this._setImageKey("dark_mode_enabled", true);
-                    }
-                    this._setRoomImage("background_on", val);
-                  }}
-                />
-              </label>
-            </div>
-          ` : html`
-            <div class="img-gallery">
-              <button type="button" class="img-upload-btn" ?disabled=${this._imgUploading}
-                      @click=${this._triggerImageUpload}>
-                <ha-icon icon=${this._imgUploading ? "mdi:loading" : "mdi:plus"}></ha-icon>
-                ${this._imgUploading ? "Uploading…" : "Upload image"}
-              </button>
-              ${this._getGallery().map((img) => html`
-                <div class="img-gallery-item ${bgOn === img.url ? "img-gallery-item--active" : ""}"
-                     @click=${() => {
-                       this._setRoomImage("background_on", img.url);
-                       this._bgPreviewValid = false;
-                       this._bgPreviewError = false;
-                       if (!bgOn && images.dark_mode_enabled === undefined) this._setImageKey("dark_mode_enabled", true);
-                     }}>
-                  <img src=${img.url} alt=${img.name} loading="lazy" />
-                  <button type="button" class="img-gallery-del"
-                          @click=${(e: Event) => { e.stopPropagation(); this._removeFromGallery(img.url); if (bgOn === img.url) this._setRoomImage("background_on", ""); }}>
-                    <ha-icon icon="mdi:close"></ha-icon>
-                  </button>
-                </div>
-              `)}
-              ${this._getGallery().length === 0 ? html`<span class="img-gallery-empty">No images yet. Tap Upload to add one.</span>` : nothing}
-            </div>
-            <input type="file" accept="image/*" class="img-file-input" @change=${this._handleImageFile} />
-          `}
-          ${bgOn && this._bgPreviewError ? this._reqError("Image not valid or not found.") : nothing}
-          ${this._bgPreviewValid ? html`
-            <div class="bg-crop-control">
-              <span class="bg-crop-label">Crop position</span>
-              <div class="tile-size-range-wrap" style="--range-pct: ${bgPosY}%">
-                <input class="tile-size-range" type="range" min="0" max="100" step="5"
-                       .value=${String(bgPosY)}
-                       @input=${(e: InputEvent) => this._setImageKey("background_position_y", Number((e.target as HTMLInputElement).value))} />
-              </div>
-              <div class="bg-crop-labels"><span>Top</span><span>Center</span><span>Bottom</span></div>
-            </div>
-            <div class="row single">
-              ${this._renderToggleField("Dark version when lights are off", "Applies a dark filter to the same image when all devices are inactive.", darkEnabled, (checked) => this._setImageKey("dark_mode_enabled", checked))}
-            </div>
-            ${darkEnabled ? html`
+
+          ${!hasArea ? nothing : html`
+            <div class="panel">
+              <div class="panel-title">Expanded state</div>
               <div class="row single">
-                <label>Switch to dark when
-                  <select .value=${darkCond} @change=${(e: Event) => this._setImageKey("dark_mode_condition", valueFromEvent(e))}>
-                    <option value="always">Always (devices off)</option>
-                    <option value="daytime">Daytime (devices off + sun above horizon)</option>
-                    <option value="lux">Lux sensor below threshold</option>
+                <label>Default state
+                  <select .value=${config.expander?.initial_state === "open" ? "open" : "closed"}
+                          @change=${(e: Event) => this._setExpander("initial_state", valueFromEvent(e))}>
+                    <option value="closed">Closed</option>
+                    <option value="open">Open</option>
                   </select>
                 </label>
               </div>
-              ${darkCond === "lux" ? html`
-                <div class="row single">
-                  <label>Lux sensor</label>
-                  ${this._renderClearableEntityPicker(
-                    images.dark_mode_lux_entity ?? "",
-                    (value) => this._setImageKey("dark_mode_lux_entity", value || undefined),
-                    false,
-                    { entity: { domain: "sensor", device_class: "illuminance" } },
-                    () => this._setImageKey("dark_mode_lux_entity", undefined),
-                  )}
-                </div>
-                <div class="row single">
-                  <label>Threshold (lux)
-                    <input type="number" min="0"
-                      .value=${String(images.dark_mode_lux_threshold ?? 50)}
-                      @input=${(e: InputEvent) => this._setImageKey("dark_mode_lux_threshold", Number(valueFromEvent(e)) || undefined)}
-                    />
-                  </label>
-                </div>
-              ` : nothing}
-            ` : nothing}
-          ` : nothing}
-        </div>
+              <div class="row single">
+                ${this._renderCompactCheckField("Remember state", "Restores the last open or closed state in this browser.", config.expander?.persist_state ?? true, (checked) => this._setExpander("persist_state", checked))}
+              </div>
+            </div>
 
-        <div class="panel">
-          <div class="panel-title">Expanded state</div>
-          <div class="row single">
-            <label>Default state
-              <select .value=${config.expander?.initial_state === "open" ? "open" : "closed"}
-                      @change=${(e: Event) => this._setExpander("initial_state", valueFromEvent(e))}>
-                <option value="closed">Closed</option>
-                <option value="open">Open</option>
-              </select>
-            </label>
-          </div>
-          <div class="row single">
-            ${this._renderCompactCheckField("Remember state", "Restores the last open or closed state from the browser.", config.expander?.persist_state ?? true, (checked) => this._setExpander("persist_state", checked))}
-          </div>
-        </div>
+            <div class="panel">
+              <div class="panel-title">Battery alerts</div>
+              <div class="row single">
+                <label>Threshold %
+                  <span class="hint">Marks batteries at or below this level.</span>
+                  <input type="number" min="0" max="100"
+                    .value=${String(config.ui?.battery_threshold ?? 20)}
+                    @input=${(e: InputEvent) => this._setUi("battery_threshold", Number(valueFromEvent(e)))}
+                  />
+                </label>
+              </div>
+            </div>
 
-        <div class="panel">
-          <div class="panel-title">Battery alerts</div>
-          <div class="row single">
-            <label>Threshold %
-              <span class="hint">Alert fires when battery level is at or below this value.</span>
-              <input type="number" min="0" max="100"
-                .value=${String(config.ui?.battery_threshold ?? 20)}
-                @input=${(e: InputEvent) => this._setUi("battery_threshold", Number(valueFromEvent(e)))}
-              />
-            </label>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-title">Performance</div>
-          <div class="row single">
-            <label>Mode
-              <select .value=${performanceMode} @change=${(e: Event) => this._setUiPerformance("mode", valueFromEvent(e))}>
-                <option value="balanced">Balanced</option>
-                <option value="maximum">Maximum savings</option>
-              </select>
-            </label>
-          </div>
-          <div class="row single">
-            ${this._renderCompactCheckField("Reduce visual effects", "Uses cheaper paint styles for shadows, blur and motion.", reduceEffects, (checked) => this._setUiPerformance("reduce_effects", checked || undefined), performanceMode === "maximum")}
-          </div>
-          <div class="row single">
-            ${this._renderCompactCheckField("Unload closed grid", "Removes device tiles from the DOM while the card is collapsed.", unloadCollapsedGrid, (checked) => this._setUiPerformance("unload_collapsed_grid", checked))}
-          </div>
-        </div>
-
-        <div class="row single">
-          <button type="button" class="autofill-button autofill-button--full" ?disabled=${!hasArea} @click=${this._handleRoomAutofill}>Autofill devices from area</button>
-        </div>
-
-        `}
+            <div class="panel">
+              <div class="panel-title">Performance</div>
+              <div class="row single">
+                <label>Mode
+                  <select .value=${performanceMode} @change=${(e: Event) => this._setUiPerformance("mode", valueFromEvent(e))}>
+                    <option value="balanced">Balanced</option>
+                    <option value="maximum">Maximum savings</option>
+                  </select>
+                </label>
+              </div>
+              <div class="row single">
+                ${this._renderCompactCheckField("Reduce visual effects", "Uses lighter shadows, blur and motion.", reduceEffects, (checked) => this._setUiPerformance("reduce_effects", checked || undefined), performanceMode === "maximum")}
+              </div>
+              <div class="row single">
+                ${this._renderCompactCheckField("Unload closed grid", "Removes device tiles from the DOM while the card is closed.", unloadCollapsedGrid, (checked) => this._setUiPerformance("unload_collapsed_grid", checked))}
+              </div>
+            </div>
+          `}
         </div></div>
       </section>
     `;
   }
-
   private _renderSensors(config: SmartRoomCardConfig) {
     const customSensors = config.sensors?.custom ?? [];
     const customCount = customSensors.length;
@@ -868,7 +744,163 @@ export class SmartAreaCardEditor extends LitElement {
     `;
   }
 
+  private _renderBackgroundImageControls(config: SmartRoomCardConfig) {
+    const areaName = this._areaName(config.room_id);
+    const images = config.ui?.images ?? {};
+    const darkEnabled = images.dark_mode_enabled !== false;
+    const darkCond = images.dark_mode_condition ?? "always";
+    const bgOn = images.background_on ?? "";
+    const bgPosY = images.background_position_y ?? 50;
+    const slug = (areaName || "living room").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "area";
+
+    return html`
+      <div class="panel">
+        <div class="panel-title">Background image</div>
+        <div class="img-picker-tabs">
+          <button type="button" class="img-tab ${this._imgPickerMode === "library" ? "img-tab--active" : ""}"
+                  @click=${() => { this._imgPickerMode = "library"; }}>
+            <ha-icon icon="mdi:image-multiple-outline"></ha-icon>Library
+          </button>
+          <button type="button" class="img-tab ${this._imgPickerMode === "path" ? "img-tab--active" : ""}"
+                  @click=${() => { this._imgPickerMode = "path"; }}>
+            <ha-icon icon="mdi:link-variant"></ha-icon>Path
+          </button>
+        </div>
+        ${this._imgPickerMode === "path" ? html`
+          <div class="row single">
+            <label>
+              <span class="hint">Use a wide, calm image that still reads behind controls.</span>
+              <input type="text" .value=${bgOn.startsWith("data:") ? "" : bgOn} placeholder=${`/local/img/areas/${slug}.png`}
+                @input=${(e: InputEvent) => {
+                  const val = valueFromEvent(e);
+                  this._bgPreviewValid = false;
+                  this._bgPreviewError = false;
+                  if (val && !bgOn && images.dark_mode_enabled === undefined) {
+                    this._setImageKey("dark_mode_enabled", true);
+                  }
+                  this._setRoomImage("background_on", val);
+                }}
+              />
+            </label>
+          </div>
+        ` : html`
+          <div class="img-gallery">
+            <button type="button" class="img-upload-btn" ?disabled=${this._imgUploading}
+                    @click=${this._triggerImageUpload}>
+              <ha-icon icon=${this._imgUploading ? "mdi:loading" : "mdi:plus"}></ha-icon>
+              ${this._imgUploading ? "Uploading..." : "Upload image"}
+            </button>
+            ${this._getGallery().map((img) => html`
+              <div class="img-gallery-item ${bgOn === img.url ? "img-gallery-item--active" : ""}"
+                   @click=${() => {
+                     this._setRoomImage("background_on", img.url);
+                     this._bgPreviewValid = false;
+                     this._bgPreviewError = false;
+                     if (!bgOn && images.dark_mode_enabled === undefined) this._setImageKey("dark_mode_enabled", true);
+                   }}>
+                <img src=${img.url} alt=${img.name} loading="lazy" />
+                <button type="button" class="img-gallery-del"
+                        @click=${(e: Event) => { e.stopPropagation(); this._removeFromGallery(img.url); if (bgOn === img.url) this._setRoomImage("background_on", ""); }}>
+                  <ha-icon icon="mdi:close"></ha-icon>
+                </button>
+              </div>
+            `)}
+            ${this._getGallery().length === 0 ? html`<span class="img-gallery-empty">Upload one image to start your room library.</span>` : nothing}
+          </div>
+          <input type="file" accept="image/*" class="img-file-input" @change=${this._handleImageFile} />
+        `}
+        ${bgOn && this._bgPreviewError ? this._reqError("Image not found. Check the path or choose another file.") : nothing}
+        ${this._bgPreviewValid ? html`
+          <div class="bg-crop-control">
+            <span class="bg-crop-label">Crop position</span>
+            <div class="tile-size-range-wrap" style="--range-pct: ${bgPosY}%">
+              <input class="tile-size-range" type="range" min="0" max="100" step="5"
+                     .value=${String(bgPosY)}
+                     @input=${(e: InputEvent) => this._setImageKey("background_position_y", Number((e.target as HTMLInputElement).value))} />
+            </div>
+            <div class="bg-crop-labels"><span>Top</span><span>Center</span><span>Bottom</span></div>
+          </div>
+          <div class="row single">
+            ${this._renderToggleField("Use dark version", "Dims the same image when the room is off.", darkEnabled, (checked) => this._setImageKey("dark_mode_enabled", checked))}
+          </div>
+          ${darkEnabled ? html`
+            <div class="row single">
+              <label>Switch to dark when
+                <select .value=${darkCond} @change=${(e: Event) => this._setImageKey("dark_mode_condition", valueFromEvent(e))}>
+                  <option value="always">Room is off</option>
+                  <option value="daytime">Room is off during the day</option>
+                  <option value="lux">Lux sensor is below threshold</option>
+                </select>
+              </label>
+            </div>
+            ${darkCond === "lux" ? html`
+              <div class="row single">
+                <label>Lux sensor</label>
+                ${this._renderClearableEntityPicker(
+                  images.dark_mode_lux_entity ?? "",
+                  (value) => this._setImageKey("dark_mode_lux_entity", value || undefined),
+                  false,
+                  { entity: { domain: "sensor", device_class: "illuminance" } },
+                  () => this._setImageKey("dark_mode_lux_entity", undefined),
+                )}
+              </div>
+              <div class="row single">
+                <label>Threshold (lux)
+                  <input type="number" min="0"
+                    .value=${String(images.dark_mode_lux_threshold ?? 50)}
+                    @input=${(e: InputEvent) => this._setImageKey("dark_mode_lux_threshold", Number(valueFromEvent(e)) || undefined)}
+                  />
+                </label>
+              </div>
+            ` : nothing}
+          ` : nothing}
+        ` : nothing}
+      </div>
+    `;
+  }
+
   private _renderHeaderSection(config: SmartRoomCardConfig) {
+    const roomName = config.room?.trim() ?? "";
+    const showAreaIcon = config.ui?.show_area_icon ?? false;
+    const images = config.ui?.images ?? {};
+    const appearanceSummary = [
+      roomName || this._areaName(config.room_id) || "Untitled area",
+      showAreaIcon ? "icon on" : "icon off",
+      images.background_on ? "image set" : "no image",
+    ].join(" - ");
+
+    return html`
+      <section class="section">
+        <div class="section-header" @click=${() => { this._headerCollapsed = !this._headerCollapsed; }}>
+          <div>
+            <div class="section-title">Appearance</div>
+            <div class="section-subtitle">${appearanceSummary}</div>
+          </div>
+          <button class="section-collapse-btn" @click=${(e: Event) => e.stopPropagation()}>
+            <ha-icon icon=${this._headerCollapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
+          </button>
+        </div>
+
+        <div class="section-collapsible ${this._headerCollapsed ? "section-collapsible--collapsed" : ""}">
+        <div class="section-collapsible-inner">
+          ${this._renderAppearancePreview(config)}
+
+          <div class="row">
+            <label>
+              Area name
+              <span class="hint">Leave empty to show badges without a title.</span>
+              <input .value=${config.room ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} />
+            </label>
+            ${this._renderCompactCheckField("Show area icon", "Adds the Home Assistant area icon beside the name.", showAreaIcon, (checked) => this._setUi("show_area_icon", checked))}
+          </div>
+
+          ${this._renderBackgroundImageControls(config)}
+        </div></div>
+      </section>
+    `;
+  }
+
+  private _renderAppearancePreview(config: SmartRoomCardConfig) {
     const roomName = config.room?.trim() ?? "";
     const showAreaIcon = config.ui?.show_area_icon ?? false;
     const areaIcon = (this.hass as import("./types/ha-extensions").HomeAssistantExtended)?.areas?.[config.room_id ?? ""]?.icon ?? "mdi:home-outline";
@@ -878,6 +910,10 @@ export class SmartAreaCardEditor extends LitElement {
     const sensorClickDetails = sensorsEnabled && config.ui?.header_climate_more_info !== false;
     const previewAutomations = this._previewAreaAutomations(config.room_id);
     const enabledAutomationCount = previewAutomations.filter((item) => item.enabled).length;
+    const images = config.ui?.images ?? {};
+    const bgOn = images.background_on ?? "";
+    const bgPosY = images.background_position_y ?? 50;
+    const darkEnabled = Boolean(bgOn) && images.dark_mode_enabled !== false;
 
     const _SENSOR_ICONS: Record<string, string> = {
       temperature: "mdi:thermometer", humidity: "mdi:water-percent", co2: "mdi:molecule-co2",
@@ -917,138 +953,166 @@ export class SmartAreaCardEditor extends LitElement {
     }
 
     return html`
-      <section class="section">
-        <div class="section-header" @click=${() => { this._headerCollapsed = !this._headerCollapsed; }}>
-          <div>
-            <div class="section-title">Header</div>
-            <div class="section-subtitle">Name, icon and sensor strip.</div>
-          </div>
-          <button class="section-collapse-btn" @click=${(e: Event) => e.stopPropagation()}>
-            <ha-icon icon=${this._headerCollapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
-          </button>
-        </div>
-        <div class="editor-header-preview">
-          <div class="ehp-overlay"></div>
-          <div class="ehp-top">
-            <div class="ehp-title">
-              ${showAreaIcon ? html`<ha-icon icon=${areaIcon}></ha-icon>` : nothing}
-              ${roomName ? html`<span>${roomName}</span>` : nothing}
-              ${automationEnabled ? html`
-                ${automationClickDetails ? html`
-                  <button
-                    type="button"
-                    class="ehp-automation-badge ehp-automation-badge--cta"
-                    aria-label="Mostrar u ocultar detalles de automatizaciones"
-                    @click=${(e: Event) => {
-                      e.stopPropagation();
-                      this._showHeaderAutomationDetails = !this._showHeaderAutomationDetails;
-                    }}
-                  >
-                    <ha-icon icon="mdi:home-automation"></ha-icon>
-                    <span class="ehp-badge-count">${enabledAutomationCount}</span>
-                  </button>
-                ` : html`
-                <span class="ehp-automation-badge" aria-label="${enabledAutomationCount} automations enabled">
+      <div class="editor-header-preview ${bgOn ? "editor-header-preview--image" : ""}">
+        ${bgOn ? html`
+          <img class="ehp-bg ehp-bg--on" src=${bgOn} alt=""
+            style="object-position: center ${bgPosY}%"
+            @load=${() => { this._bgPreviewValid = true; this._bgPreviewError = false; }}
+            @error=${() => { this._bgPreviewValid = false; this._bgPreviewError = true; }}
+          />
+          ${darkEnabled ? html`
+            <img class="ehp-bg ehp-bg--off" src=${bgOn} alt="" style="object-position: center ${bgPosY}%" />
+            <span class="bg-preview-tag bg-preview-tag--left">ON</span>
+            <span class="bg-preview-tag bg-preview-tag--right">OFF</span>
+          ` : nothing}
+        ` : nothing}
+        <div class="ehp-overlay"></div>
+        <div class="ehp-top">
+          <div class="ehp-title ${roomName ? "" : "ehp-title--empty"}">
+            ${showAreaIcon ? html`<ha-icon icon=${areaIcon}></ha-icon>` : nothing}
+            ${roomName ? html`<span>${roomName}</span>` : html`<span>${this._areaName(config.room_id) || "Area"}</span>`}
+            ${automationEnabled ? html`
+              ${automationClickDetails ? html`
+                <button
+                  type="button"
+                  class="ehp-automation-badge"
+                  aria-label="Show automation details preview"
+                  @click=${(e: Event) => {
+                    e.stopPropagation();
+                    this._showHeaderAutomationDetails = !this._showHeaderAutomationDetails;
+                  }}
+                >
                   <ha-icon icon="mdi:home-automation"></ha-icon>
                   <span class="ehp-badge-count">${enabledAutomationCount}</span>
-                </span>
-                `}
-              ` : nothing}
-            </div>
-            ${sensorsEnabled && _previewSensors.length ? html`
-              ${sensorClickDetails ? html`
-              <button
-                type="button"
-                class="ehp-sensors ehp-sensor-click-target"
-                aria-label="Open sensor details preview"
-                @click=${(e: Event) => {
-                  e.stopPropagation();
-                  this._showHeaderSensorPreviewPopup = true;
-                }}
-              >
-                ${_previewSensors.map((s, i) => html`
-                  <span class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
-                    <ha-icon icon=${s.icon}></ha-icon>
-                    <span>${s.value}</span>
-                  </span>
-                `)}
-              </button>
+                </button>
               ` : html`
-              <div class="ehp-sensors">
-                ${_previewSensors.map((s, i) => html`
-                  <span class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
-                    <ha-icon icon=${s.icon}></ha-icon>
-                    <span>${s.value}</span>
-                  </span>
-                `)}
-              </div>
+              <span class="ehp-automation-badge" aria-label="${enabledAutomationCount} automations enabled">
+                <ha-icon icon="mdi:home-automation"></ha-icon>
+                <span class="ehp-badge-count">${enabledAutomationCount}</span>
+              </span>
               `}
             ` : nothing}
           </div>
-          ${automationEnabled && automationClickDetails ? html`
-            ${this._showHeaderAutomationDetails ? html`
-              <div class="ehp-automation-panel">
-                <ha-icon icon="mdi:home-automation"></ha-icon>
-                <div class="ehp-automation-list">
-                  ${previewAutomations.length
-                    ? previewAutomations.map((item) => html`
-                        <div class="ehp-automation-item ${item.enabled ? "" : "ehp-automation-item--disabled"}">
-                          ${item.name}
-                          <span>${item.enabled ? "enabled" : "disabled"}</span>
-                        </div>
-                      `)
-                    : html`<div class="ehp-automation-item ehp-automation-item--disabled">No automations in this area</div>`}
-                </div>
-              </div>
-            ` : nothing}
+          ${sensorsEnabled && _previewSensors.length ? html`
+            ${sensorClickDetails ? html`
+            <button
+              type="button"
+              class="ehp-sensors ehp-sensor-click-target"
+              aria-label="Open sensor details preview"
+              @click=${(e: Event) => {
+                e.stopPropagation();
+                this._showHeaderSensorPreviewPopup = true;
+              }}
+            >
+              ${_previewSensors.map((s, i) => html`
+                <span class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
+                  <ha-icon icon=${s.icon}></ha-icon>
+                  <span>${s.value}</span>
+                </span>
+              `)}
+            </button>
+            ` : html`
+            <div class="ehp-sensors">
+              ${_previewSensors.map((s, i) => html`
+                <span class="ehp-sensor-item ${i === 0 ? "ehp-sensor-item--primary" : ""}">
+                  <ha-icon icon=${s.icon}></ha-icon>
+                  <span>${s.value}</span>
+                </span>
+              `)}
+            </div>
+            `}
           ` : nothing}
-          ${sensorsEnabled && this._showHeaderSensorPreviewPopup ? this._renderSensorPreviewPopup(roomName, _previewSensors) : nothing}
+        </div>
+        ${automationEnabled && automationClickDetails && this._showHeaderAutomationDetails ? html`
+          <div class="ehp-automation-panel">
+            <ha-icon icon="mdi:home-automation"></ha-icon>
+            <div class="ehp-automation-list">
+              ${previewAutomations.length
+                ? previewAutomations.map((item) => html`
+                    <div class="ehp-automation-item ${item.enabled ? "" : "ehp-automation-item--disabled"}">
+                      ${item.name}
+                      <span>${item.enabled ? "enabled" : "disabled"}</span>
+                    </div>
+                  `)
+                : html`<div class="ehp-automation-item ehp-automation-item--disabled">No automations in this area</div>`}
+            </div>
+          </div>
+        ` : nothing}
+        ${sensorsEnabled && this._showHeaderSensorPreviewPopup ? this._renderSensorPreviewPopup(roomName, _previewSensors) : nothing}
+      </div>
+    `;
+  }
+
+  private _renderAutomationsSection(config: SmartRoomCardConfig) {
+    const automationEnabled = config.ui?.automation_badge_enabled ?? false;
+    const automationClickDetails = config.ui?.automation_badge_click_details !== false;
+    const previewAutomations = this._previewAreaAutomations(config.room_id);
+    const enabledAutomationCount = previewAutomations.filter((item) => item.enabled).length;
+    const summary = automationEnabled ? `${enabledAutomationCount} enabled` : "Hidden";
+
+    return html`
+      <section class="section">
+        <div class="section-header" @click=${() => { this._automationsCollapsed = !this._automationsCollapsed; }}>
+          <div>
+            <div class="section-title">Automations</div>
+            <div class="section-subtitle">${summary}</div>
+          </div>
+          <button class="section-collapse-btn" @click=${(e: Event) => e.stopPropagation()}>
+            <ha-icon icon=${this._automationsCollapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
+          </button>
         </div>
 
-        <div class="section-collapsible ${this._headerCollapsed ? "section-collapsible--collapsed" : ""}">
+        <div class="section-collapsible ${this._automationsCollapsed ? "section-collapsible--collapsed" : ""}">
         <div class="section-collapsible-inner">
-
-        <div class="row single">
-          <label>
-            Area name
-            <span class="hint">Header label. Leave empty to hide the name and show only badges.</span>
-            <input .value=${config.room ?? ""} @input=${(e: InputEvent) => this._setRoot("room", valueFromEvent(e))} />
-          </label>
-        </div>
-
-        <div class="row single">
-          ${this._renderCompactCheckField("Show area icon", "Shows the area icon next to the name in the header.", showAreaIcon, (checked) => this._setUi("show_area_icon", checked))}
-        </div>
-
-        <div class="panel">
-          <div class="panel-title">Automations badge</div>
           <div class="row single">
-            ${this._renderToggleField("Show automation count", "Shows a badge with the count of enabled automations in this area.", automationEnabled, (checked) => this._setUi("automation_badge_enabled", checked), !this._isRoomIdValid(config.room_id))}
+            ${this._renderToggleField("Show automation count", "Shows enabled automations in the appearance preview and card header.", automationEnabled, (checked) => this._setUi("automation_badge_enabled", checked), !this._isRoomIdValid(config.room_id))}
           </div>
           ${automationEnabled ? html`
             <div class="row single">
-              ${this._renderCompactCheckField("Click despliega detalles", "Allows the automation badge to show or hide automation details.", automationClickDetails, (checked) => this._setUi("automation_badge_click_details", checked))}
+              ${this._renderCompactCheckField("Open details on click", "Lets the automation badge reveal area automation details.", automationClickDetails, (checked) => this._setUi("automation_badge_click_details", checked))}
             </div>
           ` : nothing}
-        </div>
-
-        <div class="panel">
-          <div class="panel-title">Sensors</div>
-          <div class="row single">
-            ${this._renderToggleField("Show sensors", "Shows the sensor strip in the header.", sensorsEnabled, (checked) => this._setUi("header_sensors_enabled", checked))}
-          </div>
-          ${sensorsEnabled ? html`
-            <div class="row single">
-              ${this._renderCompactCheckField("Click despliega detalles", "Allows the sensor strip to show the sensor details popup.", sensorClickDetails, (checked) => this._setUi("header_climate_more_info", checked))}
-            </div>
-            ${this._renderSensors(config)}
-          ` : nothing}
-        </div>
         </div></div>
       </section>
     `;
   }
 
+  private _renderSensorsSection(config: SmartRoomCardConfig) {
+    const sensorsEnabled = config.ui?.header_sensors_enabled !== false;
+    const sensorClickDetails = sensorsEnabled && config.ui?.header_climate_more_info !== false;
+    const sensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
+    const configuredCount = sensorOrder.filter((key) => key.startsWith("custom_")
+      ? Boolean(config.sensors?.custom?.[Number(key.slice(7))]?.entity)
+      : Boolean((config.sensors as Record<string, unknown> | undefined)?.[key])).length;
+    const summary = sensorsEnabled ? `${configuredCount} configured` : "Hidden";
+
+    return html`
+      <section class="section">
+        <div class="section-header" @click=${() => { this._sensorsCollapsed = !this._sensorsCollapsed; }}>
+          <div>
+            <div class="section-title">Sensors</div>
+            <div class="section-subtitle">${summary}</div>
+          </div>
+          <button class="section-collapse-btn" @click=${(e: Event) => e.stopPropagation()}>
+            <ha-icon icon=${this._sensorsCollapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
+          </button>
+        </div>
+
+        <div class="section-collapsible ${this._sensorsCollapsed ? "section-collapsible--collapsed" : ""}">
+        <div class="section-collapsible-inner">
+          <div class="row single">
+            ${this._renderToggleField("Show sensors", "Displays selected sensors in the appearance preview and card header.", sensorsEnabled, (checked) => this._setUi("header_sensors_enabled", checked))}
+          </div>
+          ${sensorsEnabled ? html`
+            <div class="row single">
+              ${this._renderCompactCheckField("Open details on click", "Lets the sensor strip open a compact details preview.", sensorClickDetails, (checked) => this._setUi("header_climate_more_info", checked))}
+            </div>
+            ${this._renderSensors(config)}
+          ` : nothing}
+        </div></div>
+      </section>
+    `;
+  }
   private _renderPresetSensor(
     key: string,
     _label: string,
@@ -1165,8 +1229,8 @@ export class SmartAreaCardEditor extends LitElement {
       <section class="section">
         <div class="devices-header">
           <div>
-            <div class="section-title">Devices grid</div>
-            <div class="section-subtitle">Drag to reorder · tap to edit.</div>
+            <div class="section-title">Devices</div>
+            <div class="section-subtitle">Drag to reorder. Tap to edit.</div>
           </div>
         </div>
         <div class="tile-size-control">
