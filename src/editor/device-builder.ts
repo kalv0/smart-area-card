@@ -66,7 +66,9 @@ export function applyDerivedBatteryAlertWithUi(
     name: "Low battery",
     preset: true,
     preset_source: "battery",
-    conditions: [{ entity: batteryEntity, operator: "lte", value: threshold }],
+    conditions: existingBatteryAlert?.conditions?.length
+      ? existingBatteryAlert.conditions
+      : [{ entity: batteryEntity, operator: "lte", value: threshold }],
     enabled: existingBatteryAlert?.enabled !== false,
     message: existingBatteryAlert?.message ?? "",
     outlined: existingBatteryAlert?.outlined ?? (ui?.battery_alert_outlined !== false),

@@ -126,6 +126,20 @@ describe("applyDerivedBatteryAlertWithUi", () => {
     expect(alert?.border_color).toBe("orange");
     expect(alert?.conditions?.[0].value).toBe(15);
   });
+
+  it("preserves edited battery alert conditions", () => {
+    const device = makeDevice({
+      battery: "sensor.battery",
+      states: {
+        on_conditions: [],
+        alert_conditions: [],
+        alerts: [{ preset: true, preset_source: "battery", conditions: [{ entity: "sensor.other", operator: "lte", value: 10 }] }],
+      },
+    });
+    const result = applyDerivedBatteryAlertWithUi(device, 20, noUi);
+    const alert = result.states?.alerts?.find((a) => a.preset_source === "battery");
+    expect(alert?.conditions?.[0]).toEqual({ entity: "sensor.other", operator: "lte", value: 10 });
+  });
 });
 
 describe("applyTypePreset", () => {

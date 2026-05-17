@@ -2592,6 +2592,34 @@ export const calvoRoomCardEditorStyles = css`
   .preset-copy {
     display: grid;
     gap: 4px;
+    min-width: 0;
+  }
+
+  .preset-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex: 0 0 auto;
+  }
+
+  .preset-edit-button {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 6px;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .preset-edit-button ha-icon,
+  .preset-hide-bottom ha-icon {
+    --mdc-icon-size: 17px;
+  }
+
+  .preset-hide-bottom {
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .autofill-button {

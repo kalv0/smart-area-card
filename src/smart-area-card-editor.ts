@@ -80,6 +80,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _sensorDragIndex?: number;
   @state() private _sensorDropIndex?: number;
   @state() private _expandedSensors: string[] = [];
+  @state() private _expandedPresetItems: string[] = [];
   @state() private _showAddTypePicker = false;
   @state() private _showAdvancedCardSetup = false;
   @state() private _showAdvancedBattery = false;
@@ -362,6 +363,7 @@ export class SmartAreaCardEditor extends LitElement {
     }
     const deviceCount = this._config?.devices?.length ?? 0;
     this._expandedDevices = this._expandedDevices.filter((index) => index < deviceCount);
+    this._expandedPresetItems = this._expandedPresetItems.filter((key) => Number(key.split(":")[1]) < deviceCount);
     if (!this._sectionsInitialized) {
       this._sectionsInitialized = true;
       const hasDevices = deviceCount > 0;
@@ -1616,6 +1618,20 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     return html`<div class="stack-separated"><div class="conditions-shell"><div class="subsection"><div class="subsection-title">Conditions</div><div class="field-help">${hint}</div></div>${content}</div></div>`;
   }
 
+  private _presetEditorKey(deviceIndex: number, kind: "state" | "alert", itemIndex: number, item: { preset_source?: string }): string {
+    return `${kind}:${deviceIndex}:${item.preset_source ?? "preset"}:${itemIndex}`;
+  }
+
+  private _isPresetEditorExpanded(key: string): boolean {
+    return this._expandedPresetItems.includes(key);
+  }
+
+  private _togglePresetEditor(key: string): void {
+    this._expandedPresetItems = this._expandedPresetItems.includes(key)
+      ? this._expandedPresetItems.filter((item) => item !== key)
+      : [...this._expandedPresetItems, key];
+  }
+
   private _renderSharedNamedStateCard(
     item: SmartRoomNamedStateConfig,
     options: {
@@ -1623,11 +1639,13 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       onConditions: (next: ConditionConfig[]) => void;
       onRemove?: () => void;
       onReset?: () => void;
+      onToggleCollapsed?: () => void;
       entityOptions?: string[];
       lockMode: "none" | "first" | "all";
       selectorDefaults?: { domains?: string[]; restrict_to_room_area?: boolean };
       showPresetBanner?: boolean;
       allowPresetNameEdit?: boolean;
+      collapsed?: boolean;
     },
   ) {
     const {
@@ -1635,13 +1653,32 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       onConditions,
       onRemove,
       onReset,
+      onToggleCollapsed,
       lockMode,
       selectorDefaults,
       showPresetBanner = true,
       allowPresetNameEdit = false,
+      collapsed = false,
     } = options;
+    const presetBanner = item.preset && showPresetBanner ? html`
+      <div class="preset-banner">
+        <div class="preset-copy">
+          <div><strong>${item.name?.trim() || `Default ${this._presetLabel(item.preset_source)} state`}</strong></div>
+          <div>You can edit this default type configuration, but it cannot be removed.</div>
+        </div>
+        <div class="preset-actions">
+          ${onReset ? html`<button type="button" class="secondary" @click=${onReset}>Reset</button>` : nothing}
+          ${onToggleCollapsed ? html`
+            <button type="button" class="secondary preset-edit-button" title=${collapsed ? "Edit" : "Hide"} @click=${onToggleCollapsed}>
+              <ha-icon icon=${collapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
+            </button>
+          ` : nothing}
+        </div>
+      </div>
+    ` : nothing;
     return html`<div class="condition-card condition-card-state ${item.preset ? "preset-locked" : ""}">
-      ${item.preset && showPresetBanner ? html`<div class="preset-banner"><div class="preset-copy"><div><strong>${item.name?.trim() || `Default ${this._presetLabel(item.preset_source)} state`}</strong></div><div>You can edit this default type configuration, but it cannot be removed.</div></div>${onReset ? html`<button type="button" class="secondary" @click=${onReset}>Reset</button>` : nothing}</div>` : nothing}
+      ${presetBanner}
+      ${collapsed ? nothing : html`
       <div class="panel-grid">
         <div class="subsection">
           <div class="subsection-title">${item.name?.trim() || "State"}</div>
@@ -1661,20 +1698,33 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       </div>
       ${this._renderConditionsSection("Conditions", "All conditions must be true for this state to be active. If any condition is false, it becomes inactive.", this._renderConditionList(item.conditions, onConditions, lockMode, selectorDefaults))}
       ${onRemove ? html`<button type="button" class="secondary" @click=${onRemove}>Remove state</button>` : nothing}
+      ${item.preset && onToggleCollapsed ? html`
+        <button type="button" class="secondary preset-hide-bottom" @click=${onToggleCollapsed}>
+          <ha-icon icon="mdi:chevron-up"></ha-icon>
+          <span>Hide</span>
+        </button>
+      ` : nothing}
+      `}
     </div>`;
   }
 
   private _renderNamedStates(index: number, states: SmartRoomNamedStateConfig[] | undefined) {
     const device = (this._config?.devices ?? [])[index];
     const items = states ?? [];
-    return html`${items.map((item, itemIndex) => this._renderSharedNamedStateCard(item, {
-      onUpdate: (key, value) => this._updateNamedState(index, itemIndex, key, value),
-      onConditions: (next) => this._updateNamedState(index, itemIndex, "conditions", next),
-      onRemove: item.preset ? undefined : () => this._removeNamedState(index, itemIndex),
-      onReset: item.preset ? () => this._resetPresetState(index, itemIndex) : undefined,
-      lockMode: item.preset ? "first" : "none",
-      selectorDefaults: { restrict_to_room_area: device ? this._deviceRestrictsToRoomArea(device) : false, domains: ["*"] },
-    }))}<button type="button" class="secondary" @click=${() => this._addNamedState(index)}>Add state</button>`;
+    return html`${items.map((item, itemIndex) => {
+      const presetKey = item.preset ? this._presetEditorKey(index, "state", itemIndex, item) : "";
+      const expanded = !item.preset || this._isPresetEditorExpanded(presetKey);
+      return this._renderSharedNamedStateCard(item, {
+        onUpdate: (key, value) => this._updateNamedState(index, itemIndex, key, value),
+        onConditions: (next) => this._updateNamedState(index, itemIndex, "conditions", next),
+        onRemove: item.preset ? undefined : () => this._removeNamedState(index, itemIndex),
+        onReset: item.preset ? () => this._resetPresetState(index, itemIndex) : undefined,
+        onToggleCollapsed: item.preset ? () => this._togglePresetEditor(presetKey) : undefined,
+        lockMode: item.preset ? "first" : "none",
+        selectorDefaults: { restrict_to_room_area: device ? this._deviceRestrictsToRoomArea(device) : false, domains: ["*"] },
+        collapsed: item.preset && !expanded,
+      });
+    })}<button type="button" class="secondary" @click=${() => this._addNamedState(index)}>Add state</button>`;
   }
 
   private _renderSharedNamedAlertCard(
@@ -1684,11 +1734,13 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       onConditions: (next: ConditionConfig[]) => void;
       onRemove?: () => void;
       onReset?: () => void;
+      onToggleCollapsed?: () => void;
       lockMode: "none" | "first" | "all";
       batteryLocked?: boolean;
       selectorDefaults?: { domains?: string[]; restrict_to_room_area?: boolean };
       showPresetBanner?: boolean;
       allowPresetNameEdit?: boolean;
+      collapsed?: boolean;
     },
   ) {
     const {
@@ -1696,14 +1748,39 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       onConditions,
       onRemove,
       onReset,
+      onToggleCollapsed,
       lockMode,
       batteryLocked = false,
       selectorDefaults,
       showPresetBanner = true,
       allowPresetNameEdit = false,
+      collapsed = false,
     } = options;
+    const presetTitle = item.preset_source === "battery"
+      ? "Battery alert"
+      : (item.name?.trim() || `Default ${this._presetLabel(item.preset_source)} alert`);
+    const presetDescription = item.preset_source === "battery"
+      ? "Synced with Battery entity and threshold. You can edit this default battery alert, but it cannot be removed."
+      : "You can edit this default type configuration, but it cannot be removed.";
+    const presetBanner = item.preset && showPresetBanner ? html`
+      <div class="preset-banner">
+        <div class="preset-copy">
+          <div><strong>${presetTitle}</strong></div>
+          <div>${presetDescription}</div>
+        </div>
+        <div class="preset-actions">
+          ${onReset ? html`<button type="button" class="secondary" @click=${onReset}>Reset</button>` : nothing}
+          ${onToggleCollapsed ? html`
+            <button type="button" class="secondary preset-edit-button" title=${collapsed ? "Edit" : "Hide"} @click=${onToggleCollapsed}>
+              <ha-icon icon=${collapsed ? "mdi:pencil-outline" : "mdi:chevron-up"}></ha-icon>
+            </button>
+          ` : nothing}
+        </div>
+      </div>
+    ` : nothing;
     return html`<div class="condition-card condition-card-alert ${item.preset ? "preset-locked" : ""}">
-      ${item.preset && showPresetBanner ? html`<div class="preset-banner"><div class="preset-copy"><div><strong>${item.name?.trim() || (item.preset_source === "battery" ? "Battery alert" : `Default ${this._presetLabel(item.preset_source)} alert`)}</strong></div><div>${item.preset_source === "battery" ? "Synced with Battery entity and threshold. Conditions are auto-managed. Appearance can be customized but alert cannot be removed." : "You can edit this default type configuration, but it cannot be removed."}</div></div>${onReset ? html`<button type="button" class="secondary" @click=${onReset}>Reset</button>` : nothing}</div>` : nothing}
+      ${presetBanner}
+      ${collapsed ? nothing : html`
       <div class="panel-grid">
         <div class="subsection">
           <div class="subsection-title">Alert</div>
@@ -1716,24 +1793,34 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       </div>
       ${this._renderConditionsSection("Conditions", "All conditions must be true for this alert to trigger.", this._renderConditionList(item.conditions, onConditions, lockMode, selectorDefaults))}
       ${onRemove ? html`<button type="button" class="secondary" @click=${onRemove}>Remove alert</button>` : nothing}
+      ${item.preset && onToggleCollapsed ? html`
+        <button type="button" class="secondary preset-hide-bottom" @click=${onToggleCollapsed}>
+          <ha-icon icon="mdi:chevron-up"></ha-icon>
+          <span>Hide</span>
+        </button>
+      ` : nothing}
+      `}
     </div>`;
   }
 
   private _renderNamedAlerts(index: number, alerts: SmartRoomNamedAlertConfig[] | undefined) {
     const device = (this._config?.devices ?? [])[index];
     const items = alerts ?? [];
-    const userAlerts = items.filter((item) => item.preset_source !== "battery");
     return html`
-      ${userAlerts.map((item) => {
-        const itemIndex = items.indexOf(item);
+      ${items.map((item, itemIndex) => {
+        const presetKey = item.preset ? this._presetEditorKey(index, "alert", itemIndex, item) : "";
+        const expanded = !item.preset || this._isPresetEditorExpanded(presetKey);
+        const isBattery = item.preset_source === "battery";
         return this._renderSharedNamedAlertCard(item, {
           onUpdate: (key, value) => this._updateNamedAlert(index, itemIndex, key, value),
           onConditions: (next) => this._updateNamedAlert(index, itemIndex, "conditions", next),
           onRemove: item.preset ? undefined : () => this._removeNamedAlert(index, itemIndex),
-          onReset: item.preset ? () => this._resetPresetAlert(index, itemIndex) : undefined,
+          onReset: item.preset ? () => (isBattery ? this._resetBatteryAlert(index) : this._resetPresetAlert(index, itemIndex)) : undefined,
+          onToggleCollapsed: item.preset ? () => this._togglePresetEditor(presetKey) : undefined,
           lockMode: item.preset ? "first" : "none",
           batteryLocked: false,
-          selectorDefaults: { restrict_to_room_area: device ? this._deviceRestrictsToRoomArea(device) : false, domains: ["*"] },
+          selectorDefaults: { restrict_to_room_area: device ? this._deviceRestrictsToRoomArea(device) : false, domains: isBattery ? ["sensor"] : ["*"] },
+          collapsed: item.preset && !expanded,
         });
       })}
       <button type="button" class="secondary" @click=${() => this._addNamedAlert(index)}>Add alert</button>
@@ -2168,7 +2255,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       states: syncStatePreset(nextDevice.states, preset.states, previousValue, value, [`field.${key}`]),
     };
     if (key === "battery") {
-      devices[index] = this._applyDerivedBatteryAlert(devices[index], this._config?.ui?.battery_threshold ?? 20);
+      devices[index] = this._applyDerivedBatteryAlert(this._withoutDerivedBatteryAlert(devices[index]), this._config?.ui?.battery_threshold ?? 20);
     }
     this._patch({ devices });
   }
@@ -2384,6 +2471,9 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
         ...(shouldSyncBattery ? { battery: nextBattery } : {}),
       };
       devices[index] = this._syncDeviceWithEntity(nextDevice, current.entity, nextEntity);
+      if (shouldSyncBattery && nextBattery !== currentBattery) {
+        devices[index] = this._applyDerivedBatteryAlert(this._withoutDerivedBatteryAlert(devices[index]), this._config?.ui?.battery_threshold ?? 20);
+      }
       this._patch({ devices });
       return;
     }
@@ -2416,7 +2506,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     }
     devices[index] = { ...current, [key]: value || undefined };
     if (key === "battery") {
-      devices[index] = this._applyDerivedBatteryAlert(devices[index], this._config?.ui?.battery_threshold ?? 20);
+      devices[index] = this._applyDerivedBatteryAlert(this._withoutDerivedBatteryAlert(devices[index]), this._config?.ui?.battery_threshold ?? 20);
     }
     this._patch({ devices });
   }
@@ -2466,6 +2556,15 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
   private _applyDerivedBatteryAlert(device: SmartRoomDeviceConfig, threshold: number): SmartRoomDeviceConfig {
     return applyDerivedBatteryAlertWithUi(device, threshold, this._config?.ui);
   }
+  private _withoutDerivedBatteryAlert(device: SmartRoomDeviceConfig): SmartRoomDeviceConfig {
+    return {
+      ...device,
+      states: {
+        ...(device.states ?? {}),
+        alerts: (device.states?.alerts ?? []).filter((item) => item.preset_source !== "battery"),
+      },
+    };
+  }
   private _setOffline(index: number, key: string, value: unknown) { const devices = [...(this._config?.devices ?? [])]; devices[index] = { ...devices[index], offline: { ...(devices[index].offline ?? {}), [key]: value } }; this._patch({ devices }); }
   private _resetPresetState(index: number, stateIndex: number) {
     const devices = [...(this._config?.devices ?? [])];
@@ -2483,6 +2582,13 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     const next = resetPresetAlert(device, alertIndex, this._buildResolvedPresetDevice(device));
     if (!next) return;
     devices[index] = next;
+    this._patch({ devices });
+  }
+  private _resetBatteryAlert(index: number) {
+    const devices = [...(this._config?.devices ?? [])];
+    const device = devices[index];
+    if (!device) return;
+    devices[index] = this._applyDerivedBatteryAlert(this._withoutDerivedBatteryAlert(device), this._config?.ui?.battery_threshold ?? 20);
     this._patch({ devices });
   }
   private _resetPresetOffline(index: number) {
