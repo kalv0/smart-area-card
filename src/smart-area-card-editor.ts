@@ -23,13 +23,13 @@ import { DEVICE_ENTITY_PLACEHOLDER, EXTRA_FIELD_PLACEHOLDERS } from "./editor/ed
 import { BUILTIN_TYPE_DEFINITIONS } from "./editor/builtin-types";
 import { INITIAL_STATES, OPERATORS, COLOR_OPTIONS, HEADER_BADGE_OPTIONS, ALERT_HEADER_BADGE_OPTIONS } from "./editor/editor-constants";
 import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUndefined, valueFromEvent } from "./editor/editor-utils";
-import { buildRoomBackgroundImage, DEVICE_TILE_SIZE_PRESETS, normalizeAssetPath, resolveDeviceTileSize } from "./helpers";
+import { buildRoomBackgroundImage, DEVICE_TILE_SIZE_PRESETS, getBatteryLevel, normalizeAssetPath, resolveDeviceTileSize } from "./helpers";
 import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
 import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
 import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered, relatedBatteryEntityId } from "./editor/registry-helpers";
 import { patchSensor, patchSensorIcon, patchSensorFilter, patchSensorAlert, patchSensorBattery, addCustomSensor, removeCustomSensor, updateCustomSensor, updateCustomSensorAlert, getNormalizedSensorOrder, moveSensorInOrder, reorderSensorsInOrder, bubbleSensorAboveEmpty, sinkSensorBelowFilled } from "./editor/sensor-config";
 import { addNamedState, removeNamedState, updateNamedState, resetPresetState, resetPresetAlert, resetPresetOffline, addNamedAlert, removeNamedAlert, updateNamedAlert } from "./editor/named-item-config";
-import type { SensorPopupItem } from "./components/sensor-popup";
+import type { SensorPopupAlertFlag, SensorPopupItem } from "./components/sensor-popup";
 
 const SENSOR_DEVICE_CLASSES: Partial<Record<string, string[]>> = {
   temperature: ["temperature"],
@@ -213,6 +213,58 @@ export class SmartAreaCardEditor extends LitElement {
     history.pushState(null, "", `/history?entity_id=${encodeURIComponent(entityId)}`);
     window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false }, bubbles: true, composed: true }));
   };
+
+  private _previewSensorAlertFlags(config: SmartRoomCardConfig | undefined, key: string, entityId?: string): SensorPopupAlertFlag[] {
+    const sensors = config?.sensors;
+    if (!sensors) return [];
+    const alert = key.startsWith("custom_")
+      ? sensors.custom?.[Number(key.slice(7))]?.alert
+      : sensors.alerts?.[key as keyof NonNullable<typeof sensors.alerts>];
+    const hasConfiguredAlert = Boolean(alert
+      && (("min" in alert && alert.min !== undefined)
+        || ("max" in alert && alert.max !== undefined)
+        || ("eq" in alert && alert.eq !== undefined)
+        || ("neq" in alert && alert.neq !== undefined)
+        || ("text_eq" in alert && alert.text_eq !== undefined)
+        || ("text_neq" in alert && alert.text_neq !== undefined)));
+    const entity = entityId ? this.hass?.states?.[entityId] : undefined;
+    const state = entity?.state;
+    const value = Number(state);
+    const unit = entity?.attributes?.unit_of_measurement ? String(entity.attributes.unit_of_measurement) : "";
+    const formatNumber = (n: number): string => `${n}${unit}`;
+    const flags: SensorPopupAlertFlag[] = [];
+    if (alert && hasConfiguredAlert) {
+      if ("min" in alert && alert.min !== undefined) flags.push({ label: `Min.${formatNumber(alert.min)}`, active: Number.isFinite(value) && value < alert.min });
+      if ("max" in alert && alert.max !== undefined) flags.push({ label: `Max.${formatNumber(alert.max)}`, active: Number.isFinite(value) && value > alert.max });
+      if ("eq" in alert && alert.eq !== undefined) flags.push({ label: `= ${typeof alert.eq === "number" ? formatNumber(alert.eq) : alert.eq}`, active: state === String(alert.eq) });
+      if ("neq" in alert && alert.neq !== undefined) flags.push({ label: `!= ${alert.neq}`, active: state !== undefined && state !== alert.neq });
+      if ("text_eq" in alert && alert.text_eq !== undefined) flags.push({ label: `Text = ${alert.text_eq}`, active: state === alert.text_eq });
+      if ("text_neq" in alert && alert.text_neq !== undefined) flags.push({ label: `Text != ${alert.text_neq}`, active: state !== undefined && state !== alert.text_neq });
+    }
+    const batteryConfig = key.startsWith("custom_")
+      ? {
+          entity: sensors.custom?.[Number(key.slice(7))]?.battery,
+          alert_enabled: sensors.custom?.[Number(key.slice(7))]?.battery_alert_enabled,
+        }
+      : sensors.batteries?.[key as keyof NonNullable<typeof sensors.batteries>];
+    if (batteryConfig?.entity && batteryConfig.alert_enabled !== false && config?.ui?.battery_alerts_enabled !== false) {
+      const threshold = config?.ui?.battery_threshold ?? 20;
+      const batteryLevel = getBatteryLevel(this.hass?.states?.[batteryConfig.entity]);
+      flags.push({ label: `Battery <= ${threshold}%`, active: batteryLevel !== undefined && batteryLevel <= threshold });
+    }
+    return flags.length ? flags : hasConfiguredAlert ? [{ label: "Alert", active: false }] : [];
+  }
+
+  private _previewSensorBatteryInfo(config: SmartRoomCardConfig | undefined, key: string): { level?: number } | undefined {
+    const sensors = config?.sensors;
+    if (!sensors) return undefined;
+    const batteryConfig = key.startsWith("custom_")
+      ? { entity: sensors.custom?.[Number(key.slice(7))]?.battery }
+      : sensors.batteries?.[key as keyof NonNullable<typeof sensors.batteries>];
+    const entityId = batteryConfig?.entity?.trim();
+    if (!entityId) return undefined;
+    return { level: getBatteryLevel(this.hass?.states?.[entityId]) };
+  }
 
   private async _loadBgGallery(): Promise<void> {
     try {
@@ -816,6 +868,8 @@ export class SmartAreaCardEditor extends LitElement {
       blur: config?.ui?.blur !== false,
       interactive: Boolean(sensor.entityId),
       expanded: sensor.key ? this._expandedSensorPreviewChartKeys.has(sensor.key) : false,
+      alertFlags: sensor.key ? this._previewSensorAlertFlags(config, sensor.key, sensor.entityId) : [],
+      batteryInfo: sensor.key ? this._previewSensorBatteryInfo(config, sensor.key) : undefined,
     }));
 
     return html`

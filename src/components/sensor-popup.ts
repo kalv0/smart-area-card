@@ -331,13 +331,7 @@ export class SmartAreaSensorPopup extends LitElement {
     }
 
     .sensor-popup-chart--hidden {
-      position: fixed;
-      left: -10000px;
-      top: 0;
-      width: min(492px, calc(100vw - 56px));
-      min-height: 220px;
-      opacity: 0;
-      pointer-events: none;
+      display: none;
     }
 
     .sensor-popup-chart > * {
@@ -346,6 +340,17 @@ export class SmartAreaSensorPopup extends LitElement {
       --ha-card-border-radius: 10px;
       --ha-card-background: rgba(0, 0, 0, 0.25);
       --ha-card-border-width: 0;
+    }
+
+    .sensor-popup-preload {
+      position: fixed;
+      left: -10000px;
+      top: 0;
+      width: min(492px, calc(100vw - 56px));
+      min-height: 240px;
+      opacity: 0.01;
+      pointer-events: none;
+      z-index: -1;
     }
   `;
 
@@ -371,6 +376,7 @@ export class SmartAreaSensorPopup extends LitElement {
           <div class="sensor-popup-body">
             ${repeat(this.items, (item, index) => item.key ?? String(index), (item) => this._renderItem(item))}
           </div>
+          <div class="sensor-popup-preload" aria-hidden="true"></div>
         </div>
       </div>
     `;
@@ -387,6 +393,8 @@ export class SmartAreaSensorPopup extends LitElement {
     }
     if (this.charts && this.hass) {
       void this._buildCharts();
+    } else {
+      this._syncVisibleCharts();
     }
   }
 
@@ -443,11 +451,7 @@ export class SmartAreaSensorPopup extends LitElement {
           <div class="sensor-popup-item-row">${row}</div>
         `}
         ${this.charts && item.interactive ? html`
-          <div
-            class="sensor-popup-chart ${item.expanded ? "" : "sensor-popup-chart--hidden"}"
-            data-key=${item.key}
-            data-entity-id=${item.entityId ?? ""}
-          ></div>
+          <div class="sensor-popup-chart ${item.expanded ? "" : "sensor-popup-chart--hidden"}" data-key=${item.key}></div>
           ${item.expanded ? html`
             <div class="sensor-popup-actions">
               <button class="sensor-popup-more-button" type="button" data-entity-id=${item.entityId ?? ""} @click=${this._more}>Show more</button>
@@ -487,31 +491,40 @@ export class SmartAreaSensorPopup extends LitElement {
 
   private async _buildCharts(): Promise<void> {
     const buildVersion = this._chartBuildVersion;
-    const containers = new Map(
-      Array.from(this.renderRoot.querySelectorAll<HTMLElement>(".sensor-popup-chart"))
-        .map((container) => [container.dataset.key, container])
-    );
+    const preload = this.renderRoot.querySelector<HTMLElement>(".sensor-popup-preload");
+    if (!preload) return;
     await Promise.all(this.items.map(async (item) => {
       if (!item.interactive || !item.entityId || !item.key) return;
-      const container = containers.get(item.key);
-      if (!container) return;
-      const cached = SENSOR_CHART_CACHE.get(item.entityId);
-      if (cached && cached.parentElement !== container) {
-        container.replaceChildren(cached);
-      }
-      const existing = container.firstElementChild as (HTMLElement & { hass?: HomeAssistant }) | null;
-      if (existing?.dataset.entityId === item.entityId) {
-        existing.hass = this.hass;
+      const cached = SENSOR_CHART_CACHE.get(item.entityId) as (HTMLElement & { hass?: HomeAssistant }) | undefined;
+      if (cached) {
+        cached.hass = this.hass;
+        if (!cached.parentElement) preload.appendChild(cached);
         return;
       }
-      container.replaceChildren();
       const card = await this._createHistoryGraphCard(item.entityId);
       if (!card || buildVersion !== this._chartBuildVersion || !this.isConnected) return;
       card.dataset.entityId = item.entityId;
       SENSOR_CHART_CACHE.set(item.entityId, card);
-      container.replaceChildren();
-      container.appendChild(card);
+      preload.appendChild(card);
     }));
+    this._syncVisibleCharts();
+  }
+
+  private _syncVisibleCharts(): void {
+    const preload = this.renderRoot.querySelector<HTMLElement>(".sensor-popup-preload");
+    if (!preload) return;
+    const expandedKeys = new Set(this.items.filter((item) => item.expanded).map((item) => item.key));
+    this.items.forEach((item) => {
+      if (!item.interactive || !item.entityId || !item.key) return;
+      const card = SENSOR_CHART_CACHE.get(item.entityId);
+      if (!card) return;
+      const visible = this.renderRoot.querySelector<HTMLElement>(`.sensor-popup-chart[data-key="${item.key}"]`);
+      if (expandedKeys.has(item.key) && visible && card.parentElement !== visible) {
+        visible.replaceChildren(card);
+      } else if (!expandedKeys.has(item.key) && card.parentElement !== preload) {
+        preload.appendChild(card);
+      }
+    });
   }
 
   private async _createHistoryGraphCard(entityId: string): Promise<HTMLElement | undefined> {
