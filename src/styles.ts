@@ -952,6 +952,14 @@ export const smartRoomCardStyles = css`
     padding: 0 10px 12px;
   }
 
+  .sensor-popup-chart--hidden {
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding: 0 10px;
+    pointer-events: none;
+  }
+
   .sensor-popup-chart > * {
     border-radius: 10px;
     overflow: hidden;

@@ -135,6 +135,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _showHeaderAutomationDetails = false;
   @state() private _showHeaderSensorPreviewPopup = false;
   @state() private _showSensorHeaderPreviewPopup = false;
+  @state() private _expandedSensorPreviewChartKeys = new Set<string>();
   @state() private _imgPickerMode: "library" | "path" = "library";
   @state() private _imgUploading = false;
   @state() private _devImgPickerTabs: Record<string, "library" | "path"> = {};
@@ -188,6 +189,30 @@ export class SmartAreaCardEditor extends LitElement {
     await import("./components/sensor-popup");
     if (this._showHeaderSensorPreviewPopup || this._showSensorHeaderPreviewPopup) this.requestUpdate();
   }
+
+  private _handlePreviewSensorPopupToggle = (event: CustomEvent<{ key?: string }>): void => {
+    event.stopPropagation();
+    const key = event.detail?.key;
+    if (!key) return;
+    const next = new Set(this._expandedSensorPreviewChartKeys);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    this._expandedSensorPreviewChartKeys = next;
+  };
+
+  private _handlePreviewSensorPopupMore = (event: CustomEvent<{ entityId?: string }>): void => {
+    event.stopPropagation();
+    const entityId = event.detail?.entityId;
+    if (!entityId) return;
+    this._showHeaderSensorPreviewPopup = false;
+    this._showSensorHeaderPreviewPopup = false;
+    this._expandedSensorPreviewChartKeys = new Set();
+    history.pushState(null, "", `/history?entity_id=${encodeURIComponent(entityId)}`);
+    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false }, bubbles: true, composed: true }));
+  };
 
   private async _loadBgGallery(): Promise<void> {
     try {
@@ -767,6 +792,10 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderSensorPreviewPopup(roomName: string, sensors: HeaderSensorPreview[], onClose = () => { this._showHeaderSensorPreviewPopup = false; }, config = this._config) {
+    const close = (): void => {
+      this._expandedSensorPreviewChartKeys = new Set();
+      onClose();
+    };
     const images = config?.ui?.images ?? {};
     const bgOn = images.background_on ?? "";
     const bgPosY = images.background_position_y ?? 50;
@@ -781,12 +810,23 @@ export class SmartAreaCardEditor extends LitElement {
       backgroundOrigin: "border-box",
       backgroundClip: "border-box",
     };
+    const popupItems = sensors.map((sensor) => ({
+      ...sensor,
+      accent: sensor.color,
+      blur: config?.ui?.blur !== false,
+      interactive: Boolean(sensor.entityId),
+      expanded: sensor.key ? this._expandedSensorPreviewChartKeys.has(sensor.key) : false,
+    }));
 
     return html`
       <smart-area-sensor-popup
-        .items=${sensors.map((sensor) => ({ ...sensor, accent: sensor.color, blur: true }))}
+        .items=${popupItems}
         .popupStyles=${popupStyles}
-        @sensor-popup-close=${(event: Event) => { event.stopPropagation(); onClose(); }}
+        .hass=${this.hass}
+        .charts=${true}
+        @sensor-popup-close=${(event: Event) => { event.stopPropagation(); close(); }}
+        @sensor-popup-toggle=${this._handlePreviewSensorPopupToggle}
+        @sensor-popup-more=${this._handlePreviewSensorPopupMore}
       ></smart-area-sensor-popup>
     `;
   }

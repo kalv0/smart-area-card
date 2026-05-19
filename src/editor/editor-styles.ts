@@ -1100,6 +1100,56 @@ export const calvoRoomCardEditorStyles = css`
     overflow-wrap: anywhere;
   }
 
+  .sensor-popup-item-arrow {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .sensor-popup-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 10px 12px;
+  }
+
+  .sensor-popup-more-button {
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.86);
+    font: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+
+  .sensor-popup-more-button:hover {
+    background: rgba(255, 255, 255, 0.24);
+    color: white;
+  }
+
+  .sensor-popup-chart {
+    padding: 0 10px 12px;
+  }
+
+  .sensor-popup-chart--hidden {
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+    padding: 0 10px;
+    pointer-events: none;
+  }
+
+  .sensor-popup-chart > * {
+    border-radius: 10px;
+    overflow: hidden;
+    --ha-card-border-radius: 10px;
+    --ha-card-background: rgba(0, 0, 0, 0.25);
+    --ha-card-border-width: 0;
+  }
+
   .section,
   .device-card,
   .panel,

@@ -2,6 +2,7 @@ import { LitElement, html, nothing, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
+import type { HomeAssistant } from "custom-card-helpers";
 import { getBatteryColor, getBatteryIcon } from "../helpers";
 
 export type SensorPopupAlertFlag = { label: string; active: boolean };
@@ -21,11 +22,17 @@ export type SensorPopupItem = {
   alertFlags?: SensorPopupAlertFlag[];
   batteryInfo?: SensorPopupBatteryInfo;
 };
+type CardHelpers = { createCardElement?: (config: unknown) => HTMLElement | Promise<HTMLElement> };
+type WindowWithCardHelpers = Window & { loadCardHelpers?: () => Promise<CardHelpers> };
 
 export class SmartAreaSensorPopup extends LitElement {
   @property({ attribute: false }) public items: SensorPopupItem[] = [];
   @property({ attribute: false }) public popupStyles: Record<string, string> = {};
+  @property({ attribute: false }) public hass?: HomeAssistant;
   @property({ type: Boolean }) public charts = false;
+
+  private _chartBuildVersion = 0;
+  private _cardHelpersPromise?: Promise<CardHelpers | undefined>;
 
   protected createRenderRoot(): HTMLElement | DocumentFragment {
     return this;
@@ -47,6 +54,20 @@ export class SmartAreaSensorPopup extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  protected updated(changedProps: Map<PropertyKey, unknown>): void {
+    if (changedProps.has("items") || changedProps.has("charts")) {
+      this._chartBuildVersion += 1;
+    }
+    if (this.charts && this.hass) {
+      void this._buildCharts();
+    }
+  }
+
+  public disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this._destroyCharts();
   }
 
   private _renderItem(item: SensorPopupItem): TemplateResult {
@@ -96,11 +117,17 @@ export class SmartAreaSensorPopup extends LitElement {
         ` : html`
           <div class="sensor-popup-item-row">${row}</div>
         `}
-        ${this.charts && item.interactive && item.expanded ? html`
-          <div class="sensor-popup-chart" data-key=${item.key}></div>
-          <div class="sensor-popup-actions">
-            <button class="sensor-popup-more-button" type="button" data-entity-id=${item.entityId ?? ""} @click=${this._more}>Show more</button>
-          </div>
+        ${this.charts && item.interactive ? html`
+          <div
+            class="sensor-popup-chart ${item.expanded ? "" : "sensor-popup-chart--hidden"}"
+            data-key=${item.key}
+            data-entity-id=${item.entityId ?? ""}
+          ></div>
+          ${item.expanded ? html`
+            <div class="sensor-popup-actions">
+              <button class="sensor-popup-more-button" type="button" data-entity-id=${item.entityId ?? ""} @click=${this._more}>Show more</button>
+            </div>
+          ` : nothing}
         ` : nothing}
       </div>
     `;
@@ -132,6 +159,55 @@ export class SmartAreaSensorPopup extends LitElement {
   private _preventDefault = (event: Event): void => {
     event.preventDefault();
   };
+
+  private async _buildCharts(): Promise<void> {
+    const buildVersion = this._chartBuildVersion;
+    const containers = new Map(
+      Array.from(this.querySelectorAll<HTMLElement>(".sensor-popup-chart"))
+        .map((container) => [container.dataset.key, container])
+    );
+    await Promise.all(this.items.map(async (item) => {
+      if (!item.interactive || !item.entityId || !item.key) return;
+      const container = containers.get(item.key);
+      if (!container) return;
+      const existing = container.firstElementChild as (HTMLElement & { hass?: HomeAssistant }) | null;
+      if (existing?.dataset.entityId === item.entityId) {
+        existing.hass = this.hass;
+        return;
+      }
+      container.replaceChildren();
+      const card = await this._createHistoryGraphCard(item.entityId);
+      if (!card || buildVersion !== this._chartBuildVersion || !this.isConnected) return;
+      card.dataset.entityId = item.entityId;
+      container.replaceChildren();
+      container.appendChild(card);
+    }));
+  }
+
+  private async _createHistoryGraphCard(entityId: string): Promise<HTMLElement | undefined> {
+    const config = { type: "history-graph", entities: [{ entity: entityId }], hours_to_show: 24 };
+    this._cardHelpersPromise ??= (window as WindowWithCardHelpers).loadCardHelpers?.().catch(() => undefined);
+    const helpers = await this._cardHelpersPromise;
+    if (helpers?.createCardElement) {
+      const card = await helpers.createCardElement(config) as HTMLElement & { hass?: HomeAssistant };
+      card.hass = this.hass;
+      return card;
+    }
+
+    const HistoryCard = customElements.get("hui-history-graph-card") as (new () => HTMLElement) | undefined;
+    if (!HistoryCard || !this.hass) return undefined;
+    const card = new HistoryCard() as HTMLElement & { hass: HomeAssistant; setConfig(c: unknown): void };
+    card.hass = this.hass;
+    card.setConfig(config);
+    return card;
+  }
+
+  private _destroyCharts(): void {
+    this._chartBuildVersion += 1;
+    this.querySelectorAll(".sensor-popup-chart").forEach((container) => {
+      container.replaceChildren();
+    });
+  }
 }
 
 declare global {
