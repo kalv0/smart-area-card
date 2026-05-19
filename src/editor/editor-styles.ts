@@ -810,8 +810,6 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .sensor-header-preview-frame {
-    appearance: none;
-    -webkit-appearance: none;
     position: relative;
     display: block;
     width: 100%;
@@ -826,14 +824,6 @@ export const calvoRoomCardEditorStyles = css`
       linear-gradient(135deg, var(--editor-preview-start) 0%, var(--editor-preview-mid) 52%, var(--editor-preview-end) 100%);
     box-shadow: var(--editor-inner-highlight);
     cursor: default;
-  }
-
-  .sensor-header-preview-frame--clickable {
-    cursor: pointer;
-  }
-
-  .sensor-header-preview-frame--clickable:hover {
-    border-color: rgba(255, 255, 255, 0.42);
   }
 
   .sensor-header-preview-frame img {
@@ -854,6 +844,12 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .sensor-header-preview-strip {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    padding: 0;
     position: absolute;
     top: 50%;
     right: 9px;
@@ -868,15 +864,31 @@ export const calvoRoomCardEditorStyles = css`
     max-width: calc(100% - 18px);
   }
 
+  .sensor-header-preview-strip--clickable {
+    padding: 8px;
+    border: 2px dashed rgba(255, 255, 255, 0.58);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.035);
+    cursor: pointer;
+    animation: ehp-sensor-cta 3.2s ease-in-out infinite;
+  }
+
+  .sensor-header-preview-strip--clickable:hover {
+    border-color: rgba(255, 255, 255, 0.84);
+    background: rgba(255, 255, 255, 0.07);
+  }
+
   .sensor-header-preview-item {
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
     gap: 5px;
     max-width: 100%;
-    font-size: 0.98rem;
+    font-size: 1.16rem;
     font-weight: 700;
     white-space: nowrap;
+    line-height: 1;
+    margin: 0;
     text-shadow: 0 1px 4px rgba(0,0,0,0.55);
   }
 
@@ -884,6 +896,8 @@ export const calvoRoomCardEditorStyles = css`
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1;
+    margin: 0;
   }
 
   .sensor-header-preview-item ha-icon {
@@ -892,7 +906,7 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .sensor-header-preview-item--primary {
-    font-size: 1.42rem;
+    font-size: 1.72rem;
     font-weight: 800;
   }
 
@@ -925,6 +939,166 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   /* ─── Cards & panels ─────────────────────────────────── */
+
+  .sensor-popup-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overscroll-behavior: contain;
+    animation: popup-fade-in 180ms ease both;
+  }
+
+  .sensor-popup {
+    background-color: rgba(9, 12, 22, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 22px;
+    width: min(520px, calc(100vw - 28px));
+    max-height: calc(100dvh - 56px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    box-shadow:
+      0 32px 80px rgba(0, 0, 0, 0.7),
+      0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    animation: popup-scale-in 200ms cubic-bezier(0.34, 1.36, 0.64, 1) both;
+  }
+
+  @keyframes popup-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes popup-scale-in {
+    from { transform: scale(0.92); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+
+  .sensor-popup-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 20px 16px;
+    flex-shrink: 0;
+  }
+
+  .sensor-popup-title {
+    flex: 1;
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: white;
+    line-height: 1.1;
+    letter-spacing: 0;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+  }
+
+  .sensor-popup-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    --mdc-icon-size: 16px;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .sensor-popup-close:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: white;
+  }
+
+  .sensor-popup-body {
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    overscroll-behavior: contain;
+  }
+
+  .sensor-popup-item {
+    flex: 0 0 auto;
+    background: rgba(12, 16, 26, 0.52);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    overflow: hidden;
+    backdrop-filter: blur(22px) saturate(145%);
+    -webkit-backdrop-filter: blur(22px) saturate(145%);
+    box-shadow:
+      0 10px 30px rgba(0, 0, 0, 0.18),
+      0 1px 0 rgba(255, 255, 255, 0.08) inset;
+  }
+
+  .sensor-popup-item-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 14px 14px 10px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+  }
+
+  .sensor-popup-item-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--sensor-accent, #94a3b8) 16%, rgba(255, 255, 255, 0.06));
+    border: 1px solid color-mix(in srgb, var(--sensor-accent, #94a3b8) 28%, rgba(255, 255, 255, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    --mdc-icon-size: 22px;
+    color: var(--sensor-accent, #94a3b8);
+    flex-shrink: 0;
+  }
+
+  .sensor-popup-item-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sensor-popup-item-label {
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .sensor-popup-item-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1.1;
+  }
+
+  .sensor-popup-item-entity {
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.62);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
 
   .section,
   .device-card,

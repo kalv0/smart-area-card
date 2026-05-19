@@ -23,7 +23,7 @@ import { DEVICE_ENTITY_PLACEHOLDER, EXTRA_FIELD_PLACEHOLDERS } from "./editor/ed
 import { BUILTIN_TYPE_DEFINITIONS } from "./editor/builtin-types";
 import { INITIAL_STATES, OPERATORS, COLOR_OPTIONS, HEADER_BADGE_OPTIONS, ALERT_HEADER_BADGE_OPTIONS } from "./editor/editor-constants";
 import { foregroundFor, conditionValueToText, parseConditionValue, toNumberOrUndefined, valueFromEvent } from "./editor/editor-utils";
-import { DEVICE_TILE_SIZE_PRESETS, normalizeAssetPath, resolveDeviceTileSize } from "./helpers";
+import { buildRoomBackgroundImage, DEVICE_TILE_SIZE_PRESETS, normalizeAssetPath, resolveDeviceTileSize } from "./helpers";
 import { syncActionEntity, syncOfflinePreset, syncStatePreset } from "./editor/preset-engine";
 import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, applyDerivedBatteryAlertWithUi, applyTypePreset, hydratePresetDefaults, syncDeviceWithEntity, buildResolvedPresetDevice } from "./editor/device-builder";
 import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered, relatedBatteryEntityId } from "./editor/registry-helpers";
@@ -84,6 +84,26 @@ const SENSOR_PREVIEW_ICONS: Record<string, string> = {
   radon: "mdi:radioactive",
   moisture: "mdi:water-alert",
 };
+
+const SENSOR_PREVIEW_LABELS: Record<string, string> = {
+  temperature: "Temperature",
+  humidity: "Humidity",
+  co2: "CO2",
+  voc: "VOC",
+  pm25: "PM2.5",
+  pm10: "PM10",
+  aqi: "Air Quality",
+  presence: "Presence",
+  noise: "Noise",
+  illuminance: "Illuminance",
+  power: "Power",
+  energy: "Energy",
+  carbon_monoxide: "CO",
+  radon: "Radon",
+  moisture: "Moisture",
+};
+
+type HeaderSensorPreview = { key?: string; icon: string; value: string; label?: string; entityId?: string; color?: string };
 
 export class SmartAreaCardEditor extends LitElement {
   static styles = calvoRoomCardEditorStyles;
@@ -740,29 +760,47 @@ export class SmartAreaCardEditor extends LitElement {
     ];
   }
 
-  private _renderSensorPreviewPopup(roomName: string, sensors: Array<{ icon: string; value: string }>, onClose = () => { this._showHeaderSensorPreviewPopup = false; }) {
+  private _renderSensorPreviewPopup(roomName: string, sensors: HeaderSensorPreview[], onClose = () => { this._showHeaderSensorPreviewPopup = false; }, config = this._config) {
     const close = (event: Event): void => {
       event.stopPropagation();
       onClose();
     };
+    const images = config?.ui?.images ?? {};
+    const bgOn = images.background_on ?? "";
+    const bgPosY = images.background_position_y ?? 50;
+    const darkEnabled = Boolean(bgOn) && images.dark_mode_enabled !== false;
+    const backgroundSize = bgOn ? (darkEnabled ? "100% 100%, 100% 100%, cover" : "100% 100%, cover") : "100% 100%";
+    const backgroundPosition = bgOn ? (darkEnabled ? `top left, top left, center ${bgPosY}%` : `top left, center ${bgPosY}%`) : "top left";
+    const popupStyle = [
+      `background-image: ${buildRoomBackgroundImage(bgOn, darkEnabled)}`,
+      `background-size: ${backgroundSize}`,
+      `background-position: ${backgroundPosition}`,
+      "background-repeat: no-repeat",
+      "background-origin: border-box",
+      "background-clip: border-box",
+    ].join(";");
 
     return html`
-      <div class="ehp-sensor-popup-overlay" @click=${close}>
-        <div class="ehp-sensor-popup" @click=${(event: Event) => event.stopPropagation()}>
-          <div class="ehp-sensor-popup-header">
-            <div class="ehp-sensor-popup-icon"><ha-icon icon="mdi:gauge"></ha-icon></div>
-            <span>${roomName}</span>
-            <button type="button" class="ehp-sensor-popup-close" aria-label="Close" @click=${close}>
+      <div class="sensor-popup-overlay sensor-popup-overlay--editor" @click=${close}>
+        <div class="sensor-popup" style=${popupStyle} @click=${(event: Event) => event.stopPropagation()}>
+          <div class="sensor-popup-header">
+            <span class="sensor-popup-title">Sensors</span>
+            <button type="button" class="sensor-popup-close" aria-label="Close" @click=${close}>
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>
-          <div class="ehp-sensor-popup-body">
-            ${sensors.map((sensor, index) => html`
-              <div class="ehp-sensor-popup-item">
-                <ha-icon icon=${sensor.icon}></ha-icon>
-                <div>
-                  <span>Sensor ${index + 1}</span>
-                  <strong>${sensor.value}</strong>
+          <div class="sensor-popup-body">
+            ${sensors.map((sensor) => html`
+              <div class="sensor-popup-item glass">
+                <div class="sensor-popup-item-row">
+                  <span class="sensor-popup-item-icon" style="--sensor-accent:${sensor.color ?? "#94a3b8"}">
+                    <ha-icon icon=${sensor.icon}></ha-icon>
+                  </span>
+                  <span class="sensor-popup-item-meta">
+                    <span class="sensor-popup-item-label">${sensor.label ?? "Sensor"}</span>
+                    <span class="sensor-popup-item-value">${sensor.value}</span>
+                    ${sensor.entityId ? html`<span class="sensor-popup-item-entity">${sensor.entityId}</span>` : nothing}
+                  </span>
                 </div>
               </div>
             `)}
@@ -1134,9 +1172,9 @@ export class SmartAreaCardEditor extends LitElement {
     `;
   }
 
-  private _previewHeaderSensors(config: SmartRoomCardConfig, maxItems = 6): Array<{ icon: string; value: string }> {
+  private _previewHeaderSensors(config: SmartRoomCardConfig, maxItems = 6): HeaderSensorPreview[] {
     const sensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
-    const sensors: Array<{ icon: string; value: string }> = [];
+    const sensors: HeaderSensorPreview[] = [];
     for (const key of sensorOrder) {
       if (sensors.length >= maxItems) break;
       if (key.startsWith("custom_")) {
@@ -1146,7 +1184,14 @@ export class SmartAreaCardEditor extends LitElement {
         const entity = this.hass?.states[sensor.entity];
         if (!entity || entity.state === "unavailable" || entity.state === "unknown") continue;
         const unit = entity.attributes["unit_of_measurement"] as string | undefined ?? "";
-        sensors.push({ icon: sensor.icon || "mdi:gauge", value: `${entity.state}${unit ? ` ${unit}` : ""}` });
+        sensors.push({
+          key,
+          icon: sensor.icon || "mdi:gauge",
+          value: `${entity.state}${unit ? ` ${unit}` : ""}`,
+          label: sensor.name || `Sensor ${customIndex + 1}`,
+          entityId: sensor.entity,
+          color: CUSTOM_SENSOR_COLORS[customIndex % CUSTOM_SENSOR_COLORS.length],
+        });
         continue;
       }
 
@@ -1160,7 +1205,14 @@ export class SmartAreaCardEditor extends LitElement {
         ? `${Number(raw).toFixed(1)}${unit || "\u00b0"}`
         : `${raw}${unit ? ` ${unit}` : ""}`;
       const icon = (config.sensors?.icons as Record<string, string> | undefined)?.[key] || SENSOR_PREVIEW_ICONS[key] || "mdi:gauge";
-      sensors.push({ icon, value });
+      sensors.push({
+        key,
+        icon,
+        value,
+        label: SENSOR_PREVIEW_LABELS[key] || key,
+        entityId,
+        color: SENSOR_ACCENT[key] ?? "#94a3b8",
+      });
     }
     return sensors;
   }
@@ -1180,14 +1232,24 @@ export class SmartAreaCardEditor extends LitElement {
     };
     return html`
       <div class="sensor-preview-composition" style="--sensor-preview-height: ${previewHeight}px">
-        <button
-          type="button"
-          class="sensor-header-preview-frame ${bgOn ? "sensor-header-preview-frame--image" : ""} ${sensorClickDetails && sensors.length ? "sensor-header-preview-frame--clickable" : ""}"
-          aria-label=${sensorClickDetails ? "Open sensor details preview" : "Sensor header preview"}
-          @click=${openPreview}
-        >
+        <div class="sensor-header-preview-frame ${bgOn ? "sensor-header-preview-frame--image" : ""}">
           ${bgOn ? html`<img src=${bgOn} alt="" style="object-position: center ${bgPosY}%" />` : nothing}
           <div class="sensor-header-preview-mask"></div>
+          ${sensorClickDetails && sensors.length ? html`
+          <button
+            type="button"
+            class="sensor-header-preview-strip sensor-header-preview-strip--clickable"
+            aria-label="Open sensor details preview"
+            @click=${openPreview}
+          >
+            ${sensors.length ? sensors.map((sensor, index) => html`
+              <span class="sensor-header-preview-item ${index === 0 ? "sensor-header-preview-item--primary" : ""}">
+                <ha-icon icon=${sensor.icon}></ha-icon>
+                <span>${sensor.value}</span>
+              </span>
+            `) : html`<span class="sensor-header-preview-empty">No sensors selected</span>`}
+          </button>
+          ` : html`
           <div class="sensor-header-preview-strip">
             ${sensors.length ? sensors.map((sensor, index) => html`
               <span class="sensor-header-preview-item ${index === 0 ? "sensor-header-preview-item--primary" : ""}">
@@ -1196,14 +1258,15 @@ export class SmartAreaCardEditor extends LitElement {
               </span>
             `) : html`<span class="sensor-header-preview-empty">No sensors selected</span>`}
           </div>
-        </button>
+          `}
+        </div>
         <div class="sensor-preview-option">
           ${this._renderCompactCheckField("Open details on click", "Lets the sensor strip open a compact details preview.", sensorClickDetails, (checked) => {
             if (!checked) this._showSensorHeaderPreviewPopup = false;
             this._setUi("header_climate_more_info", checked);
           })}
         </div>
-        ${sensorClickDetails && this._showSensorHeaderPreviewPopup ? this._renderSensorPreviewPopup(roomName, sensors, () => { this._showSensorHeaderPreviewPopup = false; }) : nothing}
+        ${sensorClickDetails && this._showSensorHeaderPreviewPopup ? this._renderSensorPreviewPopup(roomName, sensors, () => { this._showSensorHeaderPreviewPopup = false; }, config) : nothing}
       </div>
     `;
   }
