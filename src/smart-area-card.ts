@@ -434,7 +434,7 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   private _renderHeader(): TemplateResult {
     const model = this._renderModel!;
     const room = this._config!.room?.trim() ?? "";
-    const sensorsEnabled = this._config?.ui?.header_sensors_enabled !== false;
+    const sensorsEnabled = true;
     const climateItems = repeat(model.climateItems, (item) => item.key, (item) => html`
       <div class="climate-item ${item.className}">
         <ha-icon icon=${item.icon}></ha-icon>
@@ -631,7 +631,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
   }
 
   private _renderSensorPopup(): TemplateResult | typeof nothing {
-    if (this._config?.ui?.header_sensors_enabled === false) return nothing;
     const items = this._renderModel?.climateItems ?? [];
     if (!items.length) return nothing;
     const model = this._renderModel;
@@ -918,7 +917,6 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
 
   private _handleClimateClick = (event: Event): void => {
     event.stopPropagation();
-    if (this._config?.ui?.header_sensors_enabled === false) return;
     if (this._config?.ui?.header_climate_more_info === false) {
       this._toggleExpanded();
       return;

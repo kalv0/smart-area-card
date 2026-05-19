@@ -800,6 +800,92 @@ export const calvoRoomCardEditorStyles = css`
     font-weight: 700;
   }
 
+  .sensor-header-preview {
+    display: flex;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
+  .sensor-header-preview-frame {
+    position: relative;
+    width: min(var(--sensor-preview-height, 100px), 100%);
+    height: var(--sensor-preview-height, 100px);
+    overflow: hidden;
+    border-radius: var(--editor-radius-md);
+    border: 1px solid var(--editor-contrast-line);
+    background:
+      radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.2), transparent 32%),
+      linear-gradient(135deg, var(--editor-preview-start) 0%, var(--editor-preview-mid) 52%, var(--editor-preview-end) 100%);
+    box-shadow: var(--editor-inner-highlight);
+  }
+
+  .sensor-header-preview-frame img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .sensor-header-preview-mask {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to right, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.36)),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.1));
+  }
+
+  .sensor-header-preview-strip {
+    position: absolute;
+    top: 50%;
+    right: 9px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    color: white;
+    text-align: right;
+    line-height: 1;
+    max-width: calc(100% - 18px);
+  }
+
+  .sensor-header-preview-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    max-width: 100%;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+  }
+
+  .sensor-header-preview-item span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sensor-header-preview-item ha-icon {
+    --mdc-icon-size: 15px;
+    flex: 0 0 auto;
+  }
+
+  .sensor-header-preview-item--primary {
+    font-size: 1.08rem;
+    font-weight: 760;
+  }
+
+  .sensor-header-preview-empty {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.72);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+  }
+
   /* ─── Cards & panels ─────────────────────────────────── */
 
   .section,
@@ -3035,17 +3121,44 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .sensor-battery-title {
-    display: inline-flex;
+    appearance: none;
+    -webkit-appearance: none;
+    display: flex;
     align-items: center;
     gap: 6px;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--editor-text);
+    font: inherit;
     font-size: 0.78rem;
     font-weight: 760;
+    text-align: left;
+    cursor: pointer;
   }
 
   .sensor-battery-title ha-icon {
     color: var(--sr-accent, var(--editor-accent));
     --mdc-icon-size: 15px;
+    flex: 0 0 auto;
+  }
+
+  .sensor-battery-status {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-left: auto;
+    color: var(--editor-muted);
+    font-size: 0.7rem;
+    font-weight: 650;
+  }
+
+  .sensor-battery-chevron {
+    margin-left: 2px;
+    color: var(--editor-muted) !important;
   }
 
   .sensor-battery-card .compact-check {
@@ -3077,6 +3190,19 @@ export const calvoRoomCardEditorStyles = css`
 
   .sensor-battery-card .compact-check-desc {
     display: none;
+  }
+
+  .sensor-battery-card .battery-alert-check {
+    width: 100%;
+    padding: 7px 8px;
+    border: 1px solid color-mix(in srgb, var(--editor-danger) 42%, transparent);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--editor-danger) 11%, transparent);
+    color: var(--editor-text);
+  }
+
+  .sensor-battery-card .battery-alert-check .compact-check-title {
+    color: color-mix(in srgb, var(--editor-danger) 78%, var(--editor-text));
   }
 
   /* entity in custom sensor row (inline flex item) */

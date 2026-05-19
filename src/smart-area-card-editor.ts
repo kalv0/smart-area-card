@@ -68,6 +68,23 @@ const SENSOR_ACCENT: Record<string, string> = {
 
 const CUSTOM_SENSOR_COLORS = ["#6366f1", "#22d3ee", "#f43f5e", "#84cc16", "#d946ef", "#fb923c", "#2dd4bf", "#a78bfa"];
 
+const SENSOR_PREVIEW_ICONS: Record<string, string> = {
+  temperature: "mdi:thermometer",
+  humidity: "mdi:water-percent",
+  co2: "mdi:molecule-co2",
+  voc: "mdi:flask-outline",
+  pm25: "mdi:blur",
+  aqi: "mdi:gauge",
+  presence: "mdi:motion-sensor",
+  noise: "mdi:volume-high",
+  illuminance: "mdi:brightness-5",
+  power: "mdi:lightning-bolt",
+  energy: "mdi:flash",
+  carbon_monoxide: "mdi:molecule-co",
+  radon: "mdi:radioactive",
+  moisture: "mdi:water-alert",
+};
+
 export class SmartAreaCardEditor extends LitElement {
   static styles = calvoRoomCardEditorStyles;
 
@@ -80,6 +97,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _sensorDragIndex?: number;
   @state() private _sensorDropIndex?: number;
   @state() private _expandedSensors: string[] = [];
+  @state() private _expandedSensorBatteries: string[] = [];
   @state() private _expandedPresetItems: string[] = [];
   @state() private _showAddTypePicker = false;
   @state() private _showAdvancedCardSetup = false;
@@ -915,8 +933,8 @@ export class SmartAreaCardEditor extends LitElement {
     const areaIcon = (this.hass as import("./types/ha-extensions").HomeAssistantExtended)?.areas?.[config.room_id ?? ""]?.icon ?? "mdi:home-outline";
     const automationEnabled = config.ui?.automation_badge_enabled ?? false;
     const automationClickDetails = config.ui?.automation_badge_click_details !== false;
-    const sensorsEnabled = config.ui?.header_sensors_enabled !== false;
-    const sensorClickDetails = sensorsEnabled && config.ui?.header_climate_more_info !== false;
+    const sensorsEnabled = true;
+    const sensorClickDetails = config.ui?.header_climate_more_info !== false;
     const previewAutomations = this._previewAreaAutomations(config.room_id);
     const enabledAutomationCount = previewAutomations.filter((item) => item.enabled).length;
     const images = config.ui?.images ?? {};
@@ -1087,13 +1105,12 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderSensorsSection(config: SmartRoomCardConfig) {
-    const sensorsEnabled = config.ui?.header_sensors_enabled !== false;
-    const sensorClickDetails = sensorsEnabled && config.ui?.header_climate_more_info !== false;
+    const sensorClickDetails = config.ui?.header_climate_more_info !== false;
     const sensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
     const configuredCount = sensorOrder.filter((key) => key.startsWith("custom_")
       ? Boolean(config.sensors?.custom?.[Number(key.slice(7))]?.entity)
       : Boolean((config.sensors as Record<string, unknown> | undefined)?.[key])).length;
-    const summary = sensorsEnabled ? `${configuredCount} configured` : "Hidden";
+    const summary = `${configuredCount} configured`;
 
     return html`
       <section class="section">
@@ -1109,19 +1126,72 @@ export class SmartAreaCardEditor extends LitElement {
 
         <div class="section-collapsible ${this._sensorsCollapsed ? "section-collapsible--collapsed" : ""}">
         <div class="section-collapsible-inner">
+          ${this._renderSensorHeaderPreview(config)}
           <div class="row single">
-            ${this._renderToggleField("Show sensors", "Displays selected sensors in the appearance preview and card header.", sensorsEnabled, (checked) => this._setUi("header_sensors_enabled", checked))}
+            ${this._renderCompactCheckField("Open details on click", "Lets the sensor strip open a compact details preview.", sensorClickDetails, (checked) => this._setUi("header_climate_more_info", checked))}
           </div>
-          ${sensorsEnabled ? html`
-            <div class="row single">
-              ${this._renderCompactCheckField("Open details on click", "Lets the sensor strip open a compact details preview.", sensorClickDetails, (checked) => this._setUi("header_climate_more_info", checked))}
-            </div>
-            ${this._renderSensors(config)}
-          ` : nothing}
+          ${this._renderSensors(config)}
         </div></div>
       </section>
     `;
   }
+
+  private _previewHeaderSensors(config: SmartRoomCardConfig, maxItems = 6): Array<{ icon: string; value: string }> {
+    const sensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
+    const sensors: Array<{ icon: string; value: string }> = [];
+    for (const key of sensorOrder) {
+      if (sensors.length >= maxItems) break;
+      if (key.startsWith("custom_")) {
+        const customIndex = Number(key.slice(7));
+        const sensor = config.sensors?.custom?.[customIndex];
+        if (!sensor?.entity) continue;
+        const entity = this.hass?.states[sensor.entity];
+        if (!entity || entity.state === "unavailable" || entity.state === "unknown") continue;
+        const unit = entity.attributes["unit_of_measurement"] as string | undefined ?? "";
+        sensors.push({ icon: sensor.icon || "mdi:gauge", value: `${entity.state}${unit ? ` ${unit}` : ""}` });
+        continue;
+      }
+
+      const entityId = (config.sensors as Record<string, unknown> | undefined)?.[key] as string | undefined;
+      if (!entityId) continue;
+      const entity = this.hass?.states[entityId];
+      if (!entity || entity.state === "unavailable" || entity.state === "unknown") continue;
+      const unit = entity.attributes["unit_of_measurement"] as string | undefined ?? "";
+      const raw = entity.state;
+      const value = key === "temperature" && Number.isFinite(Number(raw))
+        ? `${Number(raw).toFixed(1)}${unit || "\u00b0"}`
+        : `${raw}${unit ? ` ${unit}` : ""}`;
+      const icon = (config.sensors?.icons as Record<string, string> | undefined)?.[key] || SENSOR_PREVIEW_ICONS[key] || "mdi:gauge";
+      sensors.push({ icon, value });
+    }
+    return sensors;
+  }
+
+  private _renderSensorHeaderPreview(config: SmartRoomCardConfig) {
+    const sensors = this._previewHeaderSensors(config);
+    const images = config.ui?.images ?? {};
+    const bgOn = images.background_on ?? "";
+    const bgPosY = images.background_position_y ?? 50;
+    const { height } = resolveDeviceTileSize(config.ui);
+    const previewHeight = Math.max(76, Math.min(132, height));
+    return html`
+      <div class="sensor-header-preview" style="--sensor-preview-height: ${previewHeight}px">
+        <div class="sensor-header-preview-frame ${bgOn ? "sensor-header-preview-frame--image" : ""}">
+          ${bgOn ? html`<img src=${bgOn} alt="" style="object-position: center ${bgPosY}%" />` : nothing}
+          <div class="sensor-header-preview-mask"></div>
+          <div class="sensor-header-preview-strip">
+            ${sensors.length ? sensors.map((sensor, index) => html`
+              <span class="sensor-header-preview-item ${index === 0 ? "sensor-header-preview-item--primary" : ""}">
+                <ha-icon icon=${sensor.icon}></ha-icon>
+                <span>${sensor.value}</span>
+              </span>
+            `) : html`<span class="sensor-header-preview-empty">No sensors selected</span>`}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   private _renderPresetSensor(
     key: string,
     _label: string,
@@ -1152,6 +1222,7 @@ export class SmartAreaCardEditor extends LitElement {
           batteryConfig?.entity ?? "",
           batteryConfig?.alert_enabled !== false,
           batteryRestrict,
+          key,
           (value) => this._setSensorBattery(sAlertKey, "entity", value || undefined),
           (checked) => this._setPresetSensorBatteryAlertEnabled(sAlertKey, checked),
           (showAll) => this._setSensorBattery(sAlertKey, "restrict_to_room_area", !showAll),
@@ -1187,6 +1258,7 @@ export class SmartAreaCardEditor extends LitElement {
           sensor.battery ?? "",
           sensor.battery_alert_enabled !== false,
           batteryRestrict,
+          `custom_${i}`,
           (value) => this._setCustomSensorBattery(i, value),
           (checked) => this._setCustomSensorBatteryAlertEnabled(i, checked),
           (showAll) => this._updateCustomSensor(i, { battery_restrict_to_room_area: !showAll }),
@@ -1209,6 +1281,7 @@ export class SmartAreaCardEditor extends LitElement {
     value: string,
     alertEnabled: boolean,
     restrictToRoom: boolean,
+    batteryKey: string,
     onEntity: (value: string) => void,
     onAlertEnabled: (checked: boolean) => void,
     onToggleShowAll: (showAll: boolean) => void,
@@ -1216,17 +1289,33 @@ export class SmartAreaCardEditor extends LitElement {
   ) {
     const trimmed = value.trim();
     const threshold = this._config?.ui?.battery_threshold ?? 20;
+    const isExpanded = Boolean(trimmed) || this._expandedSensorBatteries.includes(batteryKey);
     return html`
-      <div class="sensor-battery-card">
-        <div class="sensor-battery-title">
+      <div class="sensor-battery-card ${isExpanded ? "sensor-battery-card--expanded" : ""}">
+        <button
+          type="button"
+          class="sensor-battery-title"
+          aria-expanded=${String(isExpanded)}
+          @click=${() => this._toggleSensorBatteryExpanded(batteryKey)}
+        >
           <ha-icon icon="mdi:battery-outline"></ha-icon>
           <span>Battery entity</span>
-        </div>
-        ${this._renderSmartEntityPicker(trimmed, onEntity, ["sensor"], ["battery"], restrictToRoom, this._config?.room_id, onToggleShowAll, false, onClear)}
-        ${trimmed ? html`
-          ${!this._isEntityValid(trimmed) ? html`<span class="hint">Battery entity is not valid yet.</span>` : nothing}
-          ${this._renderCompactCheckField(`Enable battery alert (<= ${threshold}%)`, "Uses the card-level battery threshold for this header sensor.", alertEnabled, onAlertEnabled)}
-        ` : html`<span class="hint">Optional. Auto-filled from the selected sensor when Home Assistant exposes a battery sensor on the same device.</span>`}
+          ${trimmed ? html`<span class="sensor-battery-status">${this.hass?.states[trimmed]?.attributes?.friendly_name as string | undefined ?? trimmed}</span>` : nothing}
+          <ha-icon class="sensor-battery-chevron" icon=${isExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>
+        </button>
+        ${isExpanded ? html`
+          ${this._renderSmartEntityPicker(trimmed, onEntity, ["sensor"], ["battery"], restrictToRoom, this._config?.room_id, onToggleShowAll, false, onClear)}
+          ${trimmed ? html`
+            ${!this._isEntityValid(trimmed) ? html`<span class="hint">Battery entity is not valid yet.</span>` : nothing}
+            <label class="compact-check battery-alert-check">
+              <input type="checkbox" .checked=${alertEnabled} @change=${(e: Event) => onAlertEnabled((e.target as HTMLInputElement).checked)} />
+              <span class="compact-check-copy">
+                <span class="compact-check-title">Enable battery alert (<= ${threshold}%)</span>
+                <span class="compact-check-desc">Uses the card-level battery threshold for this header sensor.</span>
+              </span>
+            </label>
+          ` : html`<span class="hint">Optional. Auto-filled from the selected sensor when Home Assistant exposes a battery sensor on the same device.</span>`}
+        ` : html`<span class="hint">Optional. Open to select a battery sensor.</span>`}
       </div>
     `;
   }
@@ -2078,8 +2167,18 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     this._expandedSensors = this._expandedSensors.includes(key) ? this._expandedSensors.filter((k) => k !== key) : [...this._expandedSensors, key];
   }
 
+  private _toggleSensorBatteryExpanded(key: string) {
+    this._expandedSensorBatteries = this._expandedSensorBatteries.includes(key)
+      ? this._expandedSensorBatteries.filter((k) => k !== key)
+      : [...this._expandedSensorBatteries, key];
+  }
+
   private _expandSensor(key: string) {
     if (!this._expandedSensors.includes(key)) this._expandedSensors = [...this._expandedSensors, key];
+  }
+
+  private _expandSensorBattery(key: string) {
+    if (!this._expandedSensorBatteries.includes(key)) this._expandedSensorBatteries = [...this._expandedSensorBatteries, key];
   }
 
   private _moveDevice(index: number, direction: -1 | 1) {
@@ -2437,6 +2536,8 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       newSensors = patchSensorBattery(newSensors, key as "temperature", "entity", nextBattery);
       if (nextBattery) {
         newSensors = patchSensorBattery(newSensors, key as "temperature", "alert_enabled", true);
+        this._expandSensor(key);
+        this._expandSensorBattery(key);
       }
     }
     if (value && !hadEntity) {
@@ -2460,6 +2561,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     if (field === "entity" && typeof value === "string" && value.trim()) {
       sensors = patchSensorBattery(sensors, key as "temperature", "alert_enabled", true);
       this._expandSensor(key);
+      this._expandSensorBattery(key);
     } else if (field === "entity" && !value) {
       sensors = patchSensorBattery(sensors, key as "temperature", "alert_enabled", false);
     }
@@ -2469,6 +2571,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     const sensors = patchSensorBattery(this._config?.sensors, key as "temperature", "alert_enabled", enabled);
     if (enabled) {
       this._expandSensor(key);
+      this._expandSensorBattery(key);
     }
     this._patch({ sensors });
   }
@@ -2484,6 +2587,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     const sensors = updateCustomSensor(this._config?.sensors, i, { battery_alert_enabled: enabled });
     if (enabled) {
       this._expandSensor(`custom_${i}`);
+      this._expandSensorBattery(`custom_${i}`);
     }
     this._patch({ sensors });
   }
@@ -2495,6 +2599,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
     });
     if (normalized) {
       this._expandSensor(`custom_${i}`);
+      this._expandSensorBattery(`custom_${i}`);
     }
     this._patch({ sensors });
   }
@@ -2510,6 +2615,10 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       ...(shouldSyncBattery ? { battery: nextBattery } : {}),
       ...(shouldSyncBattery && nextBattery ? { battery_alert_enabled: true } : {}),
     });
+    if (shouldSyncBattery && nextBattery) {
+      this._expandSensor(`custom_${i}`);
+      this._expandSensorBattery(`custom_${i}`);
+    }
     if (value && !hadEntity) {
       newSensors = bubbleSensorAboveEmpty(newSensors, `custom_${i}`);
       this._patch({ sensors: newSensors });
