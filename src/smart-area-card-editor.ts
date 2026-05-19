@@ -29,6 +29,7 @@ import { definitionForType, isEntityRequired, allowedMainEntities, buildPreset, 
 import { normalizeDomains, areaEntityIds, areaEntityIdsFiltered, buildEntitySelector, buildEntitySelectorFiltered, relatedBatteryEntityId } from "./editor/registry-helpers";
 import { patchSensor, patchSensorIcon, patchSensorFilter, patchSensorAlert, patchSensorBattery, addCustomSensor, removeCustomSensor, updateCustomSensor, updateCustomSensorAlert, getNormalizedSensorOrder, moveSensorInOrder, reorderSensorsInOrder, bubbleSensorAboveEmpty, sinkSensorBelowFilled } from "./editor/sensor-config";
 import { addNamedState, removeNamedState, updateNamedState, resetPresetState, resetPresetAlert, resetPresetOffline, addNamedAlert, removeNamedAlert, updateNamedAlert } from "./editor/named-item-config";
+import type { SensorPopupItem } from "./components/sensor-popup";
 
 const SENSOR_DEVICE_CLASSES: Partial<Record<string, string[]>> = {
   temperature: ["temperature"],
@@ -103,7 +104,7 @@ const SENSOR_PREVIEW_LABELS: Record<string, string> = {
   moisture: "Moisture",
 };
 
-type HeaderSensorPreview = { key?: string; icon: string; value: string; label?: string; entityId?: string; color?: string };
+type HeaderSensorPreview = SensorPopupItem & { color?: string };
 
 export class SmartAreaCardEditor extends LitElement {
   static styles = calvoRoomCardEditorStyles;
@@ -181,6 +182,11 @@ export class SmartAreaCardEditor extends LitElement {
     const haDarkMode = (this.hass as unknown as { themes?: { darkMode?: boolean } })?.themes?.darkMode;
     const browserDarkMode = typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches;
     this.toggleAttribute("data-editor-theme-dark", haDarkMode ?? browserDarkMode);
+  }
+
+  private async _ensureSensorPopupElement(): Promise<void> {
+    await import("./components/sensor-popup");
+    if (this._showHeaderSensorPreviewPopup || this._showSensorHeaderPreviewPopup) this.requestUpdate();
   }
 
   private async _loadBgGallery(): Promise<void> {
@@ -761,52 +767,27 @@ export class SmartAreaCardEditor extends LitElement {
   }
 
   private _renderSensorPreviewPopup(roomName: string, sensors: HeaderSensorPreview[], onClose = () => { this._showHeaderSensorPreviewPopup = false; }, config = this._config) {
-    const close = (event: Event): void => {
-      event.stopPropagation();
-      onClose();
-    };
     const images = config?.ui?.images ?? {};
     const bgOn = images.background_on ?? "";
     const bgPosY = images.background_position_y ?? 50;
     const darkEnabled = Boolean(bgOn) && images.dark_mode_enabled !== false;
     const backgroundSize = bgOn ? (darkEnabled ? "100% 100%, 100% 100%, cover" : "100% 100%, cover") : "100% 100%";
     const backgroundPosition = bgOn ? (darkEnabled ? `top left, top left, center ${bgPosY}%` : `top left, center ${bgPosY}%`) : "top left";
-    const popupStyle = [
-      `background-image: ${buildRoomBackgroundImage(bgOn, darkEnabled)}`,
-      `background-size: ${backgroundSize}`,
-      `background-position: ${backgroundPosition}`,
-      "background-repeat: no-repeat",
-      "background-origin: border-box",
-      "background-clip: border-box",
-    ].join(";");
+    const popupStyles = {
+      backgroundImage: buildRoomBackgroundImage(bgOn, darkEnabled),
+      backgroundSize,
+      backgroundPosition,
+      backgroundRepeat: "no-repeat",
+      backgroundOrigin: "border-box",
+      backgroundClip: "border-box",
+    };
 
     return html`
-      <div class="sensor-popup-overlay sensor-popup-overlay--editor" @click=${close}>
-        <div class="sensor-popup" style=${popupStyle} @click=${(event: Event) => event.stopPropagation()}>
-          <div class="sensor-popup-header">
-            <span class="sensor-popup-title">Sensors</span>
-            <button type="button" class="sensor-popup-close" aria-label="Close" @click=${close}>
-              <ha-icon icon="mdi:close"></ha-icon>
-            </button>
-          </div>
-          <div class="sensor-popup-body">
-            ${sensors.map((sensor) => html`
-              <div class="sensor-popup-item glass">
-                <div class="sensor-popup-item-row">
-                  <span class="sensor-popup-item-icon" style="--sensor-accent:${sensor.color ?? "#94a3b8"}">
-                    <ha-icon icon=${sensor.icon}></ha-icon>
-                  </span>
-                  <span class="sensor-popup-item-meta">
-                    <span class="sensor-popup-item-label">${sensor.label ?? "Sensor"}</span>
-                    <span class="sensor-popup-item-value">${sensor.value}</span>
-                    ${sensor.entityId ? html`<span class="sensor-popup-item-entity">${sensor.entityId}</span>` : nothing}
-                  </span>
-                </div>
-              </div>
-            `)}
-          </div>
-        </div>
-      </div>
+      <smart-area-sensor-popup
+        .items=${sensors.map((sensor) => ({ ...sensor, accent: sensor.color, blur: true }))}
+        .popupStyles=${popupStyles}
+        @sensor-popup-close=${(event: Event) => { event.stopPropagation(); onClose(); }}
+      ></smart-area-sensor-popup>
     `;
   }
 
@@ -1067,6 +1048,7 @@ export class SmartAreaCardEditor extends LitElement {
               aria-label="Open sensor details preview"
               @click=${(e: Event) => {
                 e.stopPropagation();
+                void this._ensureSensorPopupElement();
                 this._showHeaderSensorPreviewPopup = true;
               }}
             >
@@ -1146,10 +1128,17 @@ export class SmartAreaCardEditor extends LitElement {
   private _renderSensorsSection(config: SmartRoomCardConfig) {
     const sensorClickDetails = config.ui?.header_climate_more_info !== false;
     const sensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
-    const configuredCount = sensorOrder.filter((key) => key.startsWith("custom_")
-      ? Boolean(config.sensors?.custom?.[Number(key.slice(7))]?.entity)
-      : Boolean((config.sensors as Record<string, unknown> | undefined)?.[key])).length;
-    const summary = `${configuredCount} configured`;
+    const configuredLabels = sensorOrder.flatMap((key) => {
+      if (key.startsWith("custom_")) {
+        const index = Number(key.slice(7));
+        const sensor = config.sensors?.custom?.[index];
+        return sensor?.entity ? [sensor.name?.trim() || `Custom ${index + 1}`] : [];
+      }
+      return (config.sensors as Record<string, unknown> | undefined)?.[key]
+        ? [SENSOR_PREVIEW_LABELS[key] || key]
+        : [];
+    });
+    const summary = configuredLabels.length ? configuredLabels.join(", ") : "None configured";
 
     return html`
       <section class="section">
@@ -1228,6 +1217,7 @@ export class SmartAreaCardEditor extends LitElement {
     const openPreview = (event: Event) => {
       event.stopPropagation();
       if (!sensorClickDetails || !sensors.length) return;
+      void this._ensureSensorPopupElement();
       this._showSensorHeaderPreviewPopup = true;
     };
     return html`

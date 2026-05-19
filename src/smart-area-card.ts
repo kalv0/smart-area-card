@@ -29,6 +29,7 @@ import { computeRenderModel } from "./helpers/compute-render-model";
 import { warnOnInvalidConfig } from "./helpers/validate-config";
 import { PressController } from "./controllers/press-controller";
 import { ImageFitController } from "./controllers/image-fit-controller";
+import type { SensorPopupItem } from "./components/sensor-popup";
 
 declare global {
   interface HTMLElementTagNameMap {
@@ -58,6 +59,24 @@ const BADGE_CONFIG: Partial<Record<SmartRoomHeaderBadge, { pillClass: string; ic
   water:         { pillClass: "header-pill header-pill-red",    icon: "mdi:water-alert" },
   plug_off:      { pillClass: "header-pill header-pill-red",    icon: "mdi:power-plug-off-outline" },
   low_battery:   { pillClass: "header-pill header-pill-red",    icon: "mdi:battery-alert-variant-outline" },
+};
+
+const SENSOR_POPUP_META: Record<string, { label: string; color: string }> = {
+  temperature:     { label: "Temperature", color: "#f59e0b" },
+  humidity:        { label: "Humidity",    color: "#3b82f6" },
+  co2:             { label: "CO2",         color: "#10b981" },
+  voc:             { label: "VOC",         color: "#8b5cf6" },
+  pm25:            { label: "PM2.5",       color: "#ec4899" },
+  pm10:            { label: "PM10",        color: "#db2777" },
+  aqi:             { label: "Air Quality", color: "#14b8a6" },
+  presence:        { label: "Presence",    color: "#f97316" },
+  noise:           { label: "Noise",       color: "#64748b" },
+  illuminance:     { label: "Illuminance", color: "#eab308" },
+  power:           { label: "Power",       color: "#fb923c" },
+  energy:          { label: "Energy",      color: "#16a34a" },
+  carbon_monoxide: { label: "CO",          color: "#dc2626" },
+  radon:           { label: "Radon",       color: "#7c3aed" },
+  moisture:        { label: "Moisture",    color: "#0ea5e9" },
 };
 
 const EMPTY_ENTITY_REGISTRY: EntityRegistry = {};
@@ -305,6 +324,11 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     return `${Math.floor(diff / 86400)} d ago`;
   }
 
+  private async _ensureSensorPopupElement(): Promise<void> {
+    await import("./components/sensor-popup");
+    if (this._showClimateHistory) this.requestUpdate();
+  }
+
   protected willUpdate(changedProps: Map<string, unknown>): void {
     if (changedProps.has("hass") || changedProps.has("_config")) {
       if (this._config && this.hass) {
@@ -544,17 +568,9 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._showClimateHistory = false;
   };
 
-  private _stopPropagation = (event: Event): void => {
+  private _handleSensorPopupToggle = (event: CustomEvent<{ key?: string }>): void => {
     event.stopPropagation();
-  };
-
-  private _preventDefault = (event: Event): void => {
-    event.preventDefault();
-  };
-
-  private _handleSensorToggleClick = (event: Event): void => {
-    event.stopPropagation();
-    const key = (event.currentTarget as HTMLElement | null)?.dataset.key;
+    const key = event.detail?.key;
     if (!key) return;
     const next = new Set(this._expandedSensorChartKeys);
     if (next.has(key)) {
@@ -565,9 +581,9 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     this._expandedSensorChartKeys = next;
   };
 
-  private _handleSensorMoreClick = (event: Event): void => {
+  private _handleSensorPopupMore = (event: CustomEvent<{ entityId?: string }>): void => {
     event.stopPropagation();
-    const entityId = (event.currentTarget as HTMLElement | null)?.dataset.entityId;
+    const entityId = event.detail?.entityId;
     if (entityId) this._openEntityHistory(entityId);
   };
 
@@ -630,116 +646,65 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     };
   }
 
-  private _renderSensorPopup(): TemplateResult | typeof nothing {
+  private _sensorPopupItems(): SensorPopupItem[] {
     const items = this._renderModel?.climateItems ?? [];
-    if (!items.length) return nothing;
-    const model = this._renderModel;
-    const hasRoomBackground = Boolean(model?.roomBackground);
-    const roomBackgroundPosition = `center ${model?.roomBackgroundPositionY ?? 50}%`;
-    const backgroundSize = hasRoomBackground
-      ? model?.roomImageDark
+    return items.map((item) => {
+      const entityId = this._entityIdForKey(item.key);
+      const meta = item.key.startsWith("custom_")
+        ? { label: this._config?.sensors?.custom?.[Number(item.key.slice(7))]?.name ?? item.key, color: "#94a3b8" }
+        : (SENSOR_POPUP_META[item.key] ?? { label: item.key, color: "#94a3b8" });
+      const batteryInfo = this._sensorBatteryInfo(item.key);
+      return {
+        key: item.key,
+        icon: item.icon,
+        label: meta.label,
+        value: item.value,
+        entityId,
+        updated: entityId ? this._relativeTime(this.hass.states[entityId]?.last_updated) : undefined,
+        accent: meta.color,
+        alert: item.className.includes("alert"),
+        expanded: this._expandedSensorChartKeys.has(item.key),
+        interactive: Boolean(entityId),
+        blur: this._blurEnabled(),
+        alertFlags: this._sensorAlertFlags(item.key, entityId),
+        batteryInfo: batteryInfo ? { level: batteryInfo.level } : undefined,
+      };
+    });
+  }
+
+  private _renderSensorPopup(): TemplateResult | typeof nothing {
+    const popupItems = this._sensorPopupItems();
+    if (!popupItems.length) return nothing;
+    const popupModel = this._renderModel;
+    const popupHasRoomBackground = Boolean(popupModel?.roomBackground);
+    const popupRoomBackgroundPosition = `center ${popupModel?.roomBackgroundPositionY ?? 50}%`;
+    const popupBackgroundSize = popupHasRoomBackground
+      ? popupModel?.roomImageDark
         ? "100% 100%, 100% 100%, cover"
         : "100% 100%, cover"
       : "100% 100%";
-    const backgroundPosition = hasRoomBackground
-      ? model?.roomImageDark
-        ? `top left, top left, ${roomBackgroundPosition}`
-        : `top left, ${roomBackgroundPosition}`
+    const popupBackgroundPosition = popupHasRoomBackground
+      ? popupModel?.roomImageDark
+        ? `top left, top left, ${popupRoomBackgroundPosition}`
+        : `top left, ${popupRoomBackgroundPosition}`
       : "top left";
-    const popupStyles = {
-      backgroundImage: buildRoomBackgroundImage(model?.roomBackground, model?.roomImageDark),
-      backgroundSize,
-      backgroundPosition,
+    const sharedPopupStyles = {
+      backgroundImage: buildRoomBackgroundImage(popupModel?.roomBackground, popupModel?.roomImageDark),
+      backgroundSize: popupBackgroundSize,
+      backgroundPosition: popupBackgroundPosition,
       backgroundRepeat: "no-repeat",
       backgroundOrigin: "border-box",
       backgroundClip: "border-box",
     };
-    const POPUP_META: Record<string, { label: string; color: string }> = {
-      temperature:    { label: "Temperature",  color: "#f59e0b" },
-      humidity:       { label: "Humidity",     color: "#3b82f6" },
-      co2:            { label: "CO₂",          color: "#10b981" },
-      voc:            { label: "VOC",           color: "#8b5cf6" },
-      pm25:           { label: "PM2.5",        color: "#ec4899" },
-      pm10:           { label: "PM10",         color: "#db2777" },
-      aqi:            { label: "Air Quality",  color: "#14b8a6" },
-      presence:       { label: "Presence",     color: "#f97316" },
-      noise:          { label: "Noise",        color: "#64748b" },
-      illuminance:    { label: "Illuminance",  color: "#eab308" },
-      power:          { label: "Power",        color: "#fb923c" },
-      energy:         { label: "Energy",       color: "#16a34a" },
-      carbon_monoxide:{ label: "CO",           color: "#dc2626" },
-      radon:          { label: "Radon",        color: "#7c3aed" },
-      moisture:       { label: "Moisture",     color: "#0ea5e9" },
-    };
-
     return html`
-      <div class="sensor-popup-overlay" @click=${this._closeSensorPopup} @wheel=${this._preventDefault} @touchmove=${this._preventDefault}>
-        <div class="sensor-popup" style=${styleMap(popupStyles)} @click=${this._stopPropagation} @wheel=${this._stopPropagation} @touchmove=${this._stopPropagation}>
-          <div class="sensor-popup-header">
-            <span class="sensor-popup-title">Sensors</span>
-            <button class="sensor-popup-close" @click=${this._closeSensorPopup} aria-label="Close">
-              <ha-icon icon="mdi:close"></ha-icon>
-            </button>
-          </div>
-          <div class="sensor-popup-body">
-            ${repeat(items, (item) => item.key, (item) => {
-              const entityId = this._entityIdForKey(item.key);
-              const meta = item.key.startsWith("custom_")
-                ? { label: this._config?.sensors?.custom?.[Number(item.key.slice(7))]?.name ?? item.key, color: "#94a3b8" }
-                : (POPUP_META[item.key] ?? { label: item.key, color: "#94a3b8" });
-              const expanded = this._expandedSensorChartKeys.has(item.key);
-              const alertFlags = this._sensorAlertFlags(item.key, entityId);
-              const batteryInfo = this._sensorBatteryInfo(item.key);
-              const isAlert = item.className.includes("alert");
-              return html`
-                <div class="sensor-popup-item ${this._blurEnabled() ? "glass" : ""} ${isAlert ? "sensor-popup-item--alert" : ""}">
-                  <button
-                    class="sensor-popup-item-row ${entityId ? "sensor-popup-item-row--toggle" : ""}"
-                    type="button"
-                    data-key=${item.key}
-                    ?disabled=${!entityId}
-                    aria-expanded=${entityId ? String(expanded) : nothing}
-                    @click=${entityId ? this._handleSensorToggleClick : nothing}
-                  >
-                    <span class="sensor-popup-item-icon" style="--sensor-accent:${meta.color}">
-                      <ha-icon icon=${item.icon}></ha-icon>
-                    </span>
-                    <span class="sensor-popup-item-meta">
-                      <span class="sensor-popup-item-label">${meta.label}</span>
-                      <span class="sensor-popup-item-value">${item.value}</span>
-                      ${entityId ? html`<span class="sensor-popup-item-updated">${this._relativeTime(this.hass.states[entityId]?.last_updated)}</span>` : nothing}
-                      ${entityId ? html`<span class="sensor-popup-item-entity">${entityId}</span>` : nothing}
-                    </span>
-                    ${alertFlags.length || batteryInfo ? html`
-                      <span class="sensor-popup-side">
-                        ${batteryInfo ? html`
-                          <span class="sensor-popup-battery-tag" style=${`--battery-color:${getBatteryColor(batteryInfo.level)}`}>
-                            <ha-icon icon=${getBatteryIcon(batteryInfo.level)}></ha-icon>
-                            ${batteryInfo.level !== undefined ? `${batteryInfo.level}%` : "Battery"}
-                          </span>
-                        ` : nothing}
-                        ${alertFlags.length ? html`
-                          <span class="sensor-popup-alert-flags">
-                            <span class="sensor-popup-alert-title">Alerts</span>
-                            ${alertFlags.map((flag) => html`<span class="sensor-popup-alert-flag ${flag.active ? "sensor-popup-alert-flag--active" : ""}">${flag.label}</span>`)}
-                          </span>
-                        ` : nothing}
-                      </span>
-                    ` : nothing}
-                    ${entityId ? html`<ha-icon class="sensor-popup-item-arrow" icon=${expanded ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>` : nothing}
-                  </button>
-                  ${entityId && expanded ? html`
-                    <div class="sensor-popup-chart" data-key=${item.key}></div>
-                    <div class="sensor-popup-actions">
-                      <button class="sensor-popup-more-button" type="button" data-entity-id=${entityId} @click=${this._handleSensorMoreClick}>Show more</button>
-                    </div>
-                  ` : nothing}
-                </div>
-              `;
-            })}
-          </div>
-        </div>
-      </div>
+      <smart-area-sensor-popup
+        .items=${popupItems}
+        .popupStyles=${sharedPopupStyles}
+        .charts=${true}
+        @sensor-popup-close=${this._closeSensorPopup}
+        @sensor-popup-toggle=${this._handleSensorPopupToggle}
+        @sensor-popup-more=${this._handleSensorPopupMore}
+      ></smart-area-sensor-popup>
     `;
   }
 
@@ -923,7 +888,9 @@ export class SmartAreaCard extends LitElement implements LovelaceCard {
     }
     const entities = this._renderModel?.climateEntities ?? [];
     if (!entities.length) return;
-    this._showClimateHistory = !this._showClimateHistory;
+    const nextShow = !this._showClimateHistory;
+    if (nextShow) void this._ensureSensorPopupElement();
+    this._showClimateHistory = nextShow;
     if (!this._showClimateHistory) {
       this._destroyPopupCharts();
       this._expandedSensorChartKeys = new Set();
