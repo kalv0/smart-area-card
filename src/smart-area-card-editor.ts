@@ -113,6 +113,7 @@ export class SmartAreaCardEditor extends LitElement {
   @state() private _sensorsCollapsed = false;
   @state() private _showHeaderAutomationDetails = false;
   @state() private _showHeaderSensorPreviewPopup = false;
+  @state() private _showSensorHeaderPreviewPopup = false;
   @state() private _imgPickerMode: "library" | "path" = "library";
   @state() private _imgUploading = false;
   @state() private _devImgPickerTabs: Record<string, "library" | "path"> = {};
@@ -739,10 +740,10 @@ export class SmartAreaCardEditor extends LitElement {
     ];
   }
 
-  private _renderSensorPreviewPopup(roomName: string, sensors: Array<{ icon: string; value: string }>) {
+  private _renderSensorPreviewPopup(roomName: string, sensors: Array<{ icon: string; value: string }>, onClose = () => { this._showHeaderSensorPreviewPopup = false; }) {
     const close = (event: Event): void => {
       event.stopPropagation();
-      this._showHeaderSensorPreviewPopup = false;
+      onClose();
     };
 
     return html`
@@ -1126,10 +1127,7 @@ export class SmartAreaCardEditor extends LitElement {
 
         <div class="section-collapsible ${this._sensorsCollapsed ? "section-collapsible--collapsed" : ""}">
         <div class="section-collapsible-inner">
-          ${this._renderSensorHeaderPreview(config)}
-          <div class="row single">
-            ${this._renderCompactCheckField("Open details on click", "Lets the sensor strip open a compact details preview.", sensorClickDetails, (checked) => this._setUi("header_climate_more_info", checked))}
-          </div>
+          ${this._renderSensorHeaderPreview(config, sensorClickDetails)}
           ${this._renderSensors(config)}
         </div></div>
       </section>
@@ -1167,16 +1165,27 @@ export class SmartAreaCardEditor extends LitElement {
     return sensors;
   }
 
-  private _renderSensorHeaderPreview(config: SmartRoomCardConfig) {
+  private _renderSensorHeaderPreview(config: SmartRoomCardConfig, sensorClickDetails: boolean) {
     const sensors = this._previewHeaderSensors(config);
     const images = config.ui?.images ?? {};
     const bgOn = images.background_on ?? "";
     const bgPosY = images.background_position_y ?? 50;
     const { height } = resolveDeviceTileSize(config.ui);
-    const previewHeight = Math.max(76, Math.min(132, height));
+    const previewHeight = Math.max(116, Math.min(168, height + 36));
+    const roomName = config.room?.trim() || this._areaName(config.room_id) || "Area";
+    const openPreview = (event: Event) => {
+      event.stopPropagation();
+      if (!sensorClickDetails || !sensors.length) return;
+      this._showSensorHeaderPreviewPopup = true;
+    };
     return html`
-      <div class="sensor-header-preview" style="--sensor-preview-height: ${previewHeight}px">
-        <div class="sensor-header-preview-frame ${bgOn ? "sensor-header-preview-frame--image" : ""}">
+      <div class="sensor-preview-composition" style="--sensor-preview-height: ${previewHeight}px">
+        <button
+          type="button"
+          class="sensor-header-preview-frame ${bgOn ? "sensor-header-preview-frame--image" : ""} ${sensorClickDetails && sensors.length ? "sensor-header-preview-frame--clickable" : ""}"
+          aria-label=${sensorClickDetails ? "Open sensor details preview" : "Sensor header preview"}
+          @click=${openPreview}
+        >
           ${bgOn ? html`<img src=${bgOn} alt="" style="object-position: center ${bgPosY}%" />` : nothing}
           <div class="sensor-header-preview-mask"></div>
           <div class="sensor-header-preview-strip">
@@ -1187,7 +1196,14 @@ export class SmartAreaCardEditor extends LitElement {
               </span>
             `) : html`<span class="sensor-header-preview-empty">No sensors selected</span>`}
           </div>
+        </button>
+        <div class="sensor-preview-option">
+          ${this._renderCompactCheckField("Open details on click", "Lets the sensor strip open a compact details preview.", sensorClickDetails, (checked) => {
+            if (!checked) this._showSensorHeaderPreviewPopup = false;
+            this._setUi("header_climate_more_info", checked);
+          })}
         </div>
+        ${sensorClickDetails && this._showSensorHeaderPreviewPopup ? this._renderSensorPreviewPopup(roomName, sensors, () => { this._showSensorHeaderPreviewPopup = false; }) : nothing}
       </div>
     `;
   }
@@ -1299,14 +1315,14 @@ export class SmartAreaCardEditor extends LitElement {
           @click=${() => this._toggleSensorBatteryExpanded(batteryKey)}
         >
           <ha-icon icon="mdi:battery-outline"></ha-icon>
-          <span>Battery entity</span>
+          <span>Battery</span>
           ${trimmed ? html`<span class="sensor-battery-status">${this.hass?.states[trimmed]?.attributes?.friendly_name as string | undefined ?? trimmed}</span>` : nothing}
           <ha-icon class="sensor-battery-chevron" icon=${isExpanded ? "mdi:chevron-up" : "mdi:chevron-down"}></ha-icon>
         </button>
         ${isExpanded ? html`
           ${this._renderSmartEntityPicker(trimmed, onEntity, ["sensor"], ["battery"], restrictToRoom, this._config?.room_id, onToggleShowAll, false, onClear)}
           ${trimmed ? html`
-            ${!this._isEntityValid(trimmed) ? html`<span class="hint">Battery entity is not valid yet.</span>` : nothing}
+            ${!this._isEntityValid(trimmed) ? html`<span class="hint">Battery is not valid yet.</span>` : nothing}
             <label class="compact-check battery-alert-check">
               <input type="checkbox" .checked=${alertEnabled} @change=${(e: Event) => onAlertEnabled((e.target as HTMLInputElement).checked)} />
               <span class="compact-check-copy">
@@ -1314,8 +1330,8 @@ export class SmartAreaCardEditor extends LitElement {
                 <span class="compact-check-desc">Uses the card-level battery threshold for this header sensor.</span>
               </span>
             </label>
-          ` : html`<span class="hint">Optional. Auto-filled from the selected sensor when Home Assistant exposes a battery sensor on the same device.</span>`}
-        ` : html`<span class="hint">Optional. Open to select a battery sensor.</span>`}
+          ` : nothing}
+        ` : nothing}
       </div>
     `;
   }
@@ -1527,10 +1543,10 @@ export class SmartAreaCardEditor extends LitElement {
       </div>
       <div class="row">
         <div class="field-card">
-          <div class="field-title">Battery entity</div>
+          <div class="field-title">Battery</div>
           <span class="hint">Battery source.</span>
           ${this._renderSmartEntityPicker(device.battery ?? "", (value) => this._setDevice(index, "battery", value), ["sensor"], ["battery"], batteryRestrict, roomId, (showAll) => this._setDeviceSelector(index, "battery", { ...(device.entity_selectors?.["battery"] ?? {}), restrict_to_room_area: !showAll, domains: ["sensor"] }))}
-          ${device.battery?.trim() ? html`${!this._isEntityValid(device.battery) ? html`<span class="hint">Battery entity is not valid yet.</span>` : nothing}${this._renderCompactCheckField("Show battery level", "Shows the battery icon and percentage on the device tile.", device.show_battery !== false, (checked) => this._setDevice(index, "show_battery", checked))}${this._renderCompactCheckField(`Enable battery alert (<= ${this._config?.ui?.battery_threshold ?? 20}%)`, "Derives a low battery alert using the card-level battery alert settings.", device.battery_alert_enabled !== false, (checked) => this._setDevice(index, "battery_alert_enabled", checked))}` : html`<span class="hint">Optional. Creates a low battery alert and shows battery level on the tile.</span>`}
+          ${device.battery?.trim() ? html`${!this._isEntityValid(device.battery) ? html`<span class="hint">Battery is not valid yet.</span>` : nothing}${this._renderCompactCheckField("Show battery level", "Shows the battery icon and percentage on the device tile.", device.show_battery !== false, (checked) => this._setDevice(index, "show_battery", checked))}${this._renderCompactCheckField(`Enable battery alert (<= ${this._config?.ui?.battery_threshold ?? 20}%)`, "Derives a low battery alert using the card-level battery alert settings.", device.battery_alert_enabled !== false, (checked) => this._setDevice(index, "battery_alert_enabled", checked))}` : html`<span class="hint">Optional. Creates a low battery alert and shows battery level on the tile.</span>`}
         </div>
         <div></div>
       </div>
@@ -1922,7 +1938,7 @@ If your popup content is already a JSON object, you can paste it as-is.</span></
       ? "Battery alert"
       : (item.name?.trim() || `Default ${this._presetLabel(item.preset_source)} alert`);
     const presetDescription = item.preset_source === "battery"
-      ? "Synced with Battery entity and threshold. You can edit this default battery alert, but it cannot be removed."
+      ? "Synced with Battery and threshold. You can edit this default battery alert, but it cannot be removed."
       : "You can edit this default type configuration, but it cannot be removed.";
     const presetBanner = item.preset && showPresetBanner ? html`
       <div class="preset-banner">

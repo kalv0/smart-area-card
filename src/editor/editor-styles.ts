@@ -800,16 +800,24 @@ export const calvoRoomCardEditorStyles = css`
     font-weight: 700;
   }
 
-  .sensor-header-preview {
-    display: flex;
-    justify-content: flex-end;
+  .sensor-preview-composition {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(170px, 0.72fr);
+    gap: 10px;
+    align-items: stretch;
     min-width: 0;
   }
 
   .sensor-header-preview-frame {
+    appearance: none;
+    -webkit-appearance: none;
     position: relative;
-    width: min(var(--sensor-preview-height, 100px), 100%);
+    display: block;
+    width: 100%;
     height: var(--sensor-preview-height, 100px);
+    min-width: 0;
+    padding: 0;
     overflow: hidden;
     border-radius: var(--editor-radius-md);
     border: 1px solid var(--editor-contrast-line);
@@ -817,6 +825,15 @@ export const calvoRoomCardEditorStyles = css`
       radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.2), transparent 32%),
       linear-gradient(135deg, var(--editor-preview-start) 0%, var(--editor-preview-mid) 52%, var(--editor-preview-end) 100%);
     box-shadow: var(--editor-inner-highlight);
+    cursor: default;
+  }
+
+  .sensor-header-preview-frame--clickable {
+    cursor: pointer;
+  }
+
+  .sensor-header-preview-frame--clickable:hover {
+    border-color: rgba(255, 255, 255, 0.42);
   }
 
   .sensor-header-preview-frame img {
@@ -844,7 +861,7 @@ export const calvoRoomCardEditorStyles = css`
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    gap: 2px;
     color: white;
     text-align: right;
     line-height: 1;
@@ -855,10 +872,10 @@ export const calvoRoomCardEditorStyles = css`
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 4px;
+    gap: 5px;
     max-width: 100%;
-    font-size: 0.78rem;
-    font-weight: 600;
+    font-size: 0.98rem;
+    font-weight: 700;
     white-space: nowrap;
     text-shadow: 0 1px 4px rgba(0,0,0,0.55);
   }
@@ -870,13 +887,13 @@ export const calvoRoomCardEditorStyles = css`
   }
 
   .sensor-header-preview-item ha-icon {
-    --mdc-icon-size: 15px;
+    --mdc-icon-size: 18px;
     flex: 0 0 auto;
   }
 
   .sensor-header-preview-item--primary {
-    font-size: 1.08rem;
-    font-weight: 760;
+    font-size: 1.42rem;
+    font-weight: 800;
   }
 
   .sensor-header-preview-empty {
@@ -884,6 +901,27 @@ export const calvoRoomCardEditorStyles = css`
     font-weight: 700;
     color: rgba(255, 255, 255, 0.72);
     text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+  }
+
+  .sensor-preview-option {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: var(--editor-radius-md);
+    border: 1px solid var(--editor-border);
+    background: var(--editor-field);
+    box-shadow: var(--editor-inner-highlight);
+  }
+
+  .sensor-preview-option .compact-check {
+    padding: 0;
+  }
+
+  @media (max-width: 520px) {
+    .sensor-preview-composition {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* ─── Cards & panels ─────────────────────────────────── */
