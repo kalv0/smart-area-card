@@ -1002,43 +1002,7 @@ export class SmartAreaCardEditor extends LitElement {
     const bgPosY = images.background_position_y ?? 50;
     const darkEnabled = Boolean(bgOn) && images.dark_mode_enabled !== false;
 
-    const _SENSOR_ICONS: Record<string, string> = {
-      temperature: "mdi:thermometer", humidity: "mdi:water-percent", co2: "mdi:molecule-co2",
-      voc: "mdi:flask-outline", pm25: "mdi:blur", aqi: "mdi:gauge", presence: "mdi:motion-sensor",
-      noise: "mdi:volume-high", illuminance: "mdi:brightness-5", power: "mdi:lightning-bolt",
-      energy: "mdi:flash", carbon_monoxide: "mdi:molecule-co", radon: "mdi:radioactive", moisture: "mdi:water-alert",
-    };
-    const _previewSensorOrder = getNormalizedSensorOrder(config.sensors, config.sensors?.custom?.length ?? 0);
-    const _previewSensors: Array<{ icon: string; value: string }> = [];
-    for (const _key of _previewSensorOrder) {
-      if (_previewSensors.length >= 6) break;
-      if (_key.startsWith("custom_")) {
-        const _ci = Number(_key.slice(7));
-        const _sc = config.sensors?.custom?.[_ci];
-        if (_sc?.entity) {
-          const _e = this.hass?.states[_sc.entity];
-          if (_e && _e.state !== "unavailable" && _e.state !== "unknown") {
-            const _u = _e.attributes["unit_of_measurement"] as string | undefined ?? "";
-            _previewSensors.push({ icon: _sc.icon || "mdi:gauge", value: `${_e.state}${_u ? ` ${_u}` : ""}` });
-          }
-        }
-      } else {
-        const _eid = (config.sensors as Record<string, unknown> | undefined)?.[_key] as string | undefined;
-        if (_eid) {
-          const _e = this.hass?.states[_eid];
-          if (_e && _e.state !== "unavailable" && _e.state !== "unknown") {
-            const _u = _e.attributes["unit_of_measurement"] as string | undefined ?? "";
-            const _raw = _e.state;
-            const _val = _key === "temperature" && Number.isFinite(Number(_raw))
-              ? `${Number(_raw).toFixed(1)}${_u || "°"}`
-              : `${_raw}${_u ? ` ${_u}` : ""}`;
-            const _icon = (config.sensors?.icons as Record<string, string> | undefined)?.[_key] || _SENSOR_ICONS[_key] || "mdi:gauge";
-            _previewSensors.push({ icon: _icon, value: _val });
-          }
-        }
-      }
-    }
-
+    const _previewSensors = this._previewHeaderSensors(config);
     return html`
       <div class="editor-header-preview ${bgOn ? "editor-header-preview--image" : ""}">
         ${bgOn ? html`
