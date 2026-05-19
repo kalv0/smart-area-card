@@ -1297,28 +1297,30 @@ export class SmartAreaCardEditor extends LitElement {
         <div class="sensor-row-body">
           ${this._renderSmartEntityPicker(entityId, (v) => this._setSensor(key, v), domains, deviceClasses, restrictToRoom, this._config?.room_id, (showAll) => this._setSensorFilter(sFilterKey, "restrict_to_room_area", !showAll), false, () => this._setSensor(key, ""))}
         </div>
-        ${this._renderSensorBatteryField(
-          batteryConfig?.entity ?? "",
-          batteryConfig?.alert_enabled !== false,
-          batteryRestrict,
-          key,
-          (value) => this._setSensorBattery(sAlertKey, "entity", value || undefined),
-          (checked) => this._setPresetSensorBatteryAlertEnabled(sAlertKey, checked),
-          (showAll) => this._setSensorBattery(sAlertKey, "restrict_to_room_area", !showAll),
-          () => this._setSensorBattery(sAlertKey, "entity", undefined),
-        )}
-        <div class="sr-alert-group">
-          <div class="sr-alert-group-label">Alert triggers</div>
-          <div class="sensor-alert-row">
-            ${isPresence ? html`
-              <label>Is<input type="text" .value=${presenceAlertConfig?.eq ?? ""} placeholder="e.g. on" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "eq", (e.target as HTMLInputElement).value || undefined)} /></label>
-              <label>Is not<input type="text" .value=${presenceAlertConfig?.neq ?? ""} placeholder="e.g. off" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "neq", (e.target as HTMLInputElement).value || undefined)} /></label>
-            ` : html`
-              <label>Min<input type="number" .value=${typeof numericAlertConfig?.min === "number" ? String(numericAlertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-              <label>Max<input type="number" .value=${typeof numericAlertConfig?.max === "number" ? String(numericAlertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-            `}
+        ${entityId ? html`
+          ${this._renderSensorBatteryField(
+            batteryConfig?.entity ?? "",
+            batteryConfig?.alert_enabled !== false,
+            batteryRestrict,
+            key,
+            (value) => this._setSensorBattery(sAlertKey, "entity", value || undefined),
+            (checked) => this._setPresetSensorBatteryAlertEnabled(sAlertKey, checked),
+            (showAll) => this._setSensorBattery(sAlertKey, "restrict_to_room_area", !showAll),
+            () => this._setSensorBattery(sAlertKey, "entity", undefined),
+          )}
+          <div class="sr-alert-group">
+            <div class="sr-alert-group-label">Alert triggers</div>
+            <div class="sensor-alert-row">
+              ${isPresence ? html`
+                <label>Is<input type="text" .value=${presenceAlertConfig?.eq ?? ""} placeholder="e.g. on" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "eq", (e.target as HTMLInputElement).value || undefined)} /></label>
+                <label>Is not<input type="text" .value=${presenceAlertConfig?.neq ?? ""} placeholder="e.g. off" @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "neq", (e.target as HTMLInputElement).value || undefined)} /></label>
+              ` : html`
+                <label>Min<input type="number" .value=${typeof numericAlertConfig?.min === "number" ? String(numericAlertConfig.min) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+                <label>Max<input type="number" .value=${typeof numericAlertConfig?.max === "number" ? String(numericAlertConfig.max) : ""} @input=${(e: InputEvent) => this._setSensorAlert(sAlertKey, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              `}
+            </div>
           </div>
-        </div>
+        ` : nothing}
       </div>
     `;
   }
@@ -1331,27 +1333,29 @@ export class SmartAreaCardEditor extends LitElement {
       <div class="sr-body">
         <div class="sensor-row-body">
           ${this._renderSmartEntityPicker(sensor.entity ?? "", (v) => this._setCustomSensorEntity(i, v), ["sensor"], undefined, restrictToRoom, this._config?.room_id, (showAll) => this._updateCustomSensor(i, { restrict_to_room_area: !showAll }), false, () => this._setCustomSensorEntity(i, ""))}
-          ${this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined }))}
+          ${sensor.entity ? this._renderIconPicker(sensor.icon ?? "", false, (v) => this._updateCustomSensor(i, { icon: v || undefined })) : nothing}
         </div>
-        ${this._renderSensorBatteryField(
-          sensor.battery ?? "",
-          sensor.battery_alert_enabled !== false,
-          batteryRestrict,
-          `custom_${i}`,
-          (value) => this._setCustomSensorBattery(i, value),
-          (checked) => this._setCustomSensorBatteryAlertEnabled(i, checked),
-          (showAll) => this._updateCustomSensor(i, { battery_restrict_to_room_area: !showAll }),
-          () => this._setCustomSensorBattery(i, ""),
-        )}
-        <div class="sr-alert-group">
-          <div class="sr-alert-group-label">Alert triggers</div>
-          <div class="sensor-alert-row">
-            <label>Is<input type="text" .value=${sensor.alert?.text_eq ?? ""} placeholder="state text" @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "text_eq", valueFromEvent(e) || undefined)} /></label>
-            <label>Is not<input type="text" .value=${sensor.alert?.text_neq ?? ""} placeholder="state text" @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "text_neq", valueFromEvent(e) || undefined)} /></label>
-            <label>Min<input type="number" .value=${sensor.alert?.min !== undefined ? String(sensor.alert.min) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
-            <label>Max<input type="number" .value=${sensor.alert?.max !== undefined ? String(sensor.alert.max) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+        ${sensor.entity ? html`
+          ${this._renderSensorBatteryField(
+            sensor.battery ?? "",
+            sensor.battery_alert_enabled !== false,
+            batteryRestrict,
+            `custom_${i}`,
+            (value) => this._setCustomSensorBattery(i, value),
+            (checked) => this._setCustomSensorBatteryAlertEnabled(i, checked),
+            (showAll) => this._updateCustomSensor(i, { battery_restrict_to_room_area: !showAll }),
+            () => this._setCustomSensorBattery(i, ""),
+          )}
+          <div class="sr-alert-group">
+            <div class="sr-alert-group-label">Alert triggers</div>
+            <div class="sensor-alert-row">
+              <label>Is<input type="text" .value=${sensor.alert?.text_eq ?? ""} placeholder="state text" @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "text_eq", valueFromEvent(e) || undefined)} /></label>
+              <label>Is not<input type="text" .value=${sensor.alert?.text_neq ?? ""} placeholder="state text" @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "text_neq", valueFromEvent(e) || undefined)} /></label>
+              <label>Min<input type="number" .value=${sensor.alert?.min !== undefined ? String(sensor.alert.min) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "min", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+              <label>Max<input type="number" .value=${sensor.alert?.max !== undefined ? String(sensor.alert.max) : ""} @input=${(e: InputEvent) => this._updateCustomSensorAlert(i, "max", toNumberOrUndefined(valueFromEvent(e)))} /></label>
+            </div>
           </div>
-        </div>
+        ` : nothing}
       </div>
     `;
   }

@@ -3552,6 +3552,15 @@ export const calvoRoomCardEditorStyles = css`
     border-color: transparent;
   }
 
+  .entity-clear-x ha-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+  }
+
   .sensor-more-btn {
     width: 100%;
     font-size: 0.8rem;
